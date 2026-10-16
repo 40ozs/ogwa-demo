@@ -1,0 +1,25 @@
+{
+  "schema": "ogwa.remediation.result/v1",
+  "worker": {
+    "name": "OGWA.Remediation",
+    "version": "0.1.0"
+  },
+  "operation": null,
+  "outcome": "Blocked",
+  "executed": false,
+  "productionMutation": false,
+  "correlationId": null,
+  "observedAt": "2026-10-05T12:00:00Z",
+  "target": null,
+  "checks": [
+    {
+      "code": "REQUEST_VALID",
+      "passed": false,
+      "detail": "operation must be one of: OKTA_GROUP_UNASSIGN, AD_GROUP_QUARANTINE, AD_GROUP_DELETE"
+    }
+  ],
+  "plannedChanges": [],
+  "blockedReasons": [
+    "INVALID_REQUEST"
+  ]
+}

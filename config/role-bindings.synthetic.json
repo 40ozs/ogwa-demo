@@ -1,0 +1,12 @@
+{
+  "format": "ogwa-role-bindings/v1",
+  "environment": "SYNTHETIC",
+  "issuer": "urn:ogwa:synthetic-idp",
+  "bindings": [
+    {"idpGroupId": "00gSYNTHOGWAVIEWERS", "role": "VIEWER", "note": "read-only operators"},
+    {"idpGroupId": "00gSYNTHOGWAIDAUTO", "role": "IDENTITY_AUTOMATION", "note": "propose and advance (the reviewer)"},
+    {"idpGroupId": "00gSYNTHOGWASECIAM", "role": "SECURITY_IAM", "note": "approve (the approver)"},
+    {"idpGroupId": "00gSYNTHOGWAEXEC", "role": "EXECUTOR", "note": "plan dry runs against a valid approval"},
+    {"idpGroupId": "00gSYNTHOGWAADMIN", "role": "ADMINISTRATOR", "note": "read audit and system status; no lifecycle powers"}
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "adDirectorySourceIds": [],
+  "format": "ogwa-candidate-policy/v1",
+  "freshness": {
+    "approvalHours": 168,
+    "clockSkewMinutes": 5,
+    "executionHours": 24,
+    "reviewHours": 720
+  },
+  "lifecycle": {
+    "approvalMaxTtlHours": 168,
+    "holdPeriodDays": 30
+  },
+  "protected": {
+    "adObjectGuids": [],
+    "adSids": [],
+    "oktaGroupIds": []
+  },
+  "requiredDependencyKinds": [
+    "AAP_REFERENCE",
+    "AD_ACL_REFERENCE",
+    "AD_GROUP_MEMBERS",
+    "AD_NESTED_MEMBERSHIP",
+    "APPLICATION_CONFIGURATION",
+    "GPO_REFERENCE",
+    "OKTA_OTHER_APP_ASSIGNMENT",
+    "OKTA_POLICY_REFERENCE"
+  ],
+  "usage": {
+    "lowUsageMaxSignIns": 5,
+    "lowUsageMaxUniqueUsers": null,
+    "recentLoginWindowDays": 30,
+    "retirementMaxSignIns": 0,
+    "retirementWindowDays": 90,
+    "reviewMinWindowDays": 30
+  }
+}

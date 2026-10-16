@@ -1,0 +1,28 @@
+{
+  "requestSchema": "ogwa.remediation.request/v1",
+  "resultSchema": "ogwa.remediation.result/v1",
+  "workerName": "OGWA.Remediation",
+  "workerVersion": "0.1.0",
+  "modes": ["WhatIf", "ValidateOnly"],
+  "outcomes": ["WhatIf", "Simulated", "ValidationOnly", "Blocked"],
+  "operations": {
+    "OKTA_GROUP_UNASSIGN": ["oktaAppId", "oktaGroupId"],
+    "AD_GROUP_QUARANTINE": ["objectGuid", "domain", "expectedSid", "expectedDistinguishedName", "quarantineOu"],
+    "AD_GROUP_DELETE": ["objectGuid", "domain", "expectedSid", "expectedDistinguishedName"]
+  },
+  "plannedActions": {
+    "OKTA_GROUP_UNASSIGN": "unassign_group_from_application",
+    "AD_GROUP_QUARANTINE": "move_group_to_quarantine",
+    "AD_GROUP_DELETE": "delete_group"
+  },
+  "checkCodes": [
+    "REQUEST_VALID", "ADAPTER_SYNTHETIC", "TARGET_SYNTHETIC", "TARGET_RESOLVED", "IDENTITY_MATCHES", "NOT_PROTECTED",
+    "NO_MEMBERS", "NO_PARENT_GROUPS", "QUARANTINE_OU_VALID", "ASSIGNMENT_PRESENT", "GROUP_NOT_BUILT_IN"
+  ],
+  "blockReasons": [
+    "INVALID_REQUEST", "WILDCARD_TARGET", "NO_PRODUCTION_ADAPTER", "NON_SYNTHETIC_TARGET", "TARGET_NOT_FOUND",
+    "TARGET_AMBIGUOUS", "TARGET_IDENTITY_CHANGED", "PROTECTED_TARGET", "PROTECTION_UNDETERMINED", "HAS_MEMBERS",
+    "HAS_PARENT_GROUPS", "ALREADY_IN_QUARANTINE", "QUARANTINE_OU_INVALID", "ASSIGNMENT_NOT_FOUND", "BUILT_IN_GROUP",
+    "CONFIRMATION_DECLINED", "ADAPTER_FAILED"
+  ]
+}

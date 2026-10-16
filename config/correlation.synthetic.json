@@ -1,0 +1,49 @@
+{
+  "format": "ogwa-synthetic-correlation/1",
+  "correlation": {
+    "directorySources": [
+      {"oktaAppId": "0oaSYNTHADDIR01", "domain": "corp.synthetic.example", "netbiosName": "SYNTHCORP"}
+    ],
+    "configuredMappings": [
+      {"oktaGroupId": "00gSYNTHGRP01", "adObjectGuid": "5e1f0c3a-0000-4000-8000-000000000010",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5010", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S01"},
+      {"oktaGroupId": "00gSYNTHGRP02", "adObjectGuid": "5e1f0c3a-0000-4000-8000-000000000020",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5020", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S02"},
+      {"oktaGroupId": "00gSYNTHGRP03", "adObjectGuid": "5e1f0c3a-0000-4000-8000-000000000030",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5030", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S03"},
+      {"oktaGroupId": "00gSYNTHGRP04", "adObjectGuid": "5e1f0c3a-0000-4000-8000-000000000040",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5040", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S04"},
+      {"oktaGroupId": "00gSYNTHGRP05", "adObjectGuid": "5e1f0c3a-0000-4000-8000-000000000050",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5050", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S05"},
+      {"oktaGroupId": "00gSYNTHGRP06", "adObjectGuid": "5e1f0c3a-0000-4000-8000-000000000060",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5060", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S06"},
+      {"oktaGroupId": "00gSYNTHGRP07", "adObjectGuid": "5e1f0c3a-0000-4000-8000-000000000070",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5070", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S07"},
+      {"oktaGroupId": "00gSYNTHGRP10", "adObjectGuid": "5e1f0c3a-0000-4000-8000-0000000000a0",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5100", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S10"},
+      {"oktaGroupId": "00gSYNTHGRP11", "adObjectGuid": "5e1f0c3a-0000-4000-8000-0000000000b0",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5110", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S11"},
+      {"oktaGroupId": "00gSYNTHGRP12", "adObjectGuid": "5e1f0c3a-0000-4000-8000-0000000000c0",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5120", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S12"},
+      {"oktaGroupId": "00gSYNTHGRP14", "adObjectGuid": "5e1f0c3a-0000-4000-8000-0000000000e0",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5140", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S14"},
+      {"oktaGroupId": "00gSYNTHGRP15", "adObjectGuid": "5e1f0c3a-0000-4000-8000-0000000000f0",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5150", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S15"},
+      {"oktaGroupId": "00gSYNTHGRP16", "adObjectGuid": "5e1f0c3a-0000-4000-8000-000000000100",
+       "adSid": "S-1-5-21-1000000001-1000000002-1000000003-5160", "domain": "corp.synthetic.example",
+       "configurationRef": "config/correlation.synthetic.json#S16"}
+    ]
+  }
+}

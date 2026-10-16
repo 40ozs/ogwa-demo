@@ -1,0 +1,9 @@
+{
+  "format": "ogwa-remediation-allowlist/v2",
+  "environment": "SYNTHETIC",
+  "operations": {
+    "OKTA_GROUP_UNASSIGN": {"adapter": "SYNTHETIC"},
+    "AD_GROUP_QUARANTINE": {"adapter": "SYNTHETIC"},
+    "AD_GROUP_DELETE": {"adapter": "SYNTHETIC"}
+  }
+}

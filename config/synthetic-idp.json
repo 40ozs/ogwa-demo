@@ -1,0 +1,26 @@
+{
+  "format": "ogwa-synthetic-idp/v1",
+  "issuer": "urn:ogwa:synthetic-idp",
+  "groups": [
+    {"id": "00gSYNTHOGWAVIEWERS", "displayName": "OGWA Viewers (synthetic)"},
+    {"id": "00gSYNTHOGWAIDAUTO", "displayName": "Identity Automation (synthetic)"},
+    {"id": "00gSYNTHOGWASECIAM", "displayName": "Security IAM (synthetic)"},
+    {"id": "00gSYNTHOGWAEXEC", "displayName": "OGWA Executors (synthetic)"},
+    {"id": "00gSYNTHOGWAADMIN", "displayName": "OGWA Administrators (synthetic)"},
+    {"id": "00gSYNTHLOOKALIKE", "displayName": "Security IAM (synthetic)"},
+    {"id": "00gSYNTHALLSTAFF", "displayName": "Synthetic Widgets All Staff"}
+  ],
+  "principals": [
+    {"subject": "synthetic.viewer.one", "displayName": "Synthetic Viewer One", "groups": ["00gSYNTHOGWAVIEWERS", "00gSYNTHALLSTAFF"]},
+    {"subject": "synthetic.automation.one", "displayName": "Synthetic Identity Automation One", "groups": ["00gSYNTHOGWAIDAUTO"]},
+    {"subject": "synthetic.automation.two", "displayName": "Synthetic Identity Automation Two", "groups": ["00gSYNTHOGWAIDAUTO"]},
+    {"subject": "synthetic.securityiam.one", "displayName": "Synthetic Security IAM One", "groups": ["00gSYNTHOGWASECIAM"]},
+    {"subject": "synthetic.securityiam.two", "displayName": "Synthetic Security IAM Two", "groups": ["00gSYNTHOGWASECIAM"]},
+    {"subject": "synthetic.executor.one", "displayName": "Synthetic Executor One", "groups": ["00gSYNTHOGWAEXEC"]},
+    {"subject": "synthetic.admin.one", "displayName": "Synthetic Administrator One", "groups": ["00gSYNTHOGWAADMIN"]},
+    {"subject": "synthetic.dualrole.one", "displayName": "Synthetic Automation and Security IAM", "groups": ["00gSYNTHOGWAIDAUTO", "00gSYNTHOGWASECIAM"]},
+    {"subject": "synthetic.approverexec.one", "displayName": "Synthetic Security IAM and Executor", "groups": ["00gSYNTHOGWASECIAM", "00gSYNTHOGWAEXEC"]},
+    {"subject": "synthetic.lookalike.one", "displayName": "Synthetic Look-alike Group Member", "groups": ["00gSYNTHLOOKALIKE"]},
+    {"subject": "synthetic.norole.one", "displayName": "Synthetic Staff Without OGWA Role", "groups": ["00gSYNTHALLSTAFF"]}
+  ]
+}

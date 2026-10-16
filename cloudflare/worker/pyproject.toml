@@ -1,0 +1,7 @@
+# The Cloudflare Python Worker of the hosted demo (docs/deployment/cloudflare-demo.md).
+# No third-party package: pywrangler vendors only Cloudflare's runtime SDK (python_modules/).
+[project]
+name = "ogwa-demo-worker"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = []

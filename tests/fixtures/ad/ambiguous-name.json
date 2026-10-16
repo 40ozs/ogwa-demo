@@ -1,0 +1,136 @@
+{
+  "schema": "ogwa.ad.group-report/v1",
+  "worker": {
+    "name": "OGWA.ADReader",
+    "version": "0.1.0",
+    "readOnly": true
+  },
+  "observedAt": "2026-10-04T12:00:00Z",
+  "request": {
+    "schema": "ogwa.ad.group-read-request/v1",
+    "lookup": {
+      "by": "name",
+      "value": "SYNTH-App-Finance",
+      "domain": null
+    },
+    "include": {
+      "directMembers": true,
+      "nestedMembers": true,
+      "primaryGroupReferences": true,
+      "memberOf": true
+    },
+    "limits": {
+      "maxDirectMembers": 1000,
+      "maxNestedGroups": 100,
+      "maxNestingDepth": 10,
+      "maxPrimaryGroupReferences": 50,
+      "maxParentGroups": 200,
+      "maxAmbiguousCandidates": 10
+    }
+  },
+  "forest": {
+    "name": "corp.synthetic.example",
+    "domains": [
+      "apac.corp.synthetic.example",
+      "corp.synthetic.example",
+      "emea.corp.synthetic.example"
+    ]
+  },
+  "domains": [
+    {
+      "dnsName": "apac.corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    },
+    {
+      "dnsName": "corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    },
+    {
+      "dnsName": "emea.corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    }
+  ],
+  "resolution": {
+    "status": "Ambiguous",
+    "matchedBy": "name",
+    "searchedDomains": [
+      "apac.corp.synthetic.example",
+      "corp.synthetic.example",
+      "emea.corp.synthetic.example"
+    ],
+    "unsearchedDomains": [],
+    "candidates": [
+      {
+        "objectGUID": "5e7e7000-0000-4000-8000-000000104102",
+        "objectSid": "S-1-5-21-1000000001-1000000002-1000000003-4102",
+        "distinguishedName": "CN=SYNTH-App-Finance,OU=Groups,DC=corp,DC=synthetic,DC=example",
+        "samAccountName": "SYNTH-App-Finance",
+        "domain": "corp.synthetic.example"
+      },
+      {
+        "objectGUID": "5e7e7000-0000-4000-8000-000000205102",
+        "objectSid": "S-1-5-21-2000000001-2000000002-2000000003-5102",
+        "distinguishedName": "CN=SYNTH-App-Finance,OU=Groups,DC=emea,DC=corp,DC=synthetic,DC=example",
+        "samAccountName": "SYNTH-App-Finance",
+        "domain": "emea.corp.synthetic.example"
+      }
+    ],
+    "candidatesTruncated": false,
+    "error": "2 groups match; look the group up by objectGUID or objectSid"
+  },
+  "group": null,
+  "directMembers": {
+    "status": "NotApplicable",
+    "count": null,
+    "byClass": {
+      "user": 0,
+      "computer": 0,
+      "group": 0,
+      "foreignSecurityPrincipal": 0,
+      "contact": 0,
+      "managedServiceAccount": 0,
+      "other": 0
+    },
+    "memberGroups": [],
+    "unresolved": 0,
+    "error": null
+  },
+  "nestedMembers": {
+    "status": "NotApplicable",
+    "groupsTraversed": 0,
+    "maxDepthObserved": 0,
+    "principalCount": null,
+    "principalCountIsLowerBound": false,
+    "cycleDetected": false,
+    "unexpandedReferences": 0,
+    "error": null
+  },
+  "primaryGroupReferences": {
+    "status": "NotApplicable",
+    "primaryGroupToken": null,
+    "count": null,
+    "countIsLowerBound": false,
+    "searchedDomain": null,
+    "error": null
+  },
+  "memberOf": {
+    "status": "NotApplicable",
+    "count": null,
+    "countIsLowerBound": false,
+    "parents": [],
+    "searchedDomains": [],
+    "unsearchedDomains": [],
+    "error": null
+  },
+  "protection": {
+    "status": "Undetermined",
+    "indicators": [],
+    "error": null
+  }
+}

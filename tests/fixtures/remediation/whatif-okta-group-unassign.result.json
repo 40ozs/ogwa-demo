@@ -1,0 +1,55 @@
+{
+  "schema": "ogwa.remediation.result/v1",
+  "worker": {
+    "name": "OGWA.Remediation",
+    "version": "0.1.0"
+  },
+  "operation": "OKTA_GROUP_UNASSIGN",
+  "outcome": "WhatIf",
+  "executed": false,
+  "productionMutation": false,
+  "correlationId": "req_5e7e70000000400080000000007000aa",
+  "observedAt": "2026-10-05T12:00:00Z",
+  "target": {
+    "oktaAppId": "0oaSYNTHAPP01",
+    "oktaGroupId": "00gSYNTHGRP01"
+  },
+  "checks": [
+    {
+      "code": "REQUEST_VALID",
+      "passed": true,
+      "detail": "one explicit assignment, by application and group id"
+    },
+    {
+      "code": "ADAPTER_SYNTHETIC",
+      "passed": true,
+      "detail": "the in-memory synthetic adapter"
+    },
+    {
+      "code": "TARGET_SYNTHETIC",
+      "passed": true,
+      "detail": "synthetic Okta ids"
+    },
+    {
+      "code": "ASSIGNMENT_PRESENT",
+      "passed": true,
+      "detail": "the assignment exists"
+    },
+    {
+      "code": "GROUP_NOT_BUILT_IN",
+      "passed": true,
+      "detail": "group type APP_GROUP"
+    }
+  ],
+  "plannedChanges": [
+    {
+      "action": "unassign_group_from_application",
+      "summary": "Remove the assignment of Okta group 00gSYNTHGRP01 to application 0oaSYNTHAPP01.",
+      "details": {
+        "oktaAppId": "0oaSYNTHAPP01",
+        "oktaGroupId": "00gSYNTHGRP01"
+      }
+    }
+  ],
+  "blockedReasons": []
+}

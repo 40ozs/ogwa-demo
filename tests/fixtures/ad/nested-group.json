@@ -1,0 +1,174 @@
+{
+  "schema": "ogwa.ad.group-report/v1",
+  "worker": {
+    "name": "OGWA.ADReader",
+    "version": "0.1.0",
+    "readOnly": true
+  },
+  "observedAt": "2026-10-04T12:00:00Z",
+  "request": {
+    "schema": "ogwa.ad.group-read-request/v1",
+    "lookup": {
+      "by": "objectGUID",
+      "value": "5e7e7000-0000-4000-8000-000000104104",
+      "domain": null
+    },
+    "include": {
+      "directMembers": true,
+      "nestedMembers": true,
+      "primaryGroupReferences": true,
+      "memberOf": true
+    },
+    "limits": {
+      "maxDirectMembers": 1000,
+      "maxNestedGroups": 100,
+      "maxNestingDepth": 10,
+      "maxPrimaryGroupReferences": 50,
+      "maxParentGroups": 200,
+      "maxAmbiguousCandidates": 10
+    }
+  },
+  "forest": {
+    "name": "corp.synthetic.example",
+    "domains": [
+      "apac.corp.synthetic.example",
+      "corp.synthetic.example",
+      "emea.corp.synthetic.example"
+    ]
+  },
+  "domains": [
+    {
+      "dnsName": "apac.corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    },
+    {
+      "dnsName": "corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    },
+    {
+      "dnsName": "emea.corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    }
+  ],
+  "resolution": {
+    "status": "Resolved",
+    "matchedBy": "objectGUID",
+    "searchedDomains": [
+      "apac.corp.synthetic.example",
+      "corp.synthetic.example",
+      "emea.corp.synthetic.example"
+    ],
+    "unsearchedDomains": [],
+    "candidates": [
+      {
+        "objectGUID": "5e7e7000-0000-4000-8000-000000104104",
+        "objectSid": "S-1-5-21-1000000001-1000000002-1000000003-4104",
+        "distinguishedName": "CN=SYNTH-Nested-Parent,OU=Groups,DC=corp,DC=synthetic,DC=example",
+        "samAccountName": "SYNTH-Nested-Parent",
+        "domain": "corp.synthetic.example"
+      }
+    ],
+    "candidatesTruncated": false,
+    "error": null
+  },
+  "group": {
+    "objectGUID": "5e7e7000-0000-4000-8000-000000104104",
+    "objectSid": "S-1-5-21-1000000001-1000000002-1000000003-4104",
+    "rid": 4104,
+    "domainSid": "S-1-5-21-1000000001-1000000002-1000000003",
+    "builtinDomain": false,
+    "distinguishedName": "CN=SYNTH-Nested-Parent,OU=Groups,DC=corp,DC=synthetic,DC=example",
+    "samAccountName": "SYNTH-Nested-Parent",
+    "name": "SYNTH-Nested-Parent",
+    "domain": "corp.synthetic.example",
+    "groupScope": "Universal",
+    "groupCategory": "Security",
+    "adminCount": null,
+    "isCriticalSystemObject": false,
+    "protectedFromAccidentalDeletion": false,
+    "primaryGroupToken": 4104,
+    "whenCreated": "2020-01-15T09:30:00Z",
+    "whenChanged": "2026-06-01T08:00:00Z"
+  },
+  "directMembers": {
+    "status": "Complete",
+    "count": 1,
+    "byClass": {
+      "user": 0,
+      "computer": 0,
+      "group": 1,
+      "foreignSecurityPrincipal": 0,
+      "contact": 0,
+      "managedServiceAccount": 0,
+      "other": 0
+    },
+    "memberGroups": [
+      {
+        "objectGUID": "5e7e7000-0000-4000-8000-000000104105",
+        "objectSid": "S-1-5-21-1000000001-1000000002-1000000003-4105",
+        "distinguishedName": "CN=SYNTH-Nested-Child,OU=Groups,DC=corp,DC=synthetic,DC=example",
+        "samAccountName": "SYNTH-Nested-Child",
+        "domain": "corp.synthetic.example"
+      }
+    ],
+    "unresolved": 0,
+    "error": null
+  },
+  "nestedMembers": {
+    "status": "Complete",
+    "groupsTraversed": 2,
+    "maxDepthObserved": 2,
+    "principalCount": 2,
+    "principalCountIsLowerBound": false,
+    "cycleDetected": true,
+    "unexpandedReferences": 0,
+    "error": null
+  },
+  "primaryGroupReferences": {
+    "status": "Complete",
+    "primaryGroupToken": 4104,
+    "count": 0,
+    "countIsLowerBound": false,
+    "searchedDomain": "corp.synthetic.example",
+    "error": null
+  },
+  "memberOf": {
+    "status": "Complete",
+    "count": 2,
+    "countIsLowerBound": false,
+    "parents": [
+      {
+        "objectGUID": "5e7e7000-0000-4000-8000-000000205106",
+        "objectSid": "S-1-5-21-2000000001-2000000002-2000000003-5106",
+        "distinguishedName": "CN=SYNTH-Nested-Grandchild,OU=Groups,DC=emea,DC=corp,DC=synthetic,DC=example",
+        "samAccountName": "SYNTH-Nested-Grandchild",
+        "domain": "emea.corp.synthetic.example"
+      },
+      {
+        "objectGUID": "5e7e7000-0000-4000-8000-000000205107",
+        "objectSid": "S-1-5-21-2000000001-2000000002-2000000003-5107",
+        "distinguishedName": "CN=SYNTH-Resource-Access,OU=Groups,DC=emea,DC=corp,DC=synthetic,DC=example",
+        "samAccountName": "SYNTH-Resource-Access",
+        "domain": "emea.corp.synthetic.example"
+      }
+    ],
+    "searchedDomains": [
+      "apac.corp.synthetic.example",
+      "corp.synthetic.example",
+      "emea.corp.synthetic.example"
+    ],
+    "unsearchedDomains": [],
+    "error": null
+  },
+  "protection": {
+    "status": "Determined",
+    "indicators": [],
+    "error": null
+  }
+}

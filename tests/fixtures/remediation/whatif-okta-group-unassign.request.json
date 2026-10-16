@@ -1,0 +1,10 @@
+{
+  "schema": "ogwa.remediation.request/v1",
+  "operation": "OKTA_GROUP_UNASSIGN",
+  "mode": "WhatIf",
+  "correlationId": "req_5e7e70000000400080000000007000aa",
+  "target": {
+    "oktaAppId": "0oaSYNTHAPP01",
+    "oktaGroupId": "00gSYNTHGRP01"
+  }
+}

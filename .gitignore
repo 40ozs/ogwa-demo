@@ -1,0 +1,55 @@
+# --- Local configuration and credentials -------------------------------------
+.env
+.env.*
+!.env.example
+*.token
+*token-cache*
+*token_cache*
+.okta/
+*.pem
+*.key
+*.pfx
+*.p12
+*.kdbx
+
+# --- Local data stores (the demo store lives in var/) ---------------------------
+var/
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# --- Generated evidence and exports -------------------------------------------
+evidence/
+exports/
+reports/
+*.csv
+*.xlsx
+!tests/fixtures/**/*.csv
+
+# --- Local tool state --------------------------------------------------------
+.DS_Store
+.wrangler/
+.dev.vars
+.dev.vars.*
+node_modules/
+
+# --- Logs --------------------------------------------------------------------
+*.log
+logs/
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage/
+htmlcov/
+build/
+dist/
+*.egg-info/

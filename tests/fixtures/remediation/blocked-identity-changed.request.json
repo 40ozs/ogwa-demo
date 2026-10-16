@@ -1,0 +1,12 @@
+{
+  "schema": "ogwa.remediation.request/v1",
+  "operation": "AD_GROUP_DELETE",
+  "mode": "WhatIf",
+  "correlationId": "req_5e7e70000000400080000000007000aa",
+  "target": {
+    "objectGuid": "5e7e7000-0000-4000-8000-000000707001",
+    "domain": "corp.synthetic.example",
+    "expectedSid": "S-1-5-21-1000000001-1000000002-1000000003-9999",
+    "expectedDistinguishedName": "CN=SYNTH-Legacy-Retire,OU=Groups,DC=corp,DC=synthetic,DC=example"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "format": "ogwa-quarantine-ous/v1",
+  "environment": "SYNTHETIC",
+  "quarantineOus": {
+    "corp.nullmeridian.info": "OU=OGWA-Quarantine,DC=corp,DC=nullmeridian,DC=info",
+    "corp.synthetic.example": "OU=OGWA-Quarantine,DC=corp,DC=synthetic,DC=example",
+    "emea.synthetic.example": "OU=OGWA-Quarantine,DC=emea,DC=synthetic,DC=example"
+  }
+}

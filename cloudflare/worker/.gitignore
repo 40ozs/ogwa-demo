@@ -1,0 +1,13 @@
+# Staged by `python -m app.cloudflare build` (copies of the repository and the seeded store):
+src/app/
+src/config/
+src/*.gz
+src/hosted-build.json
+public/
+# pywrangler / wrangler
+.dev.vars
+.dev.vars.*
+python_modules/
+.venv-workers/
+.wrangler/
+node_modules/

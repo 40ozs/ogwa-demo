@@ -1,0 +1,162 @@
+{
+  "schema": "ogwa.ad.group-report/v1",
+  "worker": {
+    "name": "OGWA.ADReader",
+    "version": "0.1.0",
+    "readOnly": true
+  },
+  "observedAt": "2026-10-04T12:00:00Z",
+  "request": {
+    "schema": "ogwa.ad.group-read-request/v1",
+    "lookup": {
+      "by": "objectGUID",
+      "value": "5e7e7000-0000-4000-8000-000000104109",
+      "domain": null
+    },
+    "include": {
+      "directMembers": true,
+      "nestedMembers": true,
+      "primaryGroupReferences": true,
+      "memberOf": true
+    },
+    "limits": {
+      "maxDirectMembers": 1000,
+      "maxNestedGroups": 100,
+      "maxNestingDepth": 10,
+      "maxPrimaryGroupReferences": 50,
+      "maxParentGroups": 200,
+      "maxAmbiguousCandidates": 10
+    }
+  },
+  "forest": {
+    "name": "corp.synthetic.example",
+    "domains": [
+      "apac.corp.synthetic.example",
+      "corp.synthetic.example",
+      "emea.corp.synthetic.example"
+    ]
+  },
+  "domains": [
+    {
+      "dnsName": "apac.corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    },
+    {
+      "dnsName": "corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    },
+    {
+      "dnsName": "emea.corp.synthetic.example",
+      "contacted": true,
+      "reachable": true,
+      "error": null
+    }
+  ],
+  "resolution": {
+    "status": "Resolved",
+    "matchedBy": "objectGUID",
+    "searchedDomains": [
+      "apac.corp.synthetic.example",
+      "corp.synthetic.example",
+      "emea.corp.synthetic.example"
+    ],
+    "unsearchedDomains": [],
+    "candidates": [
+      {
+        "objectGUID": "5e7e7000-0000-4000-8000-000000104109",
+        "objectSid": "S-1-5-21-1000000001-1000000002-1000000003-4109",
+        "distinguishedName": "CN=SYNTH-Tier0-Operators,OU=Tier0,DC=corp,DC=synthetic,DC=example",
+        "samAccountName": "SYNTH-Tier0-Operators",
+        "domain": "corp.synthetic.example"
+      }
+    ],
+    "candidatesTruncated": false,
+    "error": null
+  },
+  "group": {
+    "objectGUID": "5e7e7000-0000-4000-8000-000000104109",
+    "objectSid": "S-1-5-21-1000000001-1000000002-1000000003-4109",
+    "rid": 4109,
+    "domainSid": "S-1-5-21-1000000001-1000000002-1000000003",
+    "builtinDomain": false,
+    "distinguishedName": "CN=SYNTH-Tier0-Operators,OU=Tier0,DC=corp,DC=synthetic,DC=example",
+    "samAccountName": "SYNTH-Tier0-Operators",
+    "name": "SYNTH-Tier0-Operators",
+    "domain": "corp.synthetic.example",
+    "groupScope": "Global",
+    "groupCategory": "Security",
+    "adminCount": 1,
+    "isCriticalSystemObject": false,
+    "protectedFromAccidentalDeletion": false,
+    "primaryGroupToken": 4109,
+    "whenCreated": "2020-01-15T09:30:00Z",
+    "whenChanged": "2026-06-01T08:00:00Z"
+  },
+  "directMembers": {
+    "status": "Complete",
+    "count": 0,
+    "byClass": {
+      "user": 0,
+      "computer": 0,
+      "group": 0,
+      "foreignSecurityPrincipal": 0,
+      "contact": 0,
+      "managedServiceAccount": 0,
+      "other": 0
+    },
+    "memberGroups": [],
+    "unresolved": 0,
+    "error": null
+  },
+  "nestedMembers": {
+    "status": "Complete",
+    "groupsTraversed": 0,
+    "maxDepthObserved": 0,
+    "principalCount": 0,
+    "principalCountIsLowerBound": false,
+    "cycleDetected": false,
+    "unexpandedReferences": 0,
+    "error": null
+  },
+  "primaryGroupReferences": {
+    "status": "Complete",
+    "primaryGroupToken": 4109,
+    "count": 0,
+    "countIsLowerBound": false,
+    "searchedDomain": "corp.synthetic.example",
+    "error": null
+  },
+  "memberOf": {
+    "status": "Complete",
+    "count": 1,
+    "countIsLowerBound": false,
+    "parents": [
+      {
+        "objectGUID": "5e7e7000-0000-4000-8000-000000100512",
+        "objectSid": "S-1-5-21-1000000001-1000000002-1000000003-512",
+        "distinguishedName": "CN=Domain Admins,CN=Users,DC=corp,DC=synthetic,DC=example",
+        "samAccountName": "Domain Admins",
+        "domain": "corp.synthetic.example"
+      }
+    ],
+    "searchedDomains": [
+      "apac.corp.synthetic.example",
+      "corp.synthetic.example",
+      "emea.corp.synthetic.example"
+    ],
+    "unsearchedDomains": [],
+    "error": null
+  },
+  "protection": {
+    "status": "Determined",
+    "indicators": [
+      "AdminCount",
+      "NestedInWellKnownGroup:S-1-5-21-1000000001-1000000002-1000000003-512"
+    ],
+    "error": null
+  }
+}

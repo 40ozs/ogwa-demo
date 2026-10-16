@@ -1,0 +1,80 @@
+{
+  "schema": "ogwa.remediation.result/v1",
+  "worker": {
+    "name": "OGWA.Remediation",
+    "version": "0.1.0"
+  },
+  "operation": "AD_GROUP_QUARANTINE",
+  "outcome": "WhatIf",
+  "executed": false,
+  "productionMutation": false,
+  "correlationId": "req_5e7e70000000400080000000007000aa",
+  "observedAt": "2026-10-05T12:00:00Z",
+  "target": {
+    "objectGuid": "5e7e7000-0000-4000-8000-000000707001",
+    "domain": "corp.synthetic.example",
+    "expectedSid": "S-1-5-21-1000000001-1000000002-1000000003-7001",
+    "expectedDistinguishedName": "CN=SYNTH-Legacy-Retire,OU=Groups,DC=corp,DC=synthetic,DC=example",
+    "quarantineOu": "OU=OGWA-Quarantine,DC=corp,DC=synthetic,DC=example"
+  },
+  "checks": [
+    {
+      "code": "REQUEST_VALID",
+      "passed": true,
+      "detail": "one explicit AD group, by objectGUID in its domain"
+    },
+    {
+      "code": "ADAPTER_SYNTHETIC",
+      "passed": true,
+      "detail": "the in-memory synthetic adapter"
+    },
+    {
+      "code": "TARGET_SYNTHETIC",
+      "passed": true,
+      "detail": "a synthetic domain"
+    },
+    {
+      "code": "TARGET_RESOLVED",
+      "passed": true,
+      "detail": "exactly one group, by objectGUID"
+    },
+    {
+      "code": "IDENTITY_MATCHES",
+      "passed": true,
+      "detail": "objectSid and distinguishedName match"
+    },
+    {
+      "code": "NOT_PROTECTED",
+      "passed": true,
+      "detail": "no protection indicator"
+    },
+    {
+      "code": "NO_MEMBERS",
+      "passed": true,
+      "detail": "no direct members"
+    },
+    {
+      "code": "NO_PARENT_GROUPS",
+      "passed": true,
+      "detail": "not a member of any group"
+    },
+    {
+      "code": "QUARANTINE_OU_VALID",
+      "passed": true,
+      "detail": "an existing OU in the group's domain"
+    }
+  ],
+  "plannedChanges": [
+    {
+      "action": "move_group_to_quarantine",
+      "summary": "Move AD group SYNTH-Legacy-Retire (5e7e7000-0000-4000-8000-000000707001) into the quarantine OU.",
+      "details": {
+        "after.distinguishedName": "CN=SYNTH-Legacy-Retire,OU=OGWA-Quarantine,DC=corp,DC=synthetic,DC=example",
+        "before.distinguishedName": "CN=SYNTH-Legacy-Retire,OU=Groups,DC=corp,DC=synthetic,DC=example",
+        "domain": "corp.synthetic.example",
+        "objectGUID": "5e7e7000-0000-4000-8000-000000707001"
+      }
+    }
+  ],
+  "blockedReasons": []
+}
