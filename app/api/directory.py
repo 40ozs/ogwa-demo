@@ -248,7 +248,7 @@ class DirectoryView:
         s = self._load()
         if s is None:
             return {"available": False, "note": "This store holds the classic lifecycle world; it has no directory "
-                                                "snapshot. Seed the Null Meridian dataset to see people and groups."}
+                                                "snapshot. Seed the Genesee Press dataset to see people and groups."}
         counts = s.company.get("counts", {})
         return {"available": True, "snapshot": s.info, "profile": {k: v for k, v in s.company.items() if k != "counts"},
                 "counts": counts, "departments": s.departments, "deactivations": s.deactivations,

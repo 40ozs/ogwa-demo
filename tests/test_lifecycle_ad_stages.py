@@ -1,4 +1,4 @@
-"""The AD quarantine, post-quarantine hold, revalidation, and deletion stages, in the
+"""P10B: the AD quarantine, post-quarantine hold, revalidation, and deletion stages, in the
 lifecycle itself (owner decisions D128–D155). LOCAL_SYNTHETIC data only; nothing executes.
 
 - quarantine and deletion are separate stages, each approved separately (D128, D129, D147);
@@ -67,7 +67,7 @@ MIN = timedelta(minutes=1)
 
 
 def request(target, at, *, actor=SYSTEM, evidence, approval_record=None, job=None, quarantine_ous=QUARANTINE_OUS):
-    return TransitionRequest(target=target, actor=actor, reason="synthetic AD-stage step", now=at, evidence=evidence,
+    return TransitionRequest(target=target, actor=actor, reason="synthetic P10B step", now=at, evidence=evidence,
                              approval=approval_record, job=job, quarantine_ous=quarantine_ous)
 
 

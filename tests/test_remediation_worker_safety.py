@@ -1,4 +1,4 @@
-"""Static safety checks for the remediation worker, worker/OGWA.Remediation.
+"""Static safety checks for the remediation worker (P10), worker/OGWA.Remediation.
 
 The worker must be unable to change anything outside its own in-memory synthetic adapter:
 no AD or Okta cmdlets or HTTP calls at all, no dynamic code, no file writes, no credential;

@@ -1,6 +1,6 @@
-"""Remediation dry runs through the operator API, over a seeded synthetic world.
+"""P10 remediation dry runs through the operator API, over a seeded synthetic world.
 
-Five safety properties each have a class here:
+The five proofs the P10 prompt asks for each have a class here:
 
 - ``ValidApprovalCannotMutateProductionTests``: a fully valid approval yields only
   SIMULATED or VALIDATION_ONLY; no network, socket, process, or execution path is touched;
@@ -245,7 +245,7 @@ class ValidApprovalCannotMutateProductionTests(unittest.TestCase):
         self.assertTrue(group.exists)  # the store still records the group as present: nothing was deleted
 
     def test_a_valid_deletion_approval_only_simulates_the_deletion(self):
-        """The deletion stage's own approval yields a SIMULATED plan, and nothing more."""
+        """P10B: the deletion stage's own approval yields a SIMULATED plan, and nothing more."""
         candidate, approval = approve_deletion(self.world)
         jobs = self.world.api.read.job_ids_for(candidate)
         executor = self.world.client(EXECUTOR)
@@ -614,7 +614,7 @@ class AntiFootgunTests(unittest.TestCase):
 
     def test_there_is_no_bulk_remediation_and_no_remediation_execute_route(self):
         remediation = [(r.method, r.pattern[len(V):]) for r in ROUTES if "remediation" in r.pattern]
-        # The synthetic drill: one candidate, one target, against an in-memory
+        # OGWA-DEMO-03 added the synthetic drill: one candidate, one target, against an in-memory
         # provider fixture, recording nothing. It is neither a bulk route nor an execute route.
         self.assertEqual(sorted(remediation), [("GET", "/candidates/{candidateId}/remediation-dry-runs"),
                                                ("GET", "/remediation-drill-scenarios"),

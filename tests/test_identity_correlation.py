@@ -1,7 +1,7 @@
-"""Identity correlation: the case matrix. Synthetic forest only (D22); no directory is contacted.
+"""P06 identity correlation: the case matrix. Synthetic forest only (D22); no directory is contacted.
 
 Matrix: exact, name-only, ambiguous, stale, not-found, partial-forest, Okta metadata,
-fingerprint, the AD report adapter, and static safety checks.
+fingerprint, the P05 report adapter, and static safety checks.
 """
 
 import ast
@@ -627,7 +627,7 @@ class ConfigurationTests(unittest.TestCase):
             DirectorySource(okta_app_id="has spaces", domain=CORP)
 
 
-# --- AD report adapter -----------------------------------------------------------------------
+# --- P05 report adapter -----------------------------------------------------------------------
 
 
 def _fixture(name: str) -> str:
@@ -701,7 +701,8 @@ class ReportAdapterTests(unittest.TestCase):
 
 
 class CorrelationSafetyTests(unittest.TestCase):
-    FORBIDDEN_MODULES = ("urllib", "http", "socket", "subprocess", "requests", "ssl")
+    FORBIDDEN_MODULES = ("app.core.http_client", "app.core.http_mutation", "app.integrations.okta.client",
+                         "urllib", "http", "socket", "subprocess", "requests", "ssl")
 
     def test_correlation_package_has_no_network_or_process_access(self):
         for path in sorted((REPO_ROOT / "app" / "correlation").glob("*.py")):
@@ -734,12 +735,12 @@ class CorrelationSafetyTests(unittest.TestCase):
                       clock=clock, history=(approved(2, HR),))
 
 
-# --- owner decision D37: directory-source SID is not exact while unverified -------------------------
+# --- owner decision D37: directory-source SID is not exact before P11 -------------------------
 
 
 class DirectorySourceSidGateTests(CorrelationCase):
     def test_gate_is_off_until_p11(self):
-        # Pinned like OBJECT_GUID_DECODING_VERIFIED: changing it is a reviewed source change.
+        # Pinned like OBJECT_GUID_DECODING_VERIFIED: changing it needs the P11 proof in a run report.
         self.assertFalse(correlation_model.DIRECTORY_SOURCE_SID_VERIFIED)
 
     def test_directory_source_sid_alone_is_unverified_and_not_exact(self):

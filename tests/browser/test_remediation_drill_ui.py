@@ -1,4 +1,4 @@
-"""The synthetic remediation drill in a real headless browser (opt-in like the others).
+"""The synthetic remediation drill in a real headless browser (OGWA-DEMO-03; opt-in like the others).
 
 Serves an in-memory Null Meridian world on loopback and, as an executor, drills NM-C11's
 approved Okta unassignment from its candidate page: a dry run, the timeout / verification /
@@ -6,7 +6,7 @@ retry / verification scenario, and a verification failure. Dry run and execution
 impossible to confuse in a screenshot; the page must stay accessible, keyboard-operable, free
 of sideways scroll at phone width, and request nothing but its own origin.
 
-The result's mode banner (DRY RUN — NO STATE CHANGED vs SYNTHETIC EXECUTION, "No
+OGWA-DEMO-04: the result's mode banner (DRY RUN — NO STATE CHANGED vs SYNTHETIC EXECUTION, "No
 external provider or persistent environment was modified.") is above everything else and never
 shared; the "Authorized by" chain names the policy version, decision, approval, and operation id;
 and the guided walkthrough leads from the dashboard to both of its candidates.

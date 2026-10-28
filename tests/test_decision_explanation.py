@@ -1,4 +1,4 @@
-"""The explanation of a control decision, under the exact policy that produced it.
+"""OGWA-DEMO-02: the explanation of a control decision, under the exact policy that produced it.
 
 - Complete evidence: every condition satisfied, eligible only for a named human's approval.
 - NM-C10 (ambiguous, conflicting, unreadable, missing): manual review forced by the evidence, and

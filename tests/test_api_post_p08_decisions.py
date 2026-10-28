@@ -1,4 +1,4 @@
-"""Owner decisions: role boundaries, chained governed refusals, the demo-policy
+"""Owner decisions after P08: role boundaries, chained governed refusals, the demo-policy
 label, and the synthetic AD directory wired into the running API.
 
 Synthetic only: in-memory seeded stores and the store-backed synthetic directory. No
@@ -225,7 +225,7 @@ class GovernedRefusalAuditTests(unittest.TestCase):
             ("POST", "/candidates/{candidateId}/execution-jobs"), ("POST", "/execution-jobs/{jobId}/execute"),
             ("POST", "/mappings/{groupId}/selections"), ("POST", "/mappings/{groupId}/approvals"),
             ("POST", "/mappings/{groupId}/rejections"),
-            ("POST", "/candidates/{candidateId}/remediation-dry-runs"),  # Chains its dry run or its refusal
+            ("POST", "/candidates/{candidateId}/remediation-dry-runs"),  # P10: chains its dry run or its refusal
         })
 
 

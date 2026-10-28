@@ -43,11 +43,11 @@ LISTABLE = {
     "applications": ("okta_applications", OktaApplication),
     "groups": ("okta_groups", OktaGroup),
     "mappings": ("identity_mappings", IdentityMapping),
-    "dependencies": ("dependency_checks", DependencyEvidence),  # The dependency findings view
+    "dependencies": ("dependency_checks", DependencyEvidence),  # P09: the dependency findings view
 }
 
 
-# --- paging in SQL -------------------------------------------------------------
+# --- paging in SQL (OGWA-UI-IA-02) -------------------------------------------------------------
 #
 # A listing's rows are ``a`` (an evidence anchor joined to its latest observation ``o``, as
 # Store.latest picks it). ``order`` is the listing's own order and ends in the stable id: it is
@@ -398,13 +398,13 @@ class ReadModel:
                 "blocking": row["blocking"]}
 
     def approvals(self, page: Page, sort: Sort | None = None) -> tuple[list[ApprovalRecord], bool]:
-        """Every approval and rejection, newest first (the approvals view)."""
+        """Every approval and rejection, newest first (P09: the approvals view)."""
         ids, more = self.page_ids("approvals", page, sort)
         records = [self._store.load_approval(i) for i in ids]
         return [r for r in records if r is not None], more
 
     def execution_job_ids(self, page: Page, sort: Sort | None = None) -> tuple[list[str], bool]:
-        """Every execution job id, newest first (the execution jobs view)."""
+        """Every execution job id, newest first (P09: the execution jobs view)."""
         return self.page_ids("jobs", page, sort)
 
     def job_ids_for(self, candidate_id: str) -> list[str]:

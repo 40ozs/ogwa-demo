@@ -1,4 +1,4 @@
-"""The remediation execution state machine, the synthetic provider fixture, and a
+"""OGWA-DEMO-03: the remediation execution state machine, the synthetic provider fixture, and a
 run driven step by step. Pure and in memory: no store, no API, no network.
 
 The invariants (RX-1 to RX-10, docs/security/safety-invariants.md):
@@ -193,7 +193,7 @@ class RetryDecisionTests(unittest.TestCase):
 class TraceTests(unittest.TestCase):
     def step(self, seq, state, *, at=0, **kw):
         if state is X.POST_ACTION_VERIFIED:
-            # The post-action predicate verify_trace requires, so each case below
+            # The post-action predicate verify_trace requires (OGWA-DEMO-04), so each case below
             # breaks only the invariant it names.
             kw = {"reason": Reason.MATCHES_EXPECTED_STATE, "observation": O.APPLIED, "reads": (True,), **kw}
         kw.setdefault("reason", Reason.SUBMITTED)
@@ -331,11 +331,13 @@ class ProviderFixtureTests(unittest.TestCase):
 
 class MutationCapableInventoryTests(unittest.TestCase):
     def test_only_the_fixture_may_hold_a_policy_that_can_execute(self):
-        # Every mutation-capable component receives its policy by injection. The planner and the
-        # remediation adapters build their own DRY_RUN_MUTATION policy, and this build has no
-        # mutating HTTP client. So the synthetic provider fixture is the one component the
+        # P01: every mutation-capable component receives its policy by injection. The planner
+        # and the remediation adapters build their own DRY_RUN_MUTATION policy; MutatingHttpClient
+        # takes one, but no application module may import it (layer 3, APPROVED_MUTATING_IMPORTERS
+        # is empty). So the synthetic provider fixture (OGWA-DEMO-03) is the one component the
         # application builds with a policy that can execute, and only against synthetic targets.
         import app.api.services  # noqa: F401  (registers DryRunPlanner)
+        import app.core.http_mutation  # noqa: F401  (registers MutatingHttpClient)
         import app.remediation.adapters  # noqa: F401
         from app.api.services import DryRunPlanner
         from app.remediation.adapters import AapRemediationAdapter, SyntheticRemediationAdapter
@@ -347,11 +349,12 @@ class MutationCapableInventoryTests(unittest.TestCase):
 
         found = {c.__qualname__ for c in subclasses(MutationCapableService) if c.__module__.startswith("app.")}
         self.assertEqual(found, {"DryRunPlanner", "RemediationAdapter", "SyntheticRemediationAdapter",
-                                 "AapRemediationAdapter", "SyntheticProviderFixture"})
+                                 "AapRemediationAdapter", "MutatingHttpClient", "SyntheticProviderFixture"})
         for component in (DryRunPlanner(), SyntheticRemediationAdapter(), AapRemediationAdapter()):
             with self.subTest(component=type(component).__name__):
                 self.assertIs(component.mutation_policy.mode, ExecutionMode.DRY_RUN_MUTATION)
-        # That no application module imports an outbound client is test_mutation_safety's AST check.
+        # That no application module imports MutatingHttpClient is test_mutation_safety's AST
+        # check (test_only_approved_modules_import_mutating_http_client, with an empty allowlist).
 
 
 # --- a run, step by step -------------------------------------------------------------------------

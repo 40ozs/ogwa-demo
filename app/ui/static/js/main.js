@@ -37,7 +37,7 @@ const ROUTES = [
   [/^\/audit$/, audit, "/audit"],
 ];
 
-// Pages that became tabs. Old links and bookmarks still arrive: the address is
+// Pages that became tabs (OGWA-UI-IA-01). Old links and bookmarks still arrive: the address is
 // replaced, so Back does not bounce through it, and its filters are kept.
 const MOVED = new Map([
   ["/directory-groups", ["/directory", "groups"]],

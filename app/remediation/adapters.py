@@ -1,8 +1,8 @@
 """Remediation adapters: where a request that passed every gate is answered.
 
 Every adapter is a ``MutationCapableService`` holding a ``DRY_RUN_MUTATION`` mutation policy,
-which can only ever answer PLAN_ONLY, and passes ``_never`` as the operation, so the
-mutation-policy guardrail itself proves that nothing runs. No adapter has a code path that contacts or
+which can only ever answer PLAN_ONLY, and passes ``_never`` as the operation, so the P01
+guardrail itself proves that nothing runs. No adapter has a code path that contacts or
 changes an external system:
 
 - ``SyntheticRemediationAdapter`` answers ``SIMULATED``: it computes the change against the

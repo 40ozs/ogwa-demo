@@ -1,4 +1,4 @@
-"""EVIDENCE_INCOMPLETE as its own lifecycle state (owner decisions; migration 0009).
+"""EVIDENCE_INCOMPLETE as its own lifecycle state (owner decisions after P09; migration 0009).
 
 EVIDENCE_INCOMPLETE: required evidence was never fully or properly obtained.
 STALE_EVIDENCE: once-complete evidence outlived its freshness window.
@@ -201,7 +201,7 @@ class LifecycleTests(unittest.TestCase):
         self.assertIsNone(recommend_diversion(c, fresh, at, POLICY))
 
     def test_future_dated_evidence_is_never_fresh_and_never_stale(self):
-        # Owner decision: incomplete/invalid evidence with its own reason.
+        # Owner decision after the P09 addendum: incomplete/invalid evidence with its own reason.
         from app.classification import ReasonCode
         from tests.classification_fixtures import NOW, run, world
 

@@ -1,25 +1,14 @@
 """The UI server: same-origin static files beside the API, strict headers, nothing else reachable."""
 
 import io
-import json
-import os
-import re
-import signal
-import subprocess
-import sys
 import tempfile
 import unittest
-import urllib.request
 from pathlib import Path
 
-from app.core.config import load_settings
-from app.runtime.datasets import resolve_dataset
-from app.runtime.demo_store import reset_demo_store
 from app.ui.server import STATIC_ROOT, UI_CSP, OgwaWebApp, StaticAssets
 from tests.api_fixtures import ApiClient, World
 
 V = "/api/v1"
-REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def call(app, method, path, *, headers=None, body=b""):
@@ -157,37 +146,9 @@ class UiServerTests(unittest.TestCase):
 
 
 class ServeCommandTests(unittest.TestCase):
-    def test_serve_serves_the_demo_ui_and_api_and_stops_cleanly_on_sigterm(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "var"
-            env = {k: v for k, v in os.environ.items() if not k.upper().startswith("OGWA_")}
-            env.update(OGWA_DEMO_DATASET="classic", OGWA_DATABASE_URL=f"sqlite:///{(root / 'demo.sqlite3').as_posix()}")
-            reset_demo_store(load_settings(env), resolve_dataset("classic"), confirmed=True, allowed_root=root)
-            server = subprocess.Popen([sys.executable, "-m", "app.api", "serve", "--port", "0"], cwd=REPO_ROOT, env=env,
-                                      stderr=subprocess.PIPE, text=True)
-            try:
-                line = server.stderr.readline()
-                while line and "listening on" not in line:
-                    line = server.stderr.readline()
-                origin = re.search(r"http://127\.0\.0\.1:\d+", line).group(0)
-                with urllib.request.urlopen(origin + "/") as page:
-                    self.assertIn("Content-Security-Policy", page.headers)
-                with urllib.request.urlopen(origin + V + "/health") as response:
-                    body = json.load(response)
-                self.assertEqual((body["runtimeMode"], body["liveIntegrations"]), ("demo", False))
-                server.send_signal(signal.SIGTERM)
-                self.assertEqual(server.wait(timeout=30), 0)
-            finally:
-                server.kill()
-                server.wait()
-                server.stderr.close()
-
-    def test_serve_binds_loopback_unless_a_container_asks_for_all_interfaces(self):
-        from app.api.local import BIND_HOSTS, make_local_server
-
-        self.assertEqual(BIND_HOSTS, ("127.0.0.1", "0.0.0.0"))
-        with self.assertRaises(ValueError):
-            make_local_server(lambda environ, start: [], 0, host="192.0.2.1")
+    def test_serve_serves_the_ui_beside_the_api(self):
+        source = (Path(__file__).resolve().parents[1] / "app" / "api" / "__main__.py").read_text(encoding="utf-8")
+        self.assertIn("make_local_server(OgwaWebApp(api), args.port)", source)
 
 
 if __name__ == "__main__":

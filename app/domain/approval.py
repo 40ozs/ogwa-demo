@@ -5,7 +5,7 @@ stage, one candidate epoch, and one evidence fingerprint, and it expires. When m
 evidence changes the fingerprint changes, and the approval no longer applies.
 
 The governed stages are the Okta unassignment, the AD quarantine, and the AD deletion
-(owner decision D147). ``AD_RETIREMENT`` is the single AD stage earlier stores recorded. Its
+(owner decision D147). ``AD_RETIREMENT`` is the single AD stage that P02–P10 recorded. Its
 rows are kept as legacy historical records, never rewritten, and they authorize nothing; no
 new approval may use it (D148).
 """

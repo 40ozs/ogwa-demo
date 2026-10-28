@@ -1,4 +1,4 @@
-"""The candidate page's tables in a real headless browser (opt-in, UI_BROWSER_TESTS=1).
+"""OGWA-UI-IA-02: the candidate page's tables in a real headless browser (opt-in, UI_BROWSER_TESTS=1).
 
 Each data table on the candidate page sorts with the shared table: the active column and its
 direction are shown (``aria-sort`` and an arrow), a new sort starts again at the first page,
@@ -16,7 +16,7 @@ from tests.browser.test_operator_workflows import BrowserCase, skip_reason
 
 # Every table of the candidate page: whether each column sorts.
 SORTABLE = {
-    # The evidence assessment's per-source table; its free-text observation is not sortable.
+    # OGWA-DEMO-01: the evidence assessment's per-source table; its free-text observation is not sortable.
     "Evidence by source, with its state": {"Source": True, "System": True, "What it says": False, "State": True,
                                            "Freshness": True, "Bearing": True, "Required": True, "Observed": True},
     "Classification reasons": {"Effect": True, "Reason": True, "Detail": False, "Subject": True},
@@ -25,7 +25,7 @@ SORTABLE = {
                             "Observed": True},
     "Evidence records": {"Record": True, "Observed": True, "Age": True, "Freshness (classifier)": True,
                          "Result": True, "Source": True},
-    # The decision explanation's conditions keep the classifier's order; only the status sorts.
+    # OGWA-DEMO-02: the decision explanation's conditions keep the classifier's order; only the status sorts.
     "Conditions, as the policy version that ran states them": {"Condition": False, "Rule under this version": False,
                                                                "Status": True, "Why": False},
     "Lifecycle decisions, oldest first": {"When": False, "From": False, "To": False, "By": False,

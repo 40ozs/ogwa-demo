@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from app import __version__
 from app.core.build import BUILD_ALLOWS_PRODUCTION_MUTATION
 from app.core.config import Settings, load_settings
-from app.core.modes import EXTERNAL_MUTATION_SUMMARY, assert_mode_permitted_by_build
+from app.core.modes import EXTERNAL_MUTATION_SUMMARY, ExecutionMode, assert_mode_permitted_by_build
 from app.core.safety import MutationPolicy
 
 
@@ -21,7 +21,7 @@ def startup_banner(settings: Settings) -> str:
     return (
         f"OGWA {__version__} starting | runtime_mode={settings.runtime_mode.value} | "
         f"execution_mode={settings.mode.value} | "
-        f"external_mutation={EXTERNAL_MUTATION_SUMMARY[settings.mode]} | live_integrations=unavailable | "
+        f"external_mutation={EXTERNAL_MUTATION_SUMMARY[settings.mode]} | "
         f"production_mutation_permitted_by_build={str(BUILD_ALLOWS_PRODUCTION_MUTATION).lower()}"
     )
 
@@ -32,5 +32,7 @@ def bootstrap(environ: Mapping[str, str] | None = None, *, logger: logging.Logge
     settings = load_settings(environ)
     assert_mode_permitted_by_build(settings.mode)  # defence in depth; load_settings also checks
     policy = MutationPolicy.for_mode(settings.mode)
-    log.info(startup_banner(settings), extra={"ogwa": settings.diagnostics()})
+    # Anything that can reach real systems is announced at WARNING so it stands out.
+    level = logging.INFO if settings.mode is ExecutionMode.LOCAL_SYNTHETIC else logging.WARNING
+    log.log(level, startup_banner(settings), extra={"ogwa": settings.diagnostics()})
     return RuntimeContext(settings=settings, mutation_policy=policy)

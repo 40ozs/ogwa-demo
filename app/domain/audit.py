@@ -45,10 +45,10 @@ class AuditAction(StrEnum):
     # detail (IDENTITY_MAPPING_REVIEW or POLICY_VERSION) and are never rewritten.
     MAPPING_REVIEW_RECORDED = "MAPPING_REVIEW_RECORDED"
     POLICY_REVIEW_RECORDED = "POLICY_REVIEW_RECORDED"
-    # Migration 0007 (owner decision): an authenticated, well-formed request to
+    # Migration 0007 (owner decision after P08): an authenticated, well-formed request to
     # change governed state that policy or authorization refused. Nothing else changed.
     GOVERNED_REQUEST_REFUSED = "GOVERNED_REQUEST_REFUSED"
-    # Migration 0010: a remediation dry run that passed every gate and was answered
+    # Migration 0010 (P10): a remediation dry run that passed every gate and was answered
     # SIMULATED, WHATIF, or VALIDATION_ONLY. Nothing outside OGWA changed; a BLOCKED one is a
     # refusal and is chained as GOVERNED_REQUEST_REFUSED instead.
     REMEDIATION_DRY_RUN_RECORDED = "REMEDIATION_DRY_RUN_RECORDED"

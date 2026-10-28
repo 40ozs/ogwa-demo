@@ -60,21 +60,25 @@ def _groups(ds: NullMeridianDataset, numbers: dict[str, str]) -> dict[str, Any]:
     return _table(GROUP_COLUMNS, rows)
 
 
-def manifest_document(ds: NullMeridianDataset) -> dict[str, Any]:
+def manifest_document(ds: NullMeridianDataset, *, manifest_format: str = MANIFEST_FORMAT,
+                      active_directory: tuple[str, str] = (AD_DNS_DOMAIN, AD_NETBIOS), naming_eras=NAMING_ERAS,
+                      milestones=MILESTONES, notice: str | None = None) -> dict[str, Any]:
+    """The manifest document. The keyword arguments are another dataset's own facts (Genesee Press);
+    their defaults are Null Meridian's."""
     numbers = {p.id: p.employee_number for p in ds.people}
     members: dict[str, list[str]] = {}
     for group, person in ds.memberships:
         members.setdefault(group, []).append(numbers[person])
     return {
-        "format": MANIFEST_FORMAT,
+        "format": manifest_format,
         "synthetic": True,
-        "notice": "Fictional company. Every person, group, application, and identifier is generated from the seed; "
-                  "nothing is derived from any real tenant, directory, or organization.",
+        "notice": notice or "Fictional company. Every person, group, application, and identifier is generated from the "
+                            "seed; nothing is derived from any real tenant, directory, or organization.",
         "profile": ds.profile(),
-        "activeDirectory": {"dnsDomain": AD_DNS_DOMAIN, "netbios": AD_NETBIOS},
+        "activeDirectory": {"dnsDomain": active_directory[0], "netbios": active_directory[1]},
         "namingEras": [{"key": e.key, "label": e.label, "start": e.start.isoformat(), "end": e.end.isoformat(),
-                        "examples": e.description} for e in NAMING_ERAS],
-        "milestones": [{"date": d, "event": e} for d, e in MILESTONES],
+                        "examples": e.description} for e in naming_eras],
+        "milestones": [{"date": d, "event": e} for d, e in milestones],
         "counts": ds.counts(),
         "departments": [{"id": d.id, "slug": d.slug, "name": d.name, "activeHeadcount": d.size,
                          "formed": d.formed.isoformat(), "teams": [t.slug for t in d.teams]} for d in ds.departments],
@@ -94,7 +98,10 @@ def manifest_document(ds: NullMeridianDataset) -> dict[str, Any]:
     }
 
 
-def correlation_document(ds: NullMeridianDataset) -> dict[str, Any]:
+def correlation_document(ds: NullMeridianDataset, *, okta_ad_source_id: str = OKTA_AD_SOURCE_ID,
+                         active_directory: tuple[str, str] = (AD_DNS_DOMAIN, AD_NETBIOS),
+                         reference: str = CORRELATION_REF) -> dict[str, Any]:
+    domain, netbios = active_directory
     mappings = []
     for g in ds.groups:
         if not g.configured_mapping or g.okta_group_id is None:
@@ -102,9 +109,9 @@ def correlation_document(ds: NullMeridianDataset) -> dict[str, Any]:
         # A pushed Okta group: the configuration names its AD push target.
         target = ds.group(g.push_target) if g.source == "OKTA" else g
         mappings.append({"oktaGroupId": g.okta_group_id, "adObjectGuid": target.ad_object_guid, "adSid": target.ad_sid,
-                         "domain": AD_DNS_DOMAIN, "configurationRef": CORRELATION_REF + g.key})
+                         "domain": domain, "configurationRef": reference + g.key})
     return {"format": "ogwa-synthetic-correlation/1", "correlation": {
-        "directorySources": [{"oktaAppId": OKTA_AD_SOURCE_ID, "domain": AD_DNS_DOMAIN, "netbiosName": AD_NETBIOS}],
+        "directorySources": [{"oktaAppId": okta_ad_source_id, "domain": domain, "netbiosName": netbios}],
         "configuredMappings": sorted(mappings, key=lambda m: m["oktaGroupId"]),
     }}
 

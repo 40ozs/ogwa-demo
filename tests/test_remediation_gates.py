@@ -1,4 +1,4 @@
-"""Remediation gates and records, at the domain level (pure; no store, no API).
+"""P10 remediation gates and records, at the domain level (pure; no store, no API).
 
 Each test starts from a scenario where every gate passes, changes exactly one thing, and
 checks that the matching gate, and the result, refuse. Synthetic data only.

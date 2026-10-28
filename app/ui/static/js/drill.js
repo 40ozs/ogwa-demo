@@ -1,7 +1,7 @@
 // Plain-language reading of a synthetic remediation drill (POST /candidates/{id}/remediation-drills;
 // app/remediation/drill.py). Pure functions, no DOM: tests/ui/drill.test.mjs.
 //
-// Rules this module keeps:
+// Rules this module keeps (OGWA-DEMO-03):
 // - It never decides anything. Every state, label, reason, read, and answer comes from the
 //   server; this module only chooses a tone and words the outcome.
 // - A dry run and an execution can never look alike: the dry run's headline says no state
@@ -11,10 +11,10 @@
 //   state or a response that contradicts itself is treated as blocked.
 // - There is no reassuring tone. The best outcome is "info", and it still says it changed only
 //   a synthetic provider fixture.
-// - The mode banner is the server's and is shown above everything else: DRY RUN —
+// - (OGWA-DEMO-04) The mode banner is the server's and is shown above everything else: DRY RUN —
 //   NO STATE CHANGED, or SYNTHETIC EXECUTION with "No external provider or persistent environment
 //   was modified." A banner that does not match the drill's mode makes the result inconsistent.
-// - The authorization chain is the server's: each link shows the policy it
+// - (OGWA-DEMO-04) The authorization chain is the server's: each link shows the policy it
 //   recorded, and only IN_FORCE (or, with no recorded version at all, UNRECORDED_POLICY) is
 //   worded as binding; anything else, or nothing, is blocked.
 

@@ -56,7 +56,7 @@ class OktaGroupRecord:
     # correlation decides what they mean; nothing here is a match by itself.
     directory_external_id: str | None = None
     # Decoded from externalId under an UNVERIFIED byte-order assumption (D23, D30): not a
-    # stable-id basis until it is proven against a known AD-backed Okta group.
+    # stable-id basis until P11 proves it against a known AD-backed Okta group.
     directory_object_guid_unverified: str | None = None
     directory_object_sid: str | None = None
     directory_qualified_name: str | None = None  # windowsDomainQualifiedName, e.g. DOMAIN\name

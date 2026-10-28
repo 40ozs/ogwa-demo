@@ -31,11 +31,11 @@ class IdKind(StrEnum):
     APPROVAL = "apr"
     EXECUTION_JOB = "job"
     AUDIT_EVENT = "aud"
-    OBSERVATION = "obs"  # one stored observation of an evidence record (store)
+    OBSERVATION = "obs"  # one stored observation of an evidence record (P03 store)
     COLLECTOR_RUN = "run"
     REQUEST = "req"  # correlation id shared by every audit event of one operation
-    MAPPING_REVIEW = "mrev"  # one human review event of an Okta-to-AD mapping (mapping registry)
-    POLICY_VERSION = "pver"  # one approved version of the candidate-classification policy
+    MAPPING_REVIEW = "mrev"  # one human review event of an Okta-to-AD mapping (P06 registry)
+    POLICY_VERSION = "pver"  # one approved version of the candidate-classification policy (P07)
     SYNTHETIC_DIRECTORY = "sdir"  # the synthetic directory snapshot of a demo dataset (0012)
 
 

@@ -6,13 +6,15 @@ the seed namespace, lifecycle policy, correlation configuration, and seed functi
 module only:
 
 - resolves the operator's ``OGWA_DEMO_DATASET`` selector through ``app.demo.datasets.dataset``;
-- reads the dataset's canonical metadata from the implementation itself (for Null Meridian,
+- reads the dataset's canonical metadata from the implementation itself (for Genesee Press,
+  ``app.demo.genesee_press.profile``, which reads the vendored projection; for Null Meridian,
   ``app.demo.null_meridian.profile``), never from a copy here;
 - hands Demo Mode the implementation's own seed function.
 
 | Selector (``OGWA_DEMO_DATASET``) | Seed namespace (audit identity) | Seed function |
 | --- | --- | --- |
-| ``null-meridian`` (default) | ``null-meridian-v1`` | ``app.demo.null_meridian.world.create_null_meridian_store`` |
+| ``genesee-press`` (default) | ``genesee-press-v1`` | ``app.demo.genesee_press.world.create_genesee_press_store`` |
+| ``null-meridian`` (legacy) | ``null-meridian-v1`` | ``app.demo.null_meridian.world.create_null_meridian_store`` |
 | ``classic`` | ``ogwa-synthetic-demo-v1`` | ``app.demo.synthetic_world.create_seeded_store`` |
 
 The selector chooses a dataset. The seed namespace is what the seed records in the store's
@@ -31,6 +33,8 @@ from app.core.database_url import DatabaseTarget
 from app.core.errors import ConfigError
 from app.demo import datasets as registry
 
+GENESEE_PRESS_KEY = "genesee-press"
+GENESEE_PRESS_MODULE = "app.demo.genesee_press"
 NULL_MERIDIAN_KEY = "null-meridian"
 NULL_MERIDIAN_MODULE = "app.demo.null_meridian"
 CLASSIC_KEY = "classic"
@@ -86,6 +90,18 @@ class DemoDataset:
 # --- bindings to the synthetic implementations -------------------------------------------
 
 
+def _genesee_press(entry: registry.DemoDataset) -> DemoDataset:
+    from app.demo.genesee_press import profile, world
+
+    if entry.create is not world.create_genesee_press_store:
+        raise DatasetUnavailable(f"the dataset registry does not bind {GENESEE_PRESS_KEY} to "
+                                 "app.demo.genesee_press.world.create_genesee_press_store")
+    metadata = DatasetMetadata(key=profile.DATASET_KEY, company_name=profile.COMPANY,
+                               primary_domain=profile.PRIMARY_DOMAIN, snapshot_date=profile.SNAPSHOT_DATE,
+                               seed=profile.SEED)
+    return DemoDataset(metadata, GENESEE_PRESS_MODULE, world.create_genesee_press_store, entry)
+
+
 def _null_meridian(entry: registry.DemoDataset) -> DemoDataset:
     from app.demo.null_meridian import profile, world
 
@@ -109,6 +125,7 @@ def _classic(entry: registry.DemoDataset) -> DemoDataset:
 
 
 _ADAPTERS: dict[str, tuple[str, Callable[[registry.DemoDataset], DemoDataset]]] = {
+    GENESEE_PRESS_KEY: (GENESEE_PRESS_MODULE, _genesee_press),
     NULL_MERIDIAN_KEY: (NULL_MERIDIAN_MODULE, _null_meridian),
     CLASSIC_KEY: (CLASSIC_MODULE, _classic),
 }

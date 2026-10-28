@@ -1,4 +1,4 @@
-// Unit tests for the remediation-drill wording (app/ui/static/js/drill.js).
+// Unit tests for the remediation-drill wording (app/ui/static/js/drill.js), OGWA-DEMO-03.
 // Run by tests/test_ui_drill.py, which first writes fixtures produced by the real API over
 // freshly seeded synthetic worlds (UI_DRILL_FIXTURES). Synthetic data only.
 import assert from "node:assert/strict";
@@ -142,7 +142,7 @@ test("an AD deletion drill reads the same way", withFixtures, () => {
   assert.equal(drillOutcome(fx.classicDelete.DRY_RUN).headline, "DRY RUN — NO STATE CHANGED");
 });
 
-// --- The mode banner, the authorization chain, the attempts ----------------------------
+// --- OGWA-DEMO-04: the mode banner, the authorization chain, the attempts ----------------------------
 
 test("every drill carries a mode banner that matches its mode, and the two can never be confused", withFixtures, () => {
   for (const drill of every()) {

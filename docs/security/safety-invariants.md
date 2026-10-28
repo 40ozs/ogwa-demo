@@ -4,19 +4,19 @@ These invariants hold in the current build. Each one names where it is enforced 
 tests prove it. Weakening one, including relaxing its test, counts as weakening a
 guardrail under owner decision D8 ([../architecture/decisions.md](../architecture/decisions.md)).
 
-Execution modes and the mutation policy are described in
-[execution-modes.md](execution-modes.md). The first table restates the build invariants the
-rest depend on.
+P01 guardrails (execution modes, mutation policy, HTTP split) are described in
+[execution-modes.md](execution-modes.md). This document adds the P02 domain invariants and
+the P03 store invariants, and restates the P01 ones they depend on.
 
-## Build invariants
+## Inherited from P01
 
 | # | Invariant | Enforced in | Tests |
 | --- | --- | --- | --- |
 | I-1 | `PRODUCTION_MUTATION` cannot be enabled by configuration | `app/core/build.py`, `modes.py`, `config.py`, `startup.py`, `safety.py` | `test_execution_modes.py` |
-| I-2 | Mutation-capable code needs an injected `MutationPolicy`; read-only modes deny or only plan | `app/core/safety.py` | `test_mutation_safety.py` |
-| I-3 | The build has no outbound client: no application module imports a network, process, or HTTP-client module (the demo's WSGI server is the one approved server import), and no Okta, AAP, or HTTP client module or AD reader is in the build | `OUTBOUND_MODULES`, `APPROVED_SERVER_IMPORTERS` (`tests/test_mutation_safety.py`); `REMOVED_MODULES` (`tests/test_runtime_mode.py`) | `NoOutboundClientTests` (`tests/test_mutation_safety.py`), `DemoOnlyEscapeTests` (`tests/test_runtime_mode.py`) |
+| I-2 | Mutation-capable code needs an injected `MutationPolicy`; read-only modes deny or only plan | `app/core/safety.py`, `http_mutation.py` | `test_mutation_safety.py` |
+| I-3 | No module outside the empty allowlist imports the mutating HTTP client | `APPROVED_MUTATING_IMPORTERS` | `ReadOnlySurfaceTests` |
 
-## Domain invariants
+## Domain invariants (P02)
 
 ### Purity
 
@@ -67,7 +67,7 @@ rest depend on.
 
 | # | Invariant | Enforced in | Tests |
 | --- | --- | --- | --- |
-| P-1 | AD retirement requires dependency coverage `COMPLETE`. `PARTIAL` and `UNKNOWN` prohibit it | `_g_retirement_dry_run` | `test_incomplete_coverage_holds_at_review_and_prohibits_deletion` |
+| P-1 | AD retirement requires dependency coverage `COMPLETE`. `PARTIAL` and `UNKNOWN` prohibit it | `_g_retirement_dry_run` | `test_incomplete_dependency_coverage_prohibits_retirement` |
 | P-2 | Coverage is derived from decision-grade checks, never asserted. A failed check does not count | `assess_dependency_coverage` | `DependencyCoverageTests` |
 | P-3 | Policy cannot drop the mandatory dependency kinds | `LifecyclePolicy` | `test_policy_cannot_be_loosened` |
 | P-4 | A blocking dependency finding stops every forward move | `_blocking_dependencies` | Blocking-dependency refusals in each guard |
@@ -81,7 +81,7 @@ rest depend on.
 | A-2 | A material evidence change voids the approval. Re-observing identical facts does not | `evidence_fingerprint`, `approval_problems` | `test_approval_is_invalidated_by_material_evidence_change`, `test_re_observed_identical_evidence_keeps_the_approval_valid`, `test_fingerprint_*` |
 | A-3 | Expired, future-dated, over-long, rejected, wrong-stage, or wrong-candidate approvals are refused | `approval_problems` | `test_each_invalidating_condition`, approval-gate refusals |
 | A-4 | The candidate's proposer cannot approve it | `approval_problems` | `test_proposer_cannot_approve_their_own_candidate` |
-| A-5 | AD retirement needs its own approval, given after the hold period. The Okta-unassign approval cannot authorize it | Stage and `not_before` checks | `test_earlier_approvals_never_authorize_a_deletion`, "before the hold period ended" |
+| A-5 | AD retirement needs its own approval, given after the hold period. The Okta-unassign approval cannot authorize it | Stage and `not_before` checks | `test_first_stage_approval_cannot_authorize_retirement`, "before the hold period ended" |
 | A-6 | Approval lifetime is capped (default 7 days, maximum 14) | `LifecyclePolicy`, `approval_problems` | `test_policy_cannot_be_loosened`, "lifetime exceeds" |
 
 ### Execution
@@ -90,7 +90,7 @@ rest depend on.
 | --- | --- | --- | --- |
 | X-1 | An `ExecutionJob` in `PRODUCTION_MUTATION` cannot be constructed | `ExecutionJob.__post_init__` with `assert_mode_permitted_by_build` | `test_production_mutation_jobs_cannot_exist_in_this_build` |
 | X-2 | A job recording a real (non-synthetic) execution cannot be constructed | `ExecutionJob.__post_init__` | `test_real_execution_cannot_be_recorded` |
-| X-3 | Forward guards accept only dry-run, succeeded, non-executed jobs that match the candidate, approval, fingerprint, and targets | `_dry_run_job` | `UnassignDryRunGuardTests`, `DeletionDryRunGuardTests` |
+| X-3 | Forward guards accept only dry-run, succeeded, non-executed jobs that match the candidate, approval, fingerprint, and targets | `_dry_run_job` | `UnassignDryRunGuardTests`, `RetirementDryRunGuardTests` |
 
 ### Audit
 
@@ -99,7 +99,7 @@ rest depend on.
 | U-1 | Audit events are hash-chained. Edits, removals, and reordering are detected, and the newest event is covered when its digest is anchored | `AuditTrail`, `verify_chain` | `test_tampering_is_detected` |
 | U-2 | Audit details are redacted (value patterns and credential-like keys) | `clean_details` | `test_details_are_redacted` |
 
-## Store invariants
+## Store invariants (P03)
 
 See [../architecture/persistence.md](../architecture/persistence.md).
 
@@ -120,39 +120,44 @@ See [../architecture/persistence.md](../architecture/persistence.md).
 | S-13 | The store and demo packages import no network, subprocess, HTTP-client, or mutation-policy module | Code review | `StoreIsolationTests` |
 | S-14 | Job details, collector error summaries, and audit references are redacted. A collector summary containing credential-shaped text is rejected | `redact_text`, `CollectorRunOutcome` | `test_credentials_never_reach_the_audit_log`, `test_outcome_summary_must_not_carry_credentials` |
 
-## Okta integration invariants
+## Okta integration invariants (P04)
 
-See [../architecture/okta-integration.md](../architecture/okta-integration.md). O-1 to O-9
-and O-11 covered the read-only Okta HTTP client, its pacing, and its System Log usage and
-evidence collection, which are not included in this build. The record models and
-normalization (`app/integrations/okta/models.py`, `normalize.py`) remain.
+See [../architecture/okta-integration.md](../architecture/okta-integration.md).
 
 | # | Invariant | Enforced in | Tests |
 | --- | --- | --- | --- |
-| O-10 | An Okta-derived AD objectGUID never reaches correlation or domain evidence until its decoding is proven against a known AD-backed Okta group whose objectGUID is independently known from AD (D23, D30) | `OBJECT_GUID_DECODING_VERIFIED = False` (`normalize.py`), `OktaGroupIdentity` | `test_okta_derived_guid_cannot_be_used_while_decoding_is_unverified` |
+| O-1 | The Okta integration sends only GET. It imports neither the mutating client nor the mutation policy, and names no unsafe HTTP method | `app/integrations/okta/*` over `ReadOnlyHttpClient` | `ReadOnlySafetyTests`, `GetOnlyTransport` in every test |
+| O-2 | A credential carrying any scope outside `okta.apps.read`, `okta.groups.read`, `okta.logs.read` is refused. A call whose scope the grant lacks, or with a token near expiry, fails before sending | `AccessTokenGrant`, `authorization_header` | `AuthenticationTests` |
+| O-3 | SSWS is never sent. `OGWA_OKTA_API_TOKEN` is not read by the Okta client | `OktaReadOnlyClient.from_settings` | `test_from_settings_ignores_the_ssws_placeholder` |
+| O-4 | A listing is COMPLETE only if every page was read and every record parsed with no duplicates. Anything else is PARTIAL or FAILED with a reason, and that status becomes the evidence provenance | `OktaReadOnlyClient._paginate`, `evidence.py` | `PaginationTests`, `PartialPageTests`, `MissingFieldTests`, `test_partial_listing_never_yields_decision_grade_evidence` |
+| O-5 | A next link is followed only within the same origin (scheme, case-folded host, port; no userinfo) and the same endpoint path, and a page whose normalized URL (sorted query) was already requested is never requested again | `_next_link`, `_page_key`, `_paginate` | `PaginationHardeningTests`, `test_next_link_to_another_host_is_not_followed`, `test_pagination_loop_is_detected` |
+| O-6 | Every attempt counts against a bounded budget. Retries are bounded, waits above the ceiling halt instead of sleeping, and a halted session (budget, rate limit, credential) sends nothing more | `OktaRequestExecutor` | `RateLimitTests`, `BudgetTests`, `PaginationHardeningTests` budget tests, `test_401_halts_the_session_without_retry` |
+| O-7 | Assignment absence is recorded only from a COMPLETE listing | `assignment_evidence` | `test_absence_is_recorded_only_from_a_complete_listing` |
+| O-8 | Usage evidence is complete only when every slice completed, the window is inside retention and outside the ingestion lag, and every event was readable and attributable. Zero sign-ins always carries the non-use caveats | `collect_application_usage` | `UsageAggregationTests`, `WindowTests` |
+| O-9 | Normalized results hold no user profile data, and usage holds no user ids | `normalize_member`, `usage.py` | `test_members_keep_only_id_and_status`, `test_usage_results_hold_no_user_ids` |
+| O-10 | An Okta-derived AD objectGUID never reaches domain evidence until P11 proves the decoding against a known AD-backed Okta group whose objectGUID is independently known from AD (D23, D30) | `OBJECT_GUID_DECODING_VERIFIED = False`, `group_evidence` | `test_unverified_object_guid_never_reaches_domain_evidence` |
+| O-11 | The 90-day retirement usage window is unchanged. Native System Log retention yields at most `REVIEW_SIGNAL_ONLY`, never a complete 90-day window (D27) | `RETIREMENT_USAGE_WINDOW`, `ApplicationUsageEvidence.signal`, `window_limitations` | `RetentionDecisionTests`, `test_exact_policy_window_cannot_be_complete_with_default_retention` |
 
-## AD integration invariants
+## AD integration invariants (P05)
 
-See [../architecture/ad-integration.md](../architecture/ad-integration.md). These invariants
-cover the AD report contract parser, the emptiness and protection assessments, and the
-conversion to domain evidence; the golden fixtures in `tests/fixtures/ad/` are synthetic
-reports in the contract's form. AD-1 and AD-2 covered the PowerShell AD reader, which is not
-included in this build.
+See [../architecture/ad-integration.md](../architecture/ad-integration.md).
 
 | # | Invariant | Enforced in | Tests |
 | --- | --- | --- | --- |
-| AD-3 | An AD read request is validated; unknown keys and out-of-range limits are refused | `ADReadRequest` | `RequestTests` |
-| AD-4 | A group counts as resolved only when the report proves exactly one match: more than one match is `Ambiguous`, and an unsearched domain makes "not found" `Inconclusive`; neither, nor a "not found" by name, yields an AD group record | `ResolutionStatus`, `ad_evidence` | golden scenarios, `ScenarioTests` |
+| AD-1 | The worker calls only `Get-ADForest`, `Get-ADDomain`, `Get-ADDomainController`, `Get-ADGroup`, `Get-ADObject`. It writes no files, runs no dynamic code, and accepts no credential | `worker/OGWA.ADReader` | `WorkerReadOnlyTests` |
+| AD-2 | Every directory search is an escaped exact-match LDAP filter with a search base, one server, and an explicit result-size limit | `New-OgwaGroupLookupFilter`, `New-OgwaADDirectory` | `test_every_directory_search_is_bounded_and_scoped`, LDAP escaping tests |
+| AD-3 | A request is validated before any directory call; unknown keys and out-of-range limits are refused | `ConvertTo-OgwaReadRequest`, `ADReadRequest` | 15 invalid-request cases (PowerShell), `RequestTests` |
+| AD-4 | A group is `Resolved` only when exactly one match is proven: names need every domain in scope searched; more than one match is `Ambiguous`; an unsearched domain makes "not found" `Inconclusive` | `Resolve-OgwaGroup` | golden scenarios, `ScenarioTests` |
 | AD-5 | Emptiness is three facts (direct, nested, primary-group). Zero proves absence only from a complete read; `EMPTY` needs all three YES | `assess_emptiness` | `EmptinessTests`, `test_primary_group_dependency` |
-| AD-6 | Protection that cannot be determined (unreadable PFAD, unread parents, ungoverned domain, a report's `Undetermined`) is `UNDETERMINED` and blocks retirement. A report's indicators and the built-in privileged names can only add protection | `assess_protection` | `ProtectionTests` |
+| AD-6 | Protection that cannot be determined (unreadable PFAD, unread parents, ungoverned domain, worker `Undetermined`) is `UNDETERMINED` and blocks retirement. Worker indicators and the built-in privileged names can only add protection | `assess_protection` | `ProtectionTests` |
 | AD-7 | The `ADGroup` record never looks less protected than the assessment: if it cannot express the protection, it is PARTIAL | `ad_evidence` | `test_configuration_can_add_protection` |
 | AD-8 | AD evidence is COMPLETE only if every section behind it was read completely. `exists=False` comes only from an objectGUID lookup that searched every domain | `records.py` | `RecordTests`, `test_not_found_*` |
 | AD-9 | The report contract is strict in both directions; a report not marked `readOnly: true`, or from another worker or version, is refused | `parse_group_report` | `ReportParsingTests` |
 | AD-10 | `app/integrations/ad` imports no network, process, or mutation module and does no file I/O | Code review | `PythonBoundaryTests` |
-| AD-11 | Live behaviors not yet verified against real AD (large-group completeness, cross-domain parent lookup, deletion-protection readability) never contribute to COMPLETE evidence from `AD_VIA_AAP`. `VERIFIED_LIVE_BEHAVIORS` is empty (D19) | `records.py` | `OwnerDecisionTests` |
+| AD-11 | Live behaviors not yet verified against real AD (large-group completeness, cross-domain parent lookup, deletion-protection readability) never contribute to COMPLETE evidence from `AD_VIA_AAP`. `VERIFIED_LIVE_BEHAVIORS` is empty until P11 records a verification (D19) | `records.py` | `OwnerDecisionTests` |
 | AD-12 | UNDETERMINED protection cannot be overridden by any policy, flag, or source; it always blocks retirement and keeps the `ADGroup` record PARTIAL (D21) | `assess_protection`, `ad_evidence` | `test_unknown_protection_cannot_be_configured_away` |
 
-## Identity correlation invariants
+## Identity correlation invariants (P06)
 
 See [../architecture/identity-correlation.md](../architecture/identity-correlation.md).
 Tests are in `tests/test_identity_correlation.py` and `tests/test_mapping_review.py`.
@@ -172,9 +177,9 @@ Tests are in `tests/test_identity_correlation.py` and `tests/test_mapping_review
 | C-11 | A rejected pairing is never auto-resolved again | `_from_claims`, `_from_name_search` | `test_rejected_pairing_is_never_auto_resolved`, `test_rejected_name_candidate_is_not_offered_again` |
 | C-12 | `mapping_reviews` is append-only and chained per Okta group; the database refuses rewrites, forks, non-exact or name-only approvals, and non-human reviewers | migration 0003 | `StoreRegistryTests` |
 | C-13 | `app/correlation` imports no network, process, HTTP-client, or Okta-client module | Code review | `test_correlation_package_has_no_network_or_process_access` |
-| C-14 | A directory-source objectSid match is never the basis of an exact mapping until it is verified; it may only corroborate (D37). On its own it is `UNVERIFIED_IDENTIFIER` / `UNVERIFIED_STABLE_ID`, never labelled name-only and never exact (D56). `DIRECTORY_SOURCE_SID_VERIFIED` is pinned `False` | `_may_be_exact`, `app/correlation/model.py`, migration 0006 | `DirectorySourceSidGateTests`, `DirectorySourceSidGateServiceTests` |
+| C-14 | A directory-source objectSid match is never the basis of an exact mapping until P11 verifies it; it may only corroborate (D37). On its own it is `UNVERIFIED_IDENTIFIER` / `UNVERIFIED_STABLE_ID`, never labelled name-only and never exact (D56). `DIRECTORY_SOURCE_SID_VERIFIED` is pinned `False` | `_may_be_exact`, `app/correlation/model.py`, migration 0006 | `DirectorySourceSidGateTests`, `DirectorySourceSidGateServiceTests` |
 
-## Candidate policy invariants
+## Candidate policy invariants (P07)
 
 See [../architecture/candidate-policy.md](../architecture/candidate-policy.md) and
 [../operations/dependency-coverage.md](../operations/dependency-coverage.md). Tests are in
@@ -190,7 +195,7 @@ See [../architecture/candidate-policy.md](../architecture/candidate-policy.md) a
 | P-6 | Every blocking finding becomes a blocking reason, by its code or, without one, by its kind; nothing is dropped | `_findings` | `test_every_blocking_finding_is_reported` |
 | P-7 | Direct members, primaryGroupID references, parent groups, member groups, and nested principals stay separate coded facts through evidence and storage (D20) | `FindingCode`, `ad_evidence`, migration 0004 | `FindingCodeTests`, `GoldenADReportTests` |
 | P-8 | A `RETIREMENT_CANDIDATE` always satisfies the lifecycle's candidacy guard and the retirement evidence conditions (exact mapping, existing group, no protection, COMPLETE coverage, no blocking finding) | the classifier vs `apply_transition` | `LifecycleAgreementTests` |
-| P-9 | No dependency kind is covered from production until a verified collector exists; `PRODUCTION_COLLECTORS` is pinned, and live AD evidence cannot promote while its behaviours are unverified (D19) | `coverage.py`, `records.py` | `test_no_dependency_domain_is_covered_from_production_yet`, `test_live_ad_evidence_cannot_promote_before_p11` |
+| P-9 | No dependency kind is covered from production until a verified collector exists; `PRODUCTION_COLLECTORS` is pinned, and live AD evidence cannot promote before P11 (D19) | `coverage.py`, `records.py` | `test_no_dependency_domain_is_covered_from_production_yet`, `test_live_ad_evidence_cannot_promote_before_p11` |
 | P-10 | Thresholds are configuration with floors and ceilings; the policy document is strict and complete; every result names its policy digest | `CandidatePolicy` | `PolicyBoundsTests`, `PolicyDocumentTests`, `test_thresholds_come_from_policy` |
 | P-11 | A policy change is an append-only `PolicyVersion`, proposed by an Identity/Automation human and approved by a different Security/IAM human (D33), audited in the same transaction; the database refuses rewrites, forks, unchanged versions, self-approval, and non-human actors | `version_append_problems`, `Store.record_policy_version`, migration 0004 | `PolicyVersionTests`, `PolicyStoreTests` |
 | P-12 | An explanation never contains a proof of absence next to evidence of presence | the classifier passes | `ExplanationConsistencyTests` |
@@ -199,7 +204,7 @@ See [../architecture/candidate-policy.md](../architecture/candidate-policy.md) a
 | P-16 | Only an `EXACT_*` confidence yields `EXACT_MAPPING`; every other confidence, including any added later, forces `MAPPING_REQUIRED` | `_origin_mapping_and_membership` | `MappingConfidenceCoverageTests` |
 | P-15 | Mapping and policy reviews have dedicated audit actions; events recorded before migration 0005 are preserved byte for byte and the chain still verifies (D41) | migration 0005, `Store` | `ReviewAuditMigrationTests`, `test_versions_persist_with_audit_and_integrity`, `test_reviews_persist_with_audit_and_integrity` |
 
-## Operator API invariants
+## Operator API invariants (P08)
 
 See [authorization.md](authorization.md) and [../architecture/api.md](../architecture/api.md).
 
@@ -222,7 +227,7 @@ See [authorization.md](authorization.md) and [../architecture/api.md](../archite
 | API-15 | The synthetic AD directory and mapping gateway exist only for a SYNTHETIC store in `LOCAL_SYNTHETIC`, read only the store, exclude deleted groups, never raise, and never pass the unverified Okta-derived objectGUID to correlation (D68, D23, D30) | `app/demo/synthetic_directory.py` | `SyntheticDirectoryTests` |
 | API-16 | Only the execution function may use the execute route (static `EXECUTION_PLAN_DRY_RUN` or `EXECUTION_EXECUTE`); anyone else's attempt is an ordinary 403 kept out of the audit chain (D72, D73) | `ROUTES` (`EXECUTE_ROUTE`) | `test_every_route_enforces_its_permission_for_every_principal`, `test_generic_malformed_and_unauthenticated_failures_stay_in_the_security_log` |
 
-## Remediation invariants
+## Remediation invariants (P10)
 
 See [../architecture/remediation.md](../architecture/remediation.md) and
 [mutation-gates.md](mutation-gates.md). Tests are in `tests/test_remediation_*.py` unless
@@ -245,15 +250,15 @@ noted.
 | R-13 | A remediation dry run never moves the lifecycle and never creates an `ExecutionJob` | `RemediationService` | `ValidApprovalCannotMutateProductionTests` |
 | R-14 | A passing dry run is chained as `REMEDIATION_DRY_RUN_RECORDED` stating `executed: false`; a `BLOCKED` one is chained as `GOVERNED_REQUEST_REFUSED`; the store refuses to record a `BLOCKED` or executed result, a non-human actor, or another candidate's approval | `Store.record_remediation_dry_run`, `OgwaApi._chain_refusal` | `test_a_blocked_request_is_chained_with_its_operation_and_target_and_changes_nothing`, `RecordRulesTests` |
 | R-15 | Migration 0010 keeps every audit row, digest, index, and guard byte for byte; an anchored head still verifies | migration 0010 | `RemediationAuditMigrationTests` |
-| R-16 | `app/remediation` imports no HTTP client, socket, process, or integration module, and the build has no AAP client | Code review | `PackageBoundaryTests`, `test_no_live_integration_module_or_worker_is_in_the_build` |
+| R-16 | `app/remediation` imports no HTTP client, socket, process, or integration module; `app/api` never imports the AAP client | Code review | `PackageBoundaryTests`, `test_the_api_cannot_reach_the_discovery_client` |
 | R-17 | A blocked condition never yields a plan: a request that fails a gate never reaches an adapter, and no `BLOCKED` result, answer, worker result, or `409` body carries a planned change (D133) | `remediation_dry_run`, `RemediationResult`, `AdapterAnswer`, `parse_worker_result` | `BlockedNeverPlansTests` |
-| R-18 | AD quarantine and deletion are separate stages: `AD_GROUP_QUARANTINE` is authorized only by an `AD_QUARANTINE` approval and `AD_GROUP_DELETE` only by an `AD_DELETION` approval, each in its own stage's states (D128, D147). The deletion stage is modelled in Q-1 to Q-10 | `OPERATIONS`, `stage_approval_rules` | `DeletionStageTests` (gates and API) |
+| R-18 | AD quarantine and deletion are separate stages: `AD_GROUP_QUARANTINE` is authorized only by an `AD_QUARANTINE` approval and `AD_GROUP_DELETE` only by an `AD_DELETION` approval, each in its own stage's states (D128, D147). P10B modelled the deletion stage; see Q-1 to Q-10 | `OPERATIONS`, `stage_approval_rules` | `DeletionStageTests` (gates and API) |
 | R-19 | Known members, or missing or incomplete membership evidence (`AD_GROUP_MEMBERS`, `AD_NESTED_MEMBERSHIP`, the direct member count), block every remediation, the Okta unassignment included; complete coverage of the other kinds is required for AD operations only (D131, D132) | `NO_DEPENDENCY_BLOCKER` (`_membership`) | `MembershipEvidenceTests` (gates and API) |
 
-## AD quarantine and deletion invariants
+## AD quarantine and deletion invariants (P10B)
 
 Owner decisions D143–D155. See
-[../architecture/lifecycle-state-machine.md](../architecture/lifecycle-state-machine.md#the-ad-stages).
+[../architecture/lifecycle-state-machine.md](../architecture/lifecycle-state-machine.md#the-ad-stages-p10b).
 Tests are in `tests/test_lifecycle_ad_stages.py`, `tests/test_p10b_ad_stages_api.py`, and
 `tests/test_ad_stages_migration.py` unless noted.
 
@@ -270,7 +275,7 @@ Tests are in `tests/test_lifecycle_ad_stages.py`, `tests/test_p10b_ad_stages_api
 | Q-9 | There is no unquarantine or restore operation (D149), and every AD-stage job is a dry run; no production deletion, quarantine, or restoration path exists (D153) | `RemediationOperation`, `JobKind`, `ExecutionJob`, `DryRunPlanner` | `NoDeletionPathIsProductionTests`, `test_dry_run_planner_can_only_plan`, `test_a_valid_deletion_approval_only_simulates_the_deletion` |
 | Q-10 | Migration 0011 keeps every row of the four rebuilt tables and every other table verbatim; an anchored audit head still verifies; the guards are recreated, plus three triggers refusing new legacy rows | migration 0011 | `AdStagesMigrationTests` |
 
-## Evidence assessment invariants
+## Evidence assessment invariants (OGWA-DEMO-01)
 
 See [../architecture/evidence-assessment.md](../architecture/evidence-assessment.md). Tests are in
 `tests/test_evidence_assessment.py` and `tests/ui/evidence.test.mjs` (run by `tests/test_ui_evidence.py`).
@@ -286,10 +291,10 @@ See [../architecture/evidence-assessment.md](../architecture/evidence-assessment
 | EA-7 | An unknown AD member count is never zero: it proves no emptiness and holds the result at `EVIDENCE_INCOMPLETE` (`AD_MEMBERSHIP_UNKNOWN`), as D132 already did for the AD stages | `_membership` | `test_an_unknown_member_count_proves_nothing` |
 | EA-8 | The NM-C10 scenario is deterministic and shows every state through the real seed, correlation engine, lifecycle guards, and API | `_nm_c10`, golden audit head | `test_the_scenario_is_deterministic`, `test_nm_c10_shows_every_state_and_refuses_every_decision`, `test_golden_audit_head` |
 
-## Policy version invariants
+## Policy version invariants (OGWA-DEMO-02)
 
-See [../architecture/candidate-policy.md](../architecture/candidate-policy.md#named-releases-and-the-policy-each-decision-records),
-[../architecture/evidence-assessment.md](../architecture/evidence-assessment.md#decision-explanation), and
+See [../architecture/candidate-policy.md](../architecture/candidate-policy.md#named-releases-and-the-policy-each-decision-records-ogwa-demo-02),
+[../architecture/evidence-assessment.md](../architecture/evidence-assessment.md#decision-explanation-ogwa-demo-02), and
 [../demo/policies/NM-LIFECYCLE-004.md](../demo/policies/NM-LIFECYCLE-004.md). Tests are in
 `tests/test_policy_release.py`, `tests/test_decision_explanation.py`, and `tests/ui/policy.test.mjs`
 (run by `tests/test_ui_policy.py`).
@@ -305,11 +310,11 @@ See [../architecture/candidate-policy.md](../architecture/candidate-policy.md#na
 | PV-7 | The explanation never contradicts the decision: satisfied only with the classifier's proof, not satisfied only with a contradicting fact, otherwise not proven; an eligible decision has every condition satisfied; manual review is "forced by evidence" exactly when an evidence constraint applies; no condition is dropped | `explain` | `ExplanationAgreesWithTheDecisionTests`, `test_missing_evidence_is_never_satisfied_or_failed` |
 | PV-8 | The classification, the assessment, and the explanation of one view name the same policy; the explanation module reads and writes nothing external | `classify_assess_explain`, `explain` | `test_every_surface_names_the_same_exact_policy_version`, `test_the_explanation_module_reads_and_writes_nothing_external` |
 
-## Remediation execution invariants
+## Remediation execution invariants (OGWA-DEMO-03)
 
 The execution state machine and the synthetic drill
 ([../architecture/remediation-execution.md](../architecture/remediation-execution.md)). The
-governed path's invariants above (R, X, W, D153) still apply.
+governed path's invariants above (R, X, W, D153) are unchanged.
 
 | # | Invariant | Enforced in | Tests |
 | --- | --- | --- | --- |
@@ -324,13 +329,13 @@ governed path's invariants above (R, X, W, D153) still apply.
 | RX-9 | A drill writes nothing (no audit event, job, decision, or evidence), moves no lifecycle state, and contacts nothing; only the in-memory fixture changes, and only at the target | `RemediationService.drill`, `NON_PERSISTING` | `test_no_drill_writes_to_the_store_or_reaches_a_live_system`, `test_an_executed_drill_changes_only_the_synthetic_fixture`, `test_a_remediation_drill_runs_on_the_read_only_store_and_records_nothing` |
 | RX-10 | Faults are a closed, deterministic catalog: a request cannot describe faults, nothing is random or reads the wall clock, and the same script gives the same run; dry run and execution never share a label | `SCENARIOS`, the synthetic clock, `STATE_LABELS` | `test_a_request_cannot_carry_its_own_faults_mode_or_adapter`, `test_nothing_in_the_execution_path_is_random_or_reads_the_wall_clock`, `test_the_same_script_gives_the_same_run`, `test_dry_run_and_execution_labels_cannot_be_confused` |
 
-## Policy and remediation integration invariants
+## Policy and remediation integration invariants (OGWA-DEMO-04)
 
-The policy binding (PV) joined to the remediation drill (RX)
-([../architecture/remediation-execution.md](../architecture/remediation-execution.md#policy-binding-and-the-authorization-chain)).
+OGWA-DEMO-02's policy binding joined to OGWA-DEMO-03's remediation drill
+([../architecture/remediation-execution.md](../architecture/remediation-execution.md#policy-binding-and-the-authorization-chain-ogwa-demo-04)).
 Tests are in `tests/test_ogwa_demo_integration.py`, `tests/ui/drill.test.mjs` (run by
 `tests/test_ui_drill.py`), and `tests/browser/test_remediation_drill_ui.py`. EA, PV, and RX above
-still apply.
+are unchanged.
 
 | # | Invariant | Enforced in | Tests |
 | --- | --- | --- | --- |
@@ -343,17 +348,22 @@ still apply.
 | DI-7 | Dry run and synthetic execution can never be confused: each drill carries the server's mode banner (DRY RUN — NO STATE CHANGED, neutral; SYNTHETIC EXECUTION, "No external provider or persistent environment was modified.", caution), shown above the outcome; a missing or mismatched banner is blocked | `MODE_BANNERS`, `drill.js` `modeBanner`, `views/candidate.js` | `DryRunVsExecutionWordingTests`, `every drill carries a mode banner…`, browser `test_a_…`, `test_b_…` |
 | DI-8 | The reviewer audit sample is the application's own serialization, byte for byte, and synthetic: no cookie, CSRF token, credential, URL, IP address, or non-fictional domain | `app/demo/null_meridian/audit_sample.py` (`--check`) | `AuditSampleTests` |
 
-## AAP template classification invariants
+## AAP discovery invariants (P10)
 
-AAP-1 to AAP-4 and AAP-6 to AAP-8 covered AAP discovery, which is not included in this
-build. AAP-5 holds for the job-template classification the plan-only AAP remediation
-adapter uses. Tests are in `tests/test_remediation_adapters.py`.
+Tests are in `tests/test_aap_discovery.py`.
 
 | # | Invariant | Enforced in | Tests |
 | --- | --- | --- | --- |
-| AAP-5 | `KNOWN_READ_ONLY` only for a check-mode job template with a fixed job type that matches a reviewed record field for field, including the project revision; never a workflow; `UNKNOWN` is treated like `MUTATION_CAPABLE` | `classify_template` (`app/remediation/aap.py`) | `AapAdapterTests` |
+| AAP-1 | Discovery sends only GET, through `ReadOnlyHttpClient`; no launch path exists | `AapReadOnlyClient` | `test_discovery_classifies_every_template_and_sends_only_get`, `BoundaryTests` |
+| AAP-2 | A superuser identity is refused before anything is listed; discovery runs only in `READ_ONLY_PRODUCTION` (or against loopback in `LOCAL_SYNTHETIC`) | `discover`, `DISCOVERY_MODES` | `test_a_superuser_identity_is_refused_before_anything_is_listed`, `test_discovery_refuses_modes_that_could_mutate` |
+| AAP-3 | A `next` link is followed only on the same origin and path, never twice, within page and request budgets; anything cut short is PARTIAL | `_list`, `_get_json` | `test_pagination_stays_on_the_same_origin_and_path_and_never_repeats`, `test_the_request_budget_is_enforced` |
+| AAP-4 | No user name, email address, survey default, choice, or secret is kept; the token is sent only as a header and never logged | `identity`, `survey`, `ReadOnlyHttpClient` | `test_no_name_email_default_or_secret_is_kept`, `test_the_token_is_sent_as_a_bearer_header_and_never_logged` |
+| AAP-5 | `KNOWN_READ_ONLY` only for a check-mode job template with a fixed job type that matches a reviewed record field for field, including the project revision; never a workflow; `UNKNOWN` is treated like `MUTATION_CAPABLE` | `classify_template` | `ClassifierTests` |
+| AAP-6 | A template that cannot be read is reported as a problem, never classified safe. A survey that was not read is never an empty survey: its template stays `UNKNOWN` and the report is PARTIAL | `discover` | `test_a_template_that_cannot_be_read_is_a_problem_never_safe`, `test_a_survey_that_was_not_read_makes_discovery_partial` |
+| AAP-7 | Before any template is listed, every role the identity holds, directly or through a team, must be `Read`, `Auditor`, or `Member` (System Auditor is the most it may hold); any other role, or roles that cannot be read completely, refuse it (D124, D125) | `verify_read_only` | `test_the_identity_must_hold_only_read_only_roles`, `test_roles_that_cannot_be_read_completely_refuse_the_identity`, `test_system_auditor_is_accepted_as_the_most_an_identity_may_hold` |
+| AAP-8 | A listed template that the identity could start, edit, delete, copy, or schedule stops discovery before anything else is read; one that does not report its capabilities leaves the report PARTIAL (D125) | `discover`, `_capabilities` | `test_a_template_the_identity_could_change_stops_discovery`, `test_unreported_capabilities_leave_the_report_partial` |
 
-## Remediation worker invariants
+## Remediation worker invariants (P10)
 
 See [../architecture/remediation.md](../architecture/remediation.md#the-powershell-worker-workerogwaremediation).
 Behaviour: `tests/powershell/Test-OgwaRemediation.ps1` (PowerShell 7 and 5.1); static:
@@ -376,9 +386,9 @@ Behaviour: `tests/powershell/Test-OgwaRemediation.ps1` (PowerShell 7 and 5.1); s
 - Python cannot stop deliberate bypass. Someone with source access can call
   `dataclasses.replace` or construct a record directly. The invariants prevent accidental
   misuse. Deliberate bypass is caught by `verify_history` at load time, by the audit
-  chain, and by code review (D3).
+  chain, by code review (D3), and by separate least-privilege credentials.
 - `HOLD` and `RETIRED` record observed outcomes. They do not prove who made the change.
-  Attribution evidence (Okta System Log, AD metadata) is an open item.
+  Attribution evidence (Okta System Log, AD metadata) is an open item for P04/P05.
 - The SQLite triggers stop accidental or ad-hoc rewrites, not someone with DDL rights.
   Such tampering is detected (S-3, S-5, S-6) but not prevented. Prevention on a server
   needs database roles (PostgreSQL `REVOKE`, a separate migration role).

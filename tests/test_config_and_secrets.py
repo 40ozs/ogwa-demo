@@ -11,16 +11,34 @@ from app.core.errors import ConfigError
 from app.core.logging_setup import ROOT_LOGGER, configure_logging
 from app.core.redaction import redact_text
 from app.core.secret import Secret
-from tests.fakes import captured_logs
-
-SYNTHETIC_TOKEN = "synthetic-okta-token-value-0001"
+from tests.fakes import (
+    SYNTHETIC_AAP_TOKEN,
+    SYNTHETIC_OKTA_HOST,
+    SYNTHETIC_OKTA_TOKEN,
+    captured_logs,
+    read_only_env,
+)
 
 
 class SecretRenderingTests(unittest.TestCase):
-    def test_diagnostics_hold_no_credential_field(self):
+    def test_diagnostics_report_presence_not_values(self):
+        diagnostics = load_settings(read_only_env()).diagnostics()
+        rendered = json.dumps(diagnostics)
+        self.assertNotIn(SYNTHETIC_OKTA_TOKEN, rendered)
+        self.assertNotIn(SYNTHETIC_AAP_TOKEN, rendered)
+        self.assertEqual(diagnostics["okta.api_token"], "<set>")
+        self.assertEqual(diagnostics["aap.token"], "<set>")
+        self.assertEqual(diagnostics["okta.org_host"], SYNTHETIC_OKTA_HOST)
+
+    def test_unset_secrets_report_unset(self):
         diagnostics = load_settings({}).diagnostics()
-        self.assertFalse([k for k in diagnostics if any(w in k for w in ("token", "secret", "password", "okta", "aap"))])
-        self.assertEqual(diagnostics["live_integrations"], "unavailable")
+        self.assertEqual(diagnostics["okta.api_token"], "<unset>")
+
+    def test_settings_repr_and_str_hide_secrets(self):
+        settings = load_settings(read_only_env())
+        for rendered in (repr(settings), str(settings), f"{settings}"):
+            self.assertNotIn(SYNTHETIC_OKTA_TOKEN, rendered)
+            self.assertNotIn(SYNTHETIC_AAP_TOKEN, rendered)
 
     def test_secret_renders_as_placeholder(self):
         secret = Secret("synthetic-placeholder-check-1")
@@ -145,31 +163,55 @@ class LogRedactionFailClosedTests(unittest.TestCase):
 class FailClosedConfigTests(unittest.TestCase):
     def test_unsafe_configuration_is_rejected(self):
         unsafe = {
-            "an outbound HTTP setting": {"OGWA_HTTP_MAX_CONCURRENCY": "2"},
-            "an Okta URL": {"OGWA_OKTA_ORG_URL": "https://okta.synthetic.example"},
-            "an AAP URL with credentials": {"OGWA_AAP_URL": "https://user:pw@aap.synthetic.example"},
-            "an in-memory store": {"OGWA_DATABASE_URL": "sqlite:///:memory:"},
-            "a PostgreSQL store": {"OGWA_DATABASE_URL": "postgresql://db.synthetic.example/ogwa"},
+            "concurrency above ceiling": {"OGWA_HTTP_MAX_CONCURRENCY": "50"},
+            "zero concurrency": {"OGWA_HTTP_MAX_CONCURRENCY": "0"},
+            "zero read timeout": {"OGWA_HTTP_READ_TIMEOUT_SECONDS": "0"},
+            "unbounded read timeout": {"OGWA_HTTP_READ_TIMEOUT_SECONDS": "9999"},
+            "nan timeout": {"OGWA_HTTP_CONNECT_TIMEOUT_SECONDS": "nan"},
+            "non-numeric timeout": {"OGWA_HTTP_CONNECT_TIMEOUT_SECONDS": "fast"},
+            "negative retries": {"OGWA_HTTP_MAX_RETRIES": "-1"},
+            "excessive retries": {"OGWA_HTTP_MAX_RETRIES": "100"},
+            "fractional retries": {"OGWA_HTTP_MAX_RETRIES": "2.5"},
+            "plain http okta": {"OGWA_OKTA_ORG_URL": "http://okta.synthetic.example"},
+            "credentials in url": {"OGWA_AAP_URL": "https://user:pw@aap.synthetic.example"},
+            "query in url": {"OGWA_OKTA_ORG_URL": "https://okta.synthetic.example/?x=1"},
+            "relative url": {"OGWA_OKTA_ORG_URL": "okta.synthetic.example"},
             "unknown log level": {"OGWA_LOG_LEVEL": "TRACE"},
-            "typo in key": {"OGWA_EXECUTON_MODE": "LOCAL_SYNTHETIC"},
+            "typo in key": {"OGWA_EXECUTON_MODE": "READ_ONLY_PRODUCTION"},
         }
-        for name, environ in unsafe.items():
+        for name, overrides in unsafe.items():
             with self.subTest(name), self.assertRaises(ConfigError):
-                load_settings(environ)
+                load_settings(read_only_env(**overrides))
 
     def test_keys_that_differ_only_in_case_are_refused_in_either_order(self):
-        pairs = (("OGWA_LOG_LEVEL", "INFO"), ("ogwa_log_level", "DEBUG"))
+        pairs = (("OGWA_EXECUTION_MODE", "LOCAL_SYNTHETIC"), ("ogwa_execution_mode", "READ_ONLY_PRODUCTION"))
         for environ in (dict(pairs), dict(reversed(pairs))):
             with self.subTest(first=next(iter(environ))):
-                with self.assertRaisesRegex(ConfigError, "OGWA_LOG_LEVEL"):
+                with self.assertRaisesRegex(ConfigError, "OGWA_EXECUTION_MODE"):
                     load_settings(environ)
+        with self.assertRaises(ConfigError) as caught:
+            load_settings({"OGWA_AAP_TOKEN": SYNTHETIC_AAP_TOKEN, "ogwa_aap_token": SYNTHETIC_OKTA_TOKEN})
+        self.assertNotIn(SYNTHETIC_AAP_TOKEN, str(caught.exception))
+        self.assertNotIn(SYNTHETIC_OKTA_TOKEN, str(caught.exception))
         self.assertEqual(load_settings({"ogwa_log_level": "DEBUG"}).log_level, "DEBUG")  # one spelling, any case
 
+    def test_synthetic_mode_rejects_live_credentials(self):
+        for key, value in (("OGWA_OKTA_API_TOKEN", SYNTHETIC_OKTA_TOKEN), ("OGWA_AAP_TOKEN", SYNTHETIC_AAP_TOKEN)):
+            with self.subTest(key=key), self.assertRaises(ConfigError):
+                load_settings({key: value})
+
+    def test_synthetic_mode_rejects_non_loopback_service_urls(self):
+        with self.assertRaises(ConfigError):
+            load_settings({"OGWA_OKTA_ORG_URL": "https://okta.synthetic.example"})
+
+    def test_synthetic_mode_accepts_loopback_service_urls(self):
+        settings = load_settings({"OGWA_OKTA_ORG_URL": "http://127.0.0.1:8080/"})
+        self.assertEqual(settings.okta_org_url, "http://127.0.0.1:8080")
+
     def test_config_errors_do_not_echo_secret_values(self):
-        for key in ("OGWA_OKTA_API_TOKEN", "OGWA_AAP_TOKEN", "OKTA_CLIENT_SECRET", "OGWA_UNKNOWN_TOKEN"):
-            with self.subTest(key=key), self.assertRaises(ConfigError) as caught:
-                load_settings({key: SYNTHETIC_TOKEN})
-            self.assertNotIn(SYNTHETIC_TOKEN, str(caught.exception))
+        with self.assertRaises(ConfigError) as caught:
+            load_settings({"OGWA_OKTA_API_TOKEN": SYNTHETIC_OKTA_TOKEN})
+        self.assertNotIn(SYNTHETIC_OKTA_TOKEN, str(caught.exception))
 
 
 if __name__ == "__main__":

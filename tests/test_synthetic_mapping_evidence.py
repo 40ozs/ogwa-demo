@@ -1,4 +1,4 @@
-"""Owner decision: the demo's identity mappings come from the engine.
+"""Owner decision after the P08 addendum: the demo's identity mappings come from the engine.
 
 Every IdentityMapping in the synthetic world is what the correlation engine proves over the
 synthetic AD directory with ``config/correlation.synthetic.json``. Nothing is seeded as
@@ -214,7 +214,7 @@ class ConfigLoaderTests(unittest.TestCase):
     def test_the_repository_configuration_loads(self):
         config = self.load(self.data)
         self.assertEqual([s.domain for s in config.directory_sources], ["corp.synthetic.example"])
-        self.assertEqual(len(config.configured_mappings), 13)  # S15 and S16: the AD stages
+        self.assertEqual(len(config.configured_mappings), 13)  # S15 and S16 added for P10B
 
     def test_anything_not_synthetic_is_refused(self):
         def mapping_with(**changes):

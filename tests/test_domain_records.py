@@ -502,7 +502,7 @@ class DomainPurityTests(unittest.TestCase):
 
     FORBIDDEN = {
         "socket", "http", "http.client", "urllib", "urllib.request", "subprocess", "requests", "httpx",
-        "app.core.safety", "os", "shutil", "sqlite3",
+        "app.core.http_client", "app.core.http_mutation", "app.core.safety", "os", "shutil", "sqlite3",
     }
 
     def test_domain_modules_import_nothing_forbidden(self):

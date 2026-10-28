@@ -36,8 +36,8 @@ _NAME_KEYS = frozenset({"displayName", "groupName", "name", "group"})
 
 class Role(StrEnum):
     VIEWER = "VIEWER"
-    IDENTITY_AUTOMATION = "IDENTITY_AUTOMATION"  # D46; the reviewer: proposes and advances
-    SECURITY_IAM = "SECURITY_IAM"  # D46; the approver
+    IDENTITY_AUTOMATION = "IDENTITY_AUTOMATION"  # D46; the prompt's "Reviewer": proposes and advances
+    SECURITY_IAM = "SECURITY_IAM"  # D46; the prompt's "Approver"
     EXECUTOR = "EXECUTOR"  # plans dry runs against a valid approval
     ADMINISTRATOR = "ADMINISTRATOR"  # audit and system visibility only
 

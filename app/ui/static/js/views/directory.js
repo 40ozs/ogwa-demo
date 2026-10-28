@@ -63,7 +63,7 @@ function searchForm(route, query, label, hint) {
 
 function noSnapshot(data) {
   return banner("info", "No directory snapshot in this store.", data && data.note ? data.note
-    : "Seed the Null Meridian dataset (python -m app.store reset-demo --dataset null-meridian --confirm-synthetic-reset).");
+    : "Seed the Genesee Press dataset (python -m app.store reset-demo --dataset genesee-press --confirm-synthetic-reset).");
 }
 
 export function findingsTable(caption, items) {
@@ -355,7 +355,7 @@ export async function scenarios(ctx) {
       ], s.title))));
 }
 
-// The guided reviewer walkthrough, the server's text. Its disclosures come first and
+// OGWA-DEMO-04: the guided reviewer walkthrough, the server's text. Its disclosures come first and
 // are never folded away: all data is synthetic, nothing external is contacted, the drill's state is
 // discarded, and its failures are scripted.
 function walkthroughSection(guide) {

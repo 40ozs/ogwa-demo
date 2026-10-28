@@ -21,7 +21,7 @@ Execution is dry-run planning only. ``DryRunPlanner`` holds a ``DRY_RUN_MUTATION
 mutation policy, which can only ever plan. ``PRODUCTION_MUTATION`` is refused before any
 other check (D8).
 
-The AD side has two governed stages. ``AD_QUARANTINE`` is approved in
+The AD side has two governed stages (P10B). ``AD_QUARANTINE`` is approved in
 ``REVALIDATION_REQUIRED``; ``AD_DELETION`` in ``DELETION_PROPOSED``, after the post-quarantine
 hold, a fresh revalidation, and a person's deletion proposal (a lifecycle step,
 ``DELETION_REVALIDATION_REQUIRED → DELETION_PROPOSED``, with ``LIFECYCLE_ADVANCE``). The legacy
@@ -115,7 +115,7 @@ JOB_TO_STATE = {JobKind.OKTA_UNASSIGN: S.OKTA_UNASSIGN_DRY_RUN, JobKind.AD_QUARA
                 JobKind.AD_DELETION: S.DELETION_DRY_RUN}
 DRY_RUN_STATES = frozenset(JOB_TO_STATE.values())
 PRECHECK_ACTOR_ID = "ogwa/api-precheck"
-# The hypothetical approver of the evidence assessment's precheck. Its approval
+# The hypothetical approver of the evidence assessment's precheck (OGWA-DEMO-01). Its approval
 # is built only to evaluate the lifecycle guard; it is never recorded and authorizes nothing.
 ASSESSMENT_ACTOR = Actor(ActorKind.HUMAN, "ogwa/evidence-assessment-precheck")
 MAX_APPROVAL_HOURS = 14 * 24
@@ -126,7 +126,7 @@ def is_operator_action(source: LifecycleState, target: LifecycleState) -> bool:
 
     Not the observed steps (discovery records them), and not a step the lifecycle closes to
     human actors: diversions to STALE_EVIDENCE or EVIDENCE_INCOMPLETE record what the
-    evidence says and are never assigned by an operator (owner decision).
+    evidence says and are never assigned by an operator (owner decision after P09).
     Raises KeyError for a pair that is not in the lifecycle's transition table at all.
     """
     rule = TRANSITIONS[(source, target)]
@@ -152,7 +152,7 @@ def transition_permission(source: LifecycleState, target: LifecycleState) -> Per
 # --- policy in force -------------------------------------------------------------------
 
 
-# Owner decision: every API/UI surface labels the unrecorded demo policy so.
+# Owner decision after P08: every API/UI surface labels the unrecorded demo policy so.
 DEMO_POLICY_LABEL = "DEMO POLICY — UNRECORDED"
 
 
@@ -162,7 +162,7 @@ class PolicyInForce:
     source: str  # RECORDED_SOURCE or DEMO_SOURCE
     version_id: str | None
     version_sequence: int | None = None
-    # The named release whose rules these are, matched by digest; None when no
+    # The named release whose rules these are (OGWA-DEMO-02), matched by digest; None when no
     # release carries them, which every surface reports as such.
     release: PolicyRelease | None = None
 
@@ -551,7 +551,7 @@ class LifecycleService:
     def classify_assess_explain(self, candidate: LifecycleCandidate, bundle: EvidenceBundle
                                 ) -> tuple[dict[str, Any] | None, dict[str, Any], dict[str, Any]]:
         """The classification, the evidence assessment, and the explanation of its decision, all judged
-        at one instant by one policy, which each of them names."""
+        at one instant by one policy, which each of them names (OGWA-DEMO-02)."""
         now = self._clock()
         result, policy = self._classification(candidate, bundle, now)
         classification = None if result is None else {**result.to_dict(), "policy": policy.to_dict()}

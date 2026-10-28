@@ -1,7 +1,7 @@
-"""Where a remediation's authority comes from: policy, decision, approval.
+"""Where a remediation's authority comes from: policy, decision, approval (OGWA-DEMO-04).
 
-A remediation dry run or a synthetic drill rests on one human approval. The store records,
-with every approval and lifecycle decision, the exact policy that judged it; the synthetic
+A remediation dry run or a synthetic drill rests on one human approval. OGWA-DEMO-02 records,
+with every approval and lifecycle decision, the exact policy that judged it; OGWA-DEMO-03's
 drill re-evaluates the governed gates under the policy in force. This module joins the two,
 from what the store already recorded and nothing else:
 
@@ -24,8 +24,8 @@ force (PV-6), and is compared with the version in force:
 **Binding rule (fail closed).** While a policy version is recorded, a remediation may rest only
 on an approval, and a decision applying it, judged by that same version. An approval given under
 a version a later release superseded authorizes nothing under the new one: a named human
-approves again, which gives a new approval id and so a new operation id (what
-``operation_id`` assumes, enforced here). Nothing here writes, and nothing here
+approves again, which gives a new approval id and so a new operation id (the assumption
+OGWA-DEMO-03 made for ``operation_id``, now enforced). Nothing here writes, and nothing here
 judges evidence: the gates still do that.
 """
 
@@ -188,7 +188,7 @@ def drill_chain(authorization: RemediationAuthorization, report: DrillReport) ->
 
 def recorded_dry_run_chain(store: Store, event: AuditEvent) -> dict[str, Any]:
     """A recorded governed dry run's chain, read back as recorded (PV-6): the policy its own event
-    recorded (none if its event predates policy binding), the approval it cites, the decision
+    recorded (none if it was recorded before OGWA-DEMO-04), the approval it cites, the decision
     that applied that approval, and the operation id of that approved change (the same id a drill
     of it carries). Never the policy in force now."""
     details = dict(event.details)

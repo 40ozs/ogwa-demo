@@ -1,4 +1,4 @@
-"""Null Meridian's synthetic lifecycle policy, NM-LIFECYCLE-004, and its recorded history.
+"""Null Meridian's synthetic lifecycle policy, NM-LIFECYCLE-004, and its recorded history (OGWA-DEMO-02).
 
 The releases are reviewer-readable JSON files (``config/policies/null-meridian/``, format
 ``ogwa-policy-release/v1``). Each embeds an unchanged ``ogwa-candidate-policy/v1`` document, so the

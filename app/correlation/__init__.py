@@ -1,4 +1,4 @@
-"""Okta-to-AD identity correlation. See docs/architecture/identity-correlation.md.
+"""Okta-to-AD identity correlation (P06). See docs/architecture/identity-correlation.md.
 
 Read-only and pure: correlation asks a bounded ``ADIdentityDirectory`` for exact-match
 lookups and decides; it never writes to Okta or AD. Public surface:
@@ -6,7 +6,7 @@ lookups and decides; it never writes to Okta or AD. Public surface:
 - ``correlate``: one Okta group to its AD counterpart, with outcome, drift, and fingerprint;
 - ``mapping_evidence``: the ``IdentityMapping`` record the lifecycle reads;
 - ``MappingReviewService``: inspect, search, select, approve, reject (service contract only);
-- ``ReportBackedDirectory``: identity lookups over the AD report contract (synthetic only).
+- ``ReportBackedDirectory``: identity lookups over the P05 worker contract (synthetic only in P06).
 """
 
 from app.correlation.directory import ADIdentityDirectory, BoundedLookups, ReportBackedDirectory, identity_lookup_from_report

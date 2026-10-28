@@ -1,4 +1,5 @@
-"""A synthetic tenant ten or more times the demo's size, for the large-tenant listing tests.
+"""A synthetic tenant ten or more times the demo's size, for the large-tenant listing tests
+(OGWA-UI-IA-02).
 
 Every name, id, SID, and GUID here is invented. Group names repeat (each is shared by three
 groups, across three synthetic domains) and do not follow id order, so a sort by name has

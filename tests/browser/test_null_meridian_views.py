@@ -112,7 +112,7 @@ class NullMeridianViewTests(BrowserCase):
             b.send("Emulation.clearDeviceMetricsOverride")
 
     def test_e_conflicting_evidence_is_explained_not_acted_on(self):
-        """NM-C10's page answers the reviewer's six questions and offers no way to act."""
+        """OGWA-DEMO-01: NM-C10's page answers the reviewer's six questions and offers no way to act."""
         b = self.browser
         candidate = f"#/candidates/{self.server.scenarios['NM-C10']}"
         self.nav(candidate, prefix="Candidate: ")
@@ -142,7 +142,7 @@ class NullMeridianViewTests(BrowserCase):
         self.assert_clean()
 
     def test_f_the_decision_names_the_policy_version_that_produced_it(self):
-        """The candidate page says which policy version ran, why, and what judged its history."""
+        """OGWA-DEMO-02: the candidate page says which policy version ran, why, and what judged its history."""
         b = self.browser
         for key, decision, forced in (("NM-C10", "No action: sources disagree", "Yes"),
                                       ("NM-C08", "No action: no approval is open in this state", "No")):

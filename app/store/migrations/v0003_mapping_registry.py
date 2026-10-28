@@ -1,4 +1,4 @@
-"""0003 — the identity-mapping review registry.
+"""0003 — the identity-mapping review registry (P06).
 
 One append-only chain of human review events per Okta group: PROPOSED (an operator
 selected a pairing), APPROVED (an exact, verified pairing), REJECTED. A row is never

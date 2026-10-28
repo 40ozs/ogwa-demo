@@ -1,7 +1,7 @@
 """Runs the runtime indicator's JavaScript unit tests (tests/ui/runtime.test.mjs) under Node.
 
 The fixtures are the real ``GET /health`` bodies of the demo runtime (over its default
-dataset, Null Meridian) and the standard runtime, so "DEMO ENVIRONMENT" is proven to appear
+dataset, Genesee Press) and the standard runtime, so "DEMO ENVIRONMENT" is proven to appear
 in Demo Mode and not in production from what the servers actually return. Like
 tests/test_ui_assess.py, this fails without Node.
 """
@@ -39,7 +39,7 @@ class UiRuntimeJavaScriptTests(unittest.TestCase):
             fixtures = Path(tmp) / "runtime-fixtures.json"
             bodies = health_fixtures(Path(tmp))
             self.assertEqual((bodies["demo"]["organization"], bodies["demo"]["dataset"]["seed"]),
-                             ("Null Meridian", "null-meridian-v1"), "the demo fixture is the canonical dataset")
+                             ("Genesee Press", "genesee-press-v1"), "the demo fixture is the canonical dataset")
             fixtures.write_text(json.dumps(bodies), encoding="utf-8")
             env = {k: v for k, v in os.environ.items() if not k.startswith("OGWA_")}
             env["UI_RUNTIME_FIXTURES"] = str(fixtures)

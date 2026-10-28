@@ -55,7 +55,8 @@ _PROTECTED_SHAPES = {
 @dataclass(frozen=True)
 class LifecyclePolicy:
     freshness: FreshnessPolicy = field(default_factory=FreshnessPolicy)
-    # Okta's System Log keeps about 90 days. A longer window cannot be observed completely.
+    # Okta's System Log keeps about 90 days.
+    # A longer window cannot be observed completely.
     min_usage_window: timedelta = timedelta(days=90)
     max_usage_events_for_candidate: int = 0
     hold_period: timedelta = timedelta(days=30)

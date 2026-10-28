@@ -1,79 +1,74 @@
 # Execution modes
 
-This build runs in one execution mode, `LOCAL_SYNTHETIC`. `OGWA_EXECUTION_MODE` may be left
-unset or set to `LOCAL_SYNTHETIC`; any other value refuses startup with "This public build
-supports Demo Mode only. Live integrations are unavailable." It never falls back to a
-default.
+Every OGWA process runs in exactly one mode, set by `OGWA_EXECUTION_MODE`.
 
-| Mode | Meaning | In this build |
-| --- | --- | --- |
-| `LOCAL_SYNTHETIC` | Synthetic data only; external mutation reaches synthetic targets only | The only mode. Always active |
-| `READ_ONLY_PRODUCTION` | Read-only discovery against real systems | Refused by configuration |
-| `DRY_RUN_MUTATION` | Mutations planned and recorded, never executed | Refused by configuration as a process mode. Remediation adapters and the dry-run planner hold a `DRY_RUN_MUTATION` policy internally (below) |
-| `PRODUCTION_MUTATION` | Real external mutation | Refused by configuration (`ProductionMutationNotPermitted`) and by the build constant |
+| Mode | Network | External mutation | Permitted in this build |
+| --- | --- | --- | --- |
+| `LOCAL_SYNTHETIC` (default) | Loopback hosts only | Synthetic targets only | Yes |
+| `READ_ONLY_PRODUCTION` | HTTPS to explicitly allowlisted hosts | Denied | Yes |
+| `DRY_RUN_MUTATION` | HTTPS to explicitly allowlisted hosts | Planned and recorded, never executed | Yes |
+| `PRODUCTION_MUTATION` | — | — | **No — startup refuses** |
 
-The three other values stay in the vocabulary because the store's schema, its environment
-marker rules, the database CHECK constraints, and the mutation policy name them: they are
-what those gates refuse.
+Unset or blank means `LOCAL_SYNTHETIC`. An unrecognised value fails startup; it never
+falls back to a default.
 
-The runtime mode (`OGWA_RUNTIME_MODE`) is likewise always `demo`. The demo serves a
-synthetic dataset (by default Null Meridian,
-[../demo/null-meridian.md](../demo/null-meridian.md)) from its own store and refuses any
-store whose dataset identity evidence does not agree. See [../demo-mode.md](../demo-mode.md).
+The execution mode is separate from the **runtime mode** (`OGWA_RUNTIME_MODE`). Its
+`production` default is the standard runtime described here, unchanged. Its `demo` value is
+a sealed profile that forces `LOCAL_SYNTHETIC`, refuses every live-integration setting and
+credential, and serves a synthetic dataset (by default Null Meridian,
+[../demo/null-meridian.md](../demo/null-meridian.md)) from its own store, refusing any store
+whose dataset identity evidence does not agree. See [../demo-mode.md](../demo-mode.md).
 
 ## Enforcement points
 
 1. **Build constant.** `app/core/build.py` sets `BUILD_ALLOWS_PRODUCTION_MUTATION = False`.
    No configuration can change it.
-2. **Settings loader** (`app/core/config.py`). `Settings` has no field that could hold
-   another mode: its execution mode is always `LOCAL_SYNTHETIC`. The loader refuses any
-   other `OGWA_EXECUTION_MODE` (`PRODUCTION_MUTATION` with `ProductionMutationNotPermitted`),
-   any unrecognised `OGWA_*` key (so `OGWA_ALLOW_PRODUCTION_MUTATION=true` and similar
-   override attempts fail startup), the former live-integration keys, and other tools'
-   credential variables ([credentials.md](credentials.md)).
+2. **Settings loader** (`app/core/config.py`) rejects `PRODUCTION_MUTATION`, rejects any
+   unrecognised `OGWA_*` key (so `OGWA_ALLOW_PRODUCTION_MUTATION=true` and similar
+   override attempts fail startup), and rejects out-of-range or unsafe values.
 3. **Startup** (`app/core/startup.py`) re-checks the build policy and logs a banner showing
-   the runtime mode, the execution mode, and `live_integrations=unavailable`.
+   the mode. Modes that can reach real systems are announced at `WARNING`.
 4. **Mutation policy** (`app/core/safety.py`). `MutationPolicy` can only be built through
    `MutationPolicy.for_mode()`, which also refuses `PRODUCTION_MUTATION`. Every
    mutation-capable component subclasses `MutationCapableService` and must receive a policy
    by keyword injection; there is no default. `_perform()` refuses execution against any
    non-synthetic target, even if `decide()` were later changed by mistake.
-5. **No outbound client.** The build includes no Okta, AD, or AAP client and no outbound
-   HTTP client. `NoOutboundClientTests` (`tests/test_mutation_safety.py`) fails if any
-   application module imports a network, process, or HTTP-client module; the one approved
-   server import is the demo's WSGI server in `app/api/local.py`. `DemoOnlyEscapeTests`
-   (`tests/test_runtime_mode.py`) checks that no live integration module or worker is in
-   the build.
+5. **HTTP split** (`app/core/http_client.py` vs `app/core/http_mutation.py`).
+   `ReadOnlyHttpClient` has only `get()`/`head()` and refuses other methods even through
+   internals. `MutatingHttpClient` lives in a separate module, requires a `MutationPolicy`,
+   and never retries. A test fails if any module outside a reviewed allowlist imports it.
+6. **Destination policy.** Every client needs an explicit host allowlist. HTTPS is required
+   for non-loopback hosts. In `LOCAL_SYNTHETIC` only loopback hosts can be allowlisted or
+   contacted, so a synthetic run cannot reach a real system.
 
-## Remediation
+## Remediation (P10)
 
-The remediation path is dry-run only. Every adapter holds a `DRY_RUN_MUTATION` policy.
-Every request resolves to `SIMULATED`, `WHATIF`, `VALIDATION_ONLY`, or `BLOCKED`. The
-`EXECUTION_MODE_PERMITS_DRY_RUN` gate refuses a process mode that cannot plan
-(`READ_ONLY_PRODUCTION` or anything unknown). The layers and gates are in
+The remediation path is built and is dry-run only. Every adapter holds a
+`DRY_RUN_MUTATION` policy. Every request resolves to `SIMULATED`, `WHATIF`,
+`VALIDATION_ONLY`, or `BLOCKED`. In `READ_ONLY_PRODUCTION`, a remediation request fails the
+`EXECUTION_MODE_PERMITS_DRY_RUN` gate. The layers and gates are in
 [mutation-gates.md](mutation-gates.md).
 
-Synthetic drills run only in `LOCAL_SYNTHETIC` (any other mode answers
-`SYNTHETIC_DRILL_UNAVAILABLE`), over a SYNTHETIC store, and change only an in-memory
-provider fixture
+OGWA-DEMO-03's synthetic drills run only in `LOCAL_SYNTHETIC` (a `DRY_RUN_MUTATION` or
+`READ_ONLY_PRODUCTION` process answers `SYNTHETIC_DRILL_UNAVAILABLE`), over a SYNTHETIC
+store, and change only an in-memory provider fixture
 ([../architecture/remediation-execution.md](../architecture/remediation-execution.md)).
 
-The AD quarantine and deletion stages exist in `LOCAL_SYNTHETIC` only (D152). Their
+P10B added the AD quarantine and deletion stages in `LOCAL_SYNTHETIC` only (D152). Their
 lifecycle steps and remediation operations are dry runs like every other; no production
 deletion, quarantine, or restoration path exists (D153), and there is no restore operation
 at all (D149).
 
 ## Enabling production mutation (not authorized)
 
-No setting can enable production mutation. A build that supported it would need, at
-minimum:
+This prompt package does not authorize production mutation. A future build that needs it
+must, at minimum:
 
-- a reviewed source change to the build constant;
-- an explicit, per-operation authorization step (human approval recorded in the audit
+- change the build constant through a reviewed source change;
+- add an explicit, per-operation authorization step (human approval recorded in the audit
   store), not just a mode switch;
-- an outbound client for each system involved, which this build does not include and
-  `NoOutboundClientTests` refuses;
-- proof of the AD, Okta, and AAP operations involved, their scopes, and their rollback
-  paths.
+- add each executor module to `APPROVED_MUTATING_IMPORTERS` in
+  `tests/test_mutation_safety.py`, again through review;
+- prove the AD/Okta/AAP operations involved, their scopes, and their rollback paths.
 
 Changing an environment variable alone will never be enough.

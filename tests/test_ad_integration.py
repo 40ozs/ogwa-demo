@@ -1,8 +1,8 @@
-"""The AD report contract: parsing, emptiness, protection, and domain evidence.
+"""AD integration (P05): worker contract, emptiness, protection, and domain evidence.
 
-Every report here is a golden fixture in tests/fixtures/ad: a synthetic AD reader report in
-the contract's strict JSON form. This build includes no AD reader, and nothing here contacts
-a directory.
+Every report here is a golden fixture in tests/fixtures/ad, produced by the real
+PowerShell worker against a synthetic directory (tests/powershell/Test-OgwaADReader.ps1
+checks they stay current). Nothing here contacts a directory.
 """
 
 import copy
@@ -40,6 +40,7 @@ from app.integrations.ad import contract, records
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = REPO_ROOT / "tests" / "fixtures" / "ad"
+WORKER_CONTRACT = REPO_ROOT / "worker" / "OGWA.ADReader" / "contract.json"
 
 CORP = "corp.synthetic.example"
 EMEA = "emea.corp.synthetic.example"
@@ -80,6 +81,22 @@ def evidence(name: str, mutate=None, *, protection_policy=None):
 
 
 class ContractConstantTests(unittest.TestCase):
+    def test_python_constants_match_the_worker_contract_file(self):
+        worker = json.loads(WORKER_CONTRACT.read_text(encoding="utf-8"))
+        self.assertEqual(worker["requestSchema"], contract.REQUEST_SCHEMA)
+        self.assertEqual(worker["reportSchema"], contract.REPORT_SCHEMA)
+        self.assertEqual(worker["workerName"], contract.WORKER_NAME)
+        self.assertEqual(worker["workerVersion"], contract.WORKER_VERSION)
+        self.assertEqual(worker["lookupKinds"], [k.value for k in LookupKind])
+        self.assertEqual(
+            {k: (v["default"], v["ceiling"]) for k, v in worker["limits"].items()},
+            {k: (v.default, v.ceiling) for k, v in contract.LIMITS.items()},
+        )
+
+    def test_module_manifest_version_matches_the_contract(self):
+        manifest = (REPO_ROOT / "worker" / "OGWA.ADReader" / "OGWA.ADReader.psd1").read_text(encoding="utf-8")
+        self.assertIn(f"ModuleVersion     = '{contract.WORKER_VERSION}'", manifest)
+
     def test_every_scenario_has_a_golden_fixture_and_nothing_else_is_there(self):
         self.assertEqual(sorted(p.stem for p in FIXTURES.glob("*.json")), sorted(SCENARIOS))
 

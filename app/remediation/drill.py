@@ -1,4 +1,4 @@
-"""The synthetic execution drill: remediation as a controlled state transition.
+"""The synthetic execution drill: remediation as a controlled state transition (OGWA-DEMO-03).
 
 A drill takes one remediation request (one operation, one target, the approval, the
 evidence the operator saw) through the real governed path first, ``remediation_dry_run``:
@@ -93,7 +93,7 @@ class DrillUnavailable(Exception):
 
 
 class DrillUnauthorized(Exception):
-    """The governed gates passed, but the authorization they rest on does not:
+    """The governed gates passed, but the authorization they rest on does not (OGWA-DEMO-04):
     the approval, or the decision that applied it, was not judged by the policy version in
     force. Raised before any provider fixture exists, so nothing was built or submitted."""
 
@@ -102,7 +102,7 @@ class DrillUnauthorized(Exception):
         self.problems = tuple(problems)
 
 
-# What a reviewer must never be able to miss about a drill's mode. The server
+# What a reviewer must never be able to miss about a drill's mode (OGWA-DEMO-04). The server
 # words it, every response carries it, and the UI shows it above everything else in the result.
 MODE_BANNERS = {
     "DRY_RUN": {
@@ -405,7 +405,7 @@ def run_drill(
     """One drill. A request the governed path blocks comes back with no trace and nothing
     built; every other one comes back with its whole trace.
 
-    ``authorize`` returns why the request's authorization (the approval and the
+    ``authorize`` (OGWA-DEMO-04) returns why the request's authorization (the approval and the
     decision that applied it, against the policy in force) does not hold; none if it does. It is
     asked after the gates pass and before any fixture exists (``DrillUnauthorized``), and again
     with the gates before a retry is submitted."""

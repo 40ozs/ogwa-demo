@@ -1,4 +1,4 @@
-// Unit tests for the evidence-assessment wording (app/ui/static/js/evidence.js).
+// Unit tests for the evidence-assessment wording (app/ui/static/js/evidence.js), OGWA-DEMO-01.
 // Run by tests/test_ui_evidence.py, which first writes fixtures produced by the real API over
 // both freshly seeded synthetic worlds (UI_EVIDENCE_FIXTURES). Synthetic data only.
 import assert from "node:assert/strict";

@@ -1,4 +1,4 @@
-"""Versioned synthetic policy releases, and the exact policy every decision records.
+"""OGWA-DEMO-02: versioned synthetic policy releases, and the exact policy every decision records.
 
 - The release format (``ogwa-policy-release/v1``): strict, stable, and pinned for both fixtures.
 - ``PolicyRef``: what a decision records, and its stable serialization.
@@ -276,7 +276,7 @@ class NullMeridianPolicyHistoryTests(unittest.TestCase):
         approvals = self.client.get(f"{V}/candidates/{self.world.candidate('NM-C08')}/approvals").json["items"]
         self.assertEqual([(a["stage"], a["policy"]["version"]) for a in approvals], [("OKTA_UNASSIGN", "1.1.0")])
         listing = self.client.get(f"{V}/approvals?limit=50").json["items"]
-        # The triage approvals (2026-09-24/25) record 1.1.0; NM-C11's snapshot-day
+        # OGWA-DEMO-04: the triage approvals (2026-09-24/25) record 1.1.0; NM-C11's snapshot-day
         # approval (2026-10-01, after 1.2.0 took effect on 2026-09-28) records 1.2.0.
         nm_c11 = self.world.candidate("NM-C11")
         self.assertEqual(sorted((a["candidateId"] == nm_c11, a["policy"]["version"]) for a in listing),

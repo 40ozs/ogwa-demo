@@ -1,13 +1,14 @@
 # Evidence assessment: evidence quality and the control decision it allows
 
-Implemented in `app/classification/assessment.py` (pure), wired in
+Status: OGWA-DEMO-01. Implemented in `app/classification/assessment.py` (pure), wired in
 `app/api/services.py` (`LifecycleService.classify_and_assess`, `pending_step`), served as
 `evidenceAssessment` on `GET /candidates/{candidateId}`, and rendered first on the candidate
 page (`app/ui/static/js/evidence.js`, `views/candidate.js`). Synthetic data only; nothing here
 reads or writes an external system.
 
 Related: [candidate-policy.md](candidate-policy.md), [lifecycle-state-machine.md](lifecycle-state-machine.md),
-[identity-correlation.md](identity-correlation.md), [../security/safety-invariants.md](../security/safety-invariants.md#evidence-assessment-invariants).
+[identity-correlation.md](identity-correlation.md), [../security/safety-invariants.md](../security/safety-invariants.md#evidence-assessment-invariants-ogwa-demo-01),
+[../agent-runs/OGWA-DEMO-01.md](../agent-runs/OGWA-DEMO-01.md).
 
 ## What it answers
 
@@ -15,7 +16,7 @@ For one candidate: (1) the proposed governance issue; (2) which sources support 
 disagree, conflict, or are unavailable; (4) how sure the identity mapping is; (5) what OGWA can
 safely decide now; (6) what evidence it would need to go further.
 
-It **decides nothing the lifecycle does not**. The classifier says which retirement
+It **decides nothing the lifecycle does not**. The classifier (P07) says which retirement
 conditions are proven; the lifecycle guard, evaluated exactly as an approval request's precheck
 is (a hypothetical approval that is never recorded), says whether the next approval could be
 recorded. The assessment puts both in front of a person, per source, and adds conflict detection.
@@ -46,7 +47,7 @@ Detected generically, never resolved:
 
 | Code | When |
 | --- | --- |
-| `AD_MEMBERSHIP_DISAGREES` | The AD group object lists member values and a complete, counting membership read found no direct member, or the object lists none (complete read) and the membership read found members. The AD report converter (`app/integrations/ad/`) derives both from the same section, so its own output never conflicts |
+| `AD_MEMBERSHIP_DISAGREES` | The AD group object lists member values and a complete, counting membership read found no direct member, or the object lists none (complete read) and the membership read found members. The P05 converter derives both from the same section, so its own output never conflicts |
 | `OTHER_ASSIGNMENT_DISAGREES` | A complete other-assignment check found none while the bundle holds another present assignment of the group |
 | `EVIDENCE_INCONSISTENT` | Every classifier `EVIDENCE_INCONSISTENT` reason (a record about another subject) |
 
@@ -70,7 +71,7 @@ unassignment's guard does not read dependency coverage, so a human's approval wo
 while coverage is UNKNOWN), the assessment says so in `notes` rather than contradicting the
 server: OGWA does not mark the proposal safe; the approver carries the judgement.
 
-## Decision explanation
+## Decision explanation (OGWA-DEMO-02)
 
 `app/classification/explanation.py` (pure, like the assessment) explains the decision under the
 exact policy that produced it, served as `decisionExplanation` on `GET /candidates/{candidateId}`
@@ -100,7 +101,6 @@ It is a reading, never a second evaluator, so it cannot disagree with the decisi
 | `NOT_APPLICABLE` | the stage makes it moot: the assignment's absence after the observed Okta unassignment; no approval open |
 
 A condition is never dropped: with no application known, each per-application condition is
-listed once, not proven. Over the assessment tests' whole degradation matrix (every single
-weakened record) the explanation never shows a
+listed once, not proven. Over DEMO-01's whole degradation matrix the explanation never shows a
 condition satisfied without its proof or failed without a contradicting fact, and an eligible
 decision has every condition satisfied (`tests/test_decision_explanation.py`, invariants PV-6, PV-7).

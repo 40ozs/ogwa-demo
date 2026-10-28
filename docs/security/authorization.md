@@ -1,6 +1,6 @@
 # Authorization
 
-This document covers how the operator API authenticates people, which roles exist, what
+Status: P08. This covers how the operator API authenticates people, which roles exist, what
 each role may do, how separation of duties is enforced, and what this build refuses
 outright. The API contract is in [../architecture/api.md](../architecture/api.md). The
 binding owner decisions are D46–D51 in [../architecture/decisions.md](../architecture/decisions.md).
@@ -60,16 +60,17 @@ credential ──▶ IdentityAdapter.authenticate() ──▶ PrincipalClaims(is
 ## Roles
 
 D46 defines `IDENTITY_AUTOMATION` and `SECURITY_IAM`; D59 keeps `VIEWER`, `EXECUTOR`, and
-`ADMINISTRATOR`. Deployments name their own IdP groups; only the binding from group id to
+`ADMINISTRATOR`. The prompt's "Reviewer" is `IDENTITY_AUTOMATION` and its "Approver" is
+`SECURITY_IAM`. Deployments name their own IdP groups; only the binding from group id to
 OGWA role is fixed.
 
-| Role | Purpose |
-| --- | --- |
-| `VIEWER` | **Strictly read-only (D60):** the inventory, candidates, evidence, decisions, approvals, jobs, and collectors |
-| `IDENTITY_AUTOMATION` | Propose and advance: submit candidates for review, lift blocks, select mapping pairings, stop candidates |
-| `SECURITY_IAM` | Approve or reject lifecycle stages and mapping pairings, stop candidates |
-| `EXECUTOR` | **Only (D61):** plan dry runs for a stage already approved by someone else, and record the dry-run step. No mapping, policy, or approval power |
-| `ADMINISTRATOR` | **Operational and configuration concerns only (D62):** read the audit chain, the role bindings, and store integrity. No lifecycle, review, approval, or execution power, and nothing is inherited from the role (D63) |
+| Role | Prompt name | Purpose |
+| --- | --- | --- |
+| `VIEWER` | Viewer | **Strictly read-only (D60):** the inventory, candidates, evidence, decisions, approvals, jobs, and collectors |
+| `IDENTITY_AUTOMATION` | Reviewer | Propose and advance: submit candidates for review, lift blocks, select mapping pairings, stop candidates |
+| `SECURITY_IAM` | Approver | Approve or reject lifecycle stages and mapping pairings, stop candidates |
+| `EXECUTOR` | Executor | **Only (D61):** plan dry runs for a stage already approved by someone else, and record the dry-run step. No mapping, policy, or approval power |
+| `ADMINISTRATOR` | Administrator | **Operational and configuration concerns only (D62):** read the audit chain, the role bindings, and store integrity. No lifecycle, review, approval, or execution power, and nothing is inherited from the role (D63) |
 
 Code checks permissions, never role names. `test_nothing_is_inherited_from_a_role_name`
 fails if any API module other than the role table refers to a role, so no role can imply
@@ -106,7 +107,7 @@ properties:
 | Step | Permission |
 | --- | --- |
 | `DISCOVERED → CANDIDATE`, `CANDIDATE → NEEDS_REVIEW`, `HOLD → REVALIDATION_REQUIRED`, `QUARANTINE_HOLD → DELETION_REVALIDATION_REQUIRED`, re-entry from a blocked state | `LIFECYCLE_ADVANCE` |
-| `DELETION_REVALIDATION_REQUIRED → DELETION_PROPOSED` (the deletion proposal) | `LIFECYCLE_ADVANCE`, and a human; the proposer is recorded |
+| `DELETION_REVALIDATION_REQUIRED → DELETION_PROPOSED` (the deletion proposal, P10B) | `LIFECYCLE_ADVANCE`, and a human; the proposer is recorded |
 | Any move to a safer state (`BLOCKED`, `EXCLUDED`, `REJECTED`, …) | `LIFECYCLE_DIVERT` |
 | `NEEDS_REVIEW → APPROVED`, `REVALIDATION_REQUIRED → QUARANTINE_APPROVED`, `DELETION_PROPOSED → DELETION_APPROVED` | `APPROVAL_DECIDE` (and the domain requires the approver themself) |
 | `APPROVED → OKTA_UNASSIGN_DRY_RUN`, `QUARANTINE_APPROVED → QUARANTINE_DRY_RUN`, `DELETION_APPROVED → DELETION_DRY_RUN` | `EXECUTION_PLAN_DRY_RUN` |
@@ -150,7 +151,7 @@ The services enforce these rules per action, whatever roles the principal holds.
 | Approve or reject `AD_QUARANTINE` | The person who moved it into `REVALIDATION_REQUIRED` in this epoch, or the `OKTA_UNASSIGN` approver | D49 (API), D11 (domain and API) |
 | Approve or reject `AD_DELETION` | The deletion's proposer, the `AD_QUARANTINE` approver, or the `OKTA_UNASSIGN` approver | D143 (domain, API, remediation gates, history replay) |
 | Plan a dry run, or record the dry-run step | The approver of that stage | D49 (API) |
-| Request a remediation dry run | The approver of that stage | D49 (API, and the `SEPARATION_OF_DUTIES` remediation gate) |
+| Request a remediation dry run (P10) | The approver of that stage | D49 (API, and the `SEPARATION_OF_DUTIES` remediation gate) |
 | Approve a mapping pairing | The person who selected it | C-10 (domain chain rule and database trigger) |
 | Use a mapping search result | Anyone but the person who ran the search | API |
 
@@ -194,11 +195,10 @@ covers one holding both `SECURITY_IAM` and `EXECUTOR`.
 - Planning refuses any process mode that cannot record jobs
   (`EXECUTION_MODE_NOT_AUTHORIZED`). The API itself refuses to start outside
   `LOCAL_SYNTHETIC`.
-- `BUILD_ALLOWS_PRODUCTION_MUTATION` is `False`, and the build has no outbound client:
-  `app/api` imports no HTTP client, socket, or integration module (`NoOutboundClientTests`,
-  `test_api_imports_no_network_mutation_or_integration_module`).
-- **Remediation dry runs** use the same permission, `EXECUTION_PLAN_DRY_RUN`. They have no
-  permission or role of their own.
+- `BUILD_ALLOWS_PRODUCTION_MUTATION` is `False` and `APPROVED_MUTATING_IMPORTERS` is empty,
+  both unchanged. `app/api` imports no HTTP client and no mutating client.
+- **Remediation dry runs (P10)** use the same permission, `EXECUTION_PLAN_DRY_RUN`. No new
+  permission or role was added.
   - `POST /candidates/{id}/remediation-dry-runs` refuses `PRODUCTION_MUTATION` and
     `dryRun: false` first.
   - It answers only `SIMULATED` or `VALIDATION_ONLY`, or `409 REMEDIATION_BLOCKED`.
@@ -224,8 +224,9 @@ four-eyes refuses, an automation user asking for a transition only an approver m
 an executor asking to execute, was authorized to use the route and made a valid request
 that lifecycle, policy, evidence, or separation-of-duties rules refused; that is chained.
 The error then carries `auditEventId`. Ordinary route-level authorization failures are
-never chained (D73). The execute route is gated statically like every other governed
-route.
+never chained (D73). Until addendum 2 the execute route was open to every session, so any
+signed-in principal's attempt was chained; it is now gated statically like every other
+governed route.
 
 The chain grows only with authenticated humans' valid requests. A burst of them is
 visible in the chain itself (actor, time, and request id).
@@ -235,7 +236,7 @@ visible in the chain itself (actor, time, and request id).
 Each request writes one structured line (`api.request`: request id, method, route pattern,
 status, principal subject, elapsed time). Each 401 or 403 also writes `api.refused` at
 WARNING, with the error code and principal. Neither line carries query strings, bodies,
-cookies, or CSRF tokens, and all lines pass through the redacting formatter.
+cookies, or CSRF tokens, and all lines pass through the P01 redacting formatter.
 Unexpected exceptions, including a failure to chain a refusal (`api.refusal_audit_failed`;
 the refusal still stands), are logged redacted, server-side only.
 

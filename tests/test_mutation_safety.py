@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 
 from app.core.errors import MutationBlockedError
+from app.core.http_client import HttpPolicy, HttpResponse, ReadOnlyHttpClient
+from app.core.http_mutation import MutatingHttpClient
 from app.core.modes import ExecutionMode
 from app.core.safety import (
     MutationCapableService,
@@ -10,13 +12,13 @@ from app.core.safety import (
     MutationPolicy,
     MutationRequest,
 )
+from tests.fakes import SYNTHETIC_OKTA_HOST, SYNTHETIC_OKTA_URL, FakeTransport
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-# Standard-library and common third-party modules that open outbound connections or start processes.
-OUTBOUND_MODULES = ("socket", "ssl", "urllib.request", "urllib.error", "http.client", "http.server", "ftplib", "smtplib",
-                    "asyncio", "subprocess", "requests", "httpx", "aiohttp")
-# The one reviewed server import: the demo's WSGI server, bound to loopback or a container interface.
-APPROVED_SERVER_IMPORTERS = {"app/api/local.py": "wsgiref.simple_server"}
+
+# Modules (repo-relative, forward slashes) reviewed and approved to import the mutating
+# HTTP client. Adding to this set is a deliberate, reviewable change.
+APPROVED_MUTATING_IMPORTERS: frozenset[str] = frozenset()
 
 REAL_TARGET = MutationRequest(system="ad", action="remove_group_member", target="SYNTH-GROUP-001")
 SYNTHETIC_TARGET = MutationRequest(
@@ -81,17 +83,83 @@ class MutationDecisionTests(unittest.TestCase):
         self.assertEqual(service.calls, 1)
 
 
-class NoOutboundClientTests(unittest.TestCase):
-    """This build has no Okta, AD, or AAP client and no outbound HTTP client; nothing may add one unreviewed."""
+class MutatingHttpClientTests(unittest.TestCase):
+    def _client(self, mode, transport, hosts=(SYNTHETIC_OKTA_HOST,)):
+        return MutatingHttpClient(
+            mutation_policy=MutationPolicy.for_mode(mode),
+            http_policy=HttpPolicy(),
+            allowed_hosts=hosts,
+            transport=transport,
+        )
 
-    def test_no_application_module_imports_an_outbound_network_or_process_module(self):
-        for path in sorted((REPO_ROOT / "app").rglob("*.py")):
-            relative = path.relative_to(REPO_ROOT).as_posix()
-            for name in _imported_modules(path):
-                with self.subTest(module=relative, imports=name):
-                    self.assertFalse(any(name == f or name.startswith(f + ".") for f in OUTBOUND_MODULES))
-                    if name.startswith("wsgiref"):
-                        self.assertEqual(APPROVED_SERVER_IMPORTERS.get(relative), name)
+    def test_requires_mutation_policy(self):
+        with self.assertRaises(TypeError):
+            MutatingHttpClient(http_policy=HttpPolicy(), allowed_hosts=[SYNTHETIC_OKTA_HOST])  # type: ignore[call-arg]
+
+    def test_read_only_mode_blocks_without_network(self):
+        transport = FakeTransport()
+        client = self._client(ExecutionMode.READ_ONLY_PRODUCTION, transport)
+        with self.assertRaises(MutationBlockedError):
+            client.send_mutation(REAL_TARGET, "DELETE", f"{SYNTHETIC_OKTA_URL}/api/v1/groups/SYNTH")
+        self.assertEqual(transport.calls, [])
+
+    def test_dry_run_plans_without_network(self):
+        transport = FakeTransport()
+        client = self._client(ExecutionMode.DRY_RUN_MUTATION, transport)
+        outcome = client.send_mutation(REAL_TARGET, "DELETE", f"{SYNTHETIC_OKTA_URL}/api/v1/groups/SYNTH")
+        self.assertFalse(outcome.executed)
+        self.assertEqual(transport.calls, [])
+
+    def test_synthetic_target_on_loopback_is_sent_once_without_retry(self):
+        transport = FakeTransport(HttpResponse(503))
+        client = self._client(ExecutionMode.LOCAL_SYNTHETIC, transport, hosts=("127.0.0.1",))
+        outcome = client.send_mutation(SYNTHETIC_TARGET, "POST", "http://127.0.0.1:9/synthetic")
+        self.assertTrue(outcome.executed)
+        self.assertEqual(outcome.result.status, 503)
+        self.assertEqual(len(transport.calls), 1)
+
+    def test_rejects_safe_methods(self):
+        client = self._client(ExecutionMode.DRY_RUN_MUTATION, FakeTransport())
+        with self.assertRaises(ValueError):
+            client.send_mutation(REAL_TARGET, "GET", f"{SYNTHETIC_OKTA_URL}/api/v1/groups")
+
+
+class ReadOnlySurfaceTests(unittest.TestCase):
+    def test_read_only_client_exposes_no_mutating_methods(self):
+        for name in ("post", "put", "patch", "delete", "request", "send_mutation"):
+            with self.subTest(name=name):
+                self.assertFalse(hasattr(ReadOnlyHttpClient, name))
+
+    def test_read_only_client_refuses_unsafe_methods_even_via_internals(self):
+        transport = FakeTransport()
+        client = ReadOnlyHttpClient(
+            mode=ExecutionMode.READ_ONLY_PRODUCTION,
+            http_policy=HttpPolicy(),
+            allowed_hosts=[SYNTHETIC_OKTA_HOST],
+            transport=transport,
+        )
+        for method in ("POST", "PUT", "PATCH", "DELETE"):
+            with self.subTest(method=method), self.assertRaises(MutationBlockedError):
+                client._send_once(method, f"{SYNTHETIC_OKTA_URL}/x", None, None, 1)
+        self.assertEqual(transport.calls, [])
+
+    def test_read_only_http_module_does_not_import_mutation_code(self):
+        imported = _imported_modules(REPO_ROOT / "app" / "core" / "http_client.py")
+        self.assertNotIn("app.core.http_mutation", imported)
+        self.assertNotIn("app.core.safety", imported)
+
+    def test_only_approved_modules_import_mutating_http_client(self):
+        importers = set()
+        for path in (REPO_ROOT / "app").rglob("*.py"):
+            if path.name == "http_mutation.py":
+                continue
+            if "app.core.http_mutation" in _imported_modules(path):
+                importers.add(path.relative_to(REPO_ROOT).as_posix())
+        self.assertEqual(importers - APPROVED_MUTATING_IMPORTERS, set())
+
+    def test_mutating_import_allowlist_is_empty_in_current_prompt_package(self):
+        # Owner decision D8 (docs/architecture/decisions.md): no executor is approved yet.
+        self.assertEqual(APPROVED_MUTATING_IMPORTERS, frozenset())
 
 
 def _imported_modules(path: Path) -> set[str]:

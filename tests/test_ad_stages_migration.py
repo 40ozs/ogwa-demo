@@ -1,4 +1,4 @@
-"""Migration 0011: the AD quarantine and deletion stages, on a store with legacy rows.
+"""Migration 0011 (P10B): the AD quarantine and deletion stages, on a store with legacy rows.
 
 The store is seeded by the build as it was at schema 10, so it holds S12's legacy
 ``AD_RETIREMENT`` approval and dry-run job. The owner authorized 0011 on the local synthetic

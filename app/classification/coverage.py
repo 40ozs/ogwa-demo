@@ -35,14 +35,14 @@ class KindStatus(StrEnum):
 @dataclass(frozen=True)
 class ProductionCollector:
     name: str
-    live_verified: bool  # False: nothing has verified the live behaviors it depends on (D19)
+    live_verified: bool  # False until P11 records the live behaviors it depends on (D19)
     note: str
 
 
 _AD_READER = ProductionCollector(
-    name="AD reader (not included in this build)",
+    name="OGWA.ADReader worker (P05) through a read-only AAP job",
     live_verified=False,
-    note="This build has no AD reader and no AAP transport; AD coverage comes only from synthetic evidence.",
+    note="No AAP transport exists yet, and live AD results stay PARTIAL until P11 verifies the D19 behaviors.",
 )
 
 # None: OGWA has no collector for the kind. Its coverage can come only from synthetic data.

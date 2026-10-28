@@ -22,8 +22,8 @@ from app.integrations.okta.normalize import OBJECT_GUID_DECODING_VERIFIED
 CORRELATION_VERSION = "ogwa-correlation/1"
 
 # Owner decision D37: a directory-source objectSid match (Okta's AD integration carries
-# the SID and AD resolves it) may count as exact only once the mechanism is validated
-# against a known AD-backed Okta group, which this build has no live connection to do. Until then such a
+# the SID and AD resolves it) may count as exact only after P11 validates the mechanism
+# against a known AD-backed Okta group and records it in a run report. Until then such a
 # match is review evidence (UNVERIFIED_IDENTIFIER / UNVERIFIED_STABLE_ID, D56), never a name
 # match and never exact; it can still corroborate an exact mapping established another way. Changing this is a reviewed source change,
 # like OBJECT_GUID_DECODING_VERIFIED; tests pin it.

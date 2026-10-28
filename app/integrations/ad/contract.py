@@ -1,11 +1,12 @@
-"""The JSON contract between OGWA and a read-only AD reader.
+"""The JSON contract between OGWA and the read-only PowerShell AD worker (OGWA.ADReader).
 
-OGWA never talks to Active Directory itself, and this build includes no AD reader. A request
-is an ``ogwa.ad.group-read-request/v1`` document and a reader answers with one
+OGWA never talks to Active Directory itself. It builds an ``ogwa.ad.group-read-request/v1``
+document, a read-only AAP job runs the worker with it, and the worker returns one
 ``ogwa.ad.group-report/v1`` document. This module validates both directions strictly:
 unknown keys, missing keys, wrong types, and out-of-range values are refused, so contract
-drift fails closed instead of being read as "no members" or "not protected". The golden
-fixtures in tests/fixtures/ad are synthetic reports in this form.
+drift fails closed instead of being read as "no members" or "not protected".
+
+The constants here must match ``worker/OGWA.ADReader/contract.json`` (checked by tests).
 See docs/architecture/ad-integration.md.
 """
 

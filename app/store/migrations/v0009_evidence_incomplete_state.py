@@ -1,4 +1,4 @@
-"""0009 — the EVIDENCE_INCOMPLETE lifecycle state (owner decision).
+"""0009 — the EVIDENCE_INCOMPLETE lifecycle state (owner decision after P09).
 
 EVIDENCE_INCOMPLETE means required evidence was never fully or properly obtained;
 STALE_EVIDENCE means once-complete evidence outlived its freshness window. Until now both

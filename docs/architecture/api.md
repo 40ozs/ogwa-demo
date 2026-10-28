@@ -1,8 +1,9 @@
 # Operator API
 
-The API applies decisions D58–D68. It runs **only in `LOCAL_SYNTHETIC` mode over a
-SYNTHETIC store, with synthetic sign-in** (D50, D51). It is the contract the UI builds on
-(D58). Authorization is described in
+Status: P08, with the owner decisions after P08 (D58–D70) applied; P09 added three read-only
+listings for the UI. The API runs **only in
+`LOCAL_SYNTHETIC` mode over a SYNTHETIC store, with synthetic sign-in** (D50, D51). It is
+the contract the UI will build on (D58). Authorization is described in
 [../security/authorization.md](../security/authorization.md).
 
 ## Shape
@@ -36,28 +37,21 @@ Browser ──(session cookie + CSRF header, JSON only)──▶ app/api (WSGI)
 | `app/api/identity.py` | Identity adapter boundary and the synthetic adapter |
 | `app/api/sessions.py` | Server-side sessions and CSRF tokens |
 | `app/api/http.py`, `validation.py`, `errors.py` | Strict JSON bodies and queries, pagination, error format, security headers |
-| `app/api/local.py`, `__main__.py` | Local factory and the `serve` command |
+| `app/api/local.py`, `__main__.py` | Local factory and the loopback-only `serve` command |
 | `config/synthetic-idp.json`, `config/role-bindings.synthetic.json` | Synthetic principals and their role bindings |
 
 ## Running locally
 
 ```powershell
-python -m app.runtime reset-demo --confirm-synthetic-reset   # create or re-create the demo store
-python -m app.api serve                                      # http://127.0.0.1:8765, synthetic sign-in only
+python -m app.store status             # the store must be SYNTHETIC and at the build's schema
+python -m app.api serve --demo-clock   # http://127.0.0.1:8765, synthetic sign-in only
 ```
 
-- `serve` also serves the operator UI on the same origin; see [ui.md](ui.md).
-- `serve` binds `127.0.0.1` by default; `--host 0.0.0.0` is only for a container whose port
-  is published to the host's loopback. Either way the browser must use
-  `http://localhost:8765` or `http://127.0.0.1:8765` (or the `--port` given): the API's
-  Origin check accepts no other origin.
-- `serve` refuses to start unless the store is marked SYNTHETIC and holds the configured demo
-  dataset.
-- The API clock always starts just after the store's newest audit event and runs in real
-  time, so the demo world's evidence is fresh enough to work with.
-- With Docker instead: `docker compose up --build` seeds the demo store on first start and
-  serves it at http://localhost:8765. `docker compose down` stops it; `docker compose down -v`
-  also deletes the demo store volume, so the next start re-seeds it.
+- `serve` also serves the operator UI (P09) on the same origin; see [ui.md](ui.md).
+- `serve` binds `127.0.0.1` only; there is no host option. It refuses any mode other than
+  `LOCAL_SYNTHETIC` and any store not marked SYNTHETIC.
+- `--demo-clock` starts the API clock just after the store's newest audit event and lets it
+  run in real time, so the demo world's evidence is fresh enough to work with.
 - The server is `wsgiref`: single-threaded, plain HTTP, for local development only.
 - Sessions are kept in memory, so restarting the server signs everyone out.
 
@@ -88,10 +82,10 @@ List endpoints accept `limit` (1–200, default 50) and `cursor`, and return:
 
 `nextCursor` is opaque and is `null` on the last page. A cursor that the server did not
 issue gets `400`, as does any page beyond 100,000 records. `previousCursor`, `offset`, and
-`total` (the listing's row count after its filters) are additive: a client that reads only
-`items` and `nextCursor` is unaffected.
+`total` (the listing's row count after its filters) were added by OGWA-UI-IA-01; they are
+additive, and a client that reads only `items` and `nextCursor` is unaffected.
 
-**Sorting.** Listings accept `sort=<field>&order=asc|desc`. Without `sort` a
+**Sorting (OGWA-UI-IA-01).** Listings accept `sort=<field>&order=asc|desc`. Without `sort` a
 listing keeps its own order. The sort is stable (ties keep the listing's order) and a missing
 value sorts last in both directions. An unknown field or order is `400`. Fields:
 
@@ -110,7 +104,7 @@ value sorts last in both directions. An unknown field or order is `400`. Fields:
 | `/collector-runs` | `collector`, `startedAt`, `outcome`, `records` |
 | `/audit-events` | `sequence` only: the chain is served in chain order, either way round |
 
-**Filter, sort, then page, in one query.** A store-backed listing (applications,
+**Filter, sort, then page, in one query (OGWA-UI-IA-02).** A store-backed listing (applications,
 groups, mappings, dependency findings, candidates, approvals, execution jobs, collector runs)
 filters, sorts, and pages in a single `SELECT … ORDER BY … LIMIT/OFFSET` (`ReadModel.page_ids`,
 `PAGED` in `app/api/readmodel.py`), then loads only that page's records through the
@@ -118,7 +112,7 @@ digest-verifying loaders. Ties keep the listing's own order, which ends in the s
 page is deterministic and never ordered by a name alone. A column of ids sorts by the name it
 resolves to, as `GET /identities` gives it; an AD group's name comes from the directory
 snapshot, else its latest sAMAccountName. Text compares case-insensitively for ASCII letters
-(SQLite's `NOCASE`).
+(SQLite's `NOCASE`). The response is unchanged.
 
 The directory snapshot's listings (`/people`, `/directory-groups`, `/governance-findings`) are
 served from the snapshot held in memory (loaded once per process): they filter, sort, and page
@@ -149,7 +143,7 @@ request id when reporting either.
 | 403 | `FORBIDDEN`, `CSRF_FAILED`, `ORIGIN_REFUSED`, `SEPARATION_OF_DUTIES`, `NOT_AN_OPERATOR_ACTION`, `PRODUCTION_MUTATION_REFUSED`, `EXECUTION_MODE_NOT_AUTHORIZED` |
 | 404 | `NOT_FOUND` |
 | 405 | `METHOD_NOT_ALLOWED` (with `Allow`) |
-| 409 | `EVIDENCE_CHANGED`, `EVIDENCE_RULES_NOT_MET`, `INVALID_STATE`, `APPROVAL_INVALID`, `TRANSITION_REFUSED`, `TRANSITION_NOT_PERMITTED`, `REVIEW_REFUSED`, `POLICY_NOT_RECORDED`, `LEGACY_AD_RETIREMENT`, `REMEDIATION_BLOCKED`, `APPROVAL_POLICY_NOT_IN_FORCE`, `CONFLICT` |
+| 409 | `EVIDENCE_CHANGED`, `EVIDENCE_RULES_NOT_MET`, `INVALID_STATE`, `APPROVAL_INVALID`, `TRANSITION_REFUSED`, `TRANSITION_NOT_PERMITTED`, `REVIEW_REFUSED`, `POLICY_NOT_RECORDED`, `LEGACY_AD_RETIREMENT`, `REMEDIATION_BLOCKED`, `APPROVAL_POLICY_NOT_IN_FORCE` (OGWA-DEMO-04), `CONFLICT` |
 | 411, 413, 415 | `LENGTH_REQUIRED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE` |
 | 422 | `VALIDATION_FAILED` |
 | 500 | `INTERNAL_ERROR`, `INTEGRITY_FAILURE` |
@@ -159,9 +153,9 @@ request id when reporting either.
 
 | Method and path | Access | Purpose |
 | --- | --- | --- |
-| `GET /health` | public | `{"status": "ok"}`. It also names the runtime and the dataset: `runtimeMode`, `dataSource`, `organization`, `dataset` (selector, company, domain, snapshot date, seed namespace), `liveIntegrations: false` ([../demo-mode.md](../demo-mode.md)) |
-| `POST /session` | public | Synthetic sign-in: `{"subject": "synthetic.securityiam.one"}`. Sets the session cookie and returns the principal and `csrfToken`. The read-only public demo has no sign-in and answers `403 PUBLIC_DEMO_NO_SIGN_IN` ([../demo-mode.md](../demo-mode.md)) |
-| `GET /session` | session | The principal (subject, roles, permissions) and the CSRF token. On the read-only public demo it is public: a visitor without a session gets a new one for the anonymous `public.visitor` |
+| `GET /health` | public | `{"status": "ok"}`. Under Demo Mode it also names the runtime and the dataset: `runtimeMode`, `dataSource`, `organization`, `dataset` (selector, company, domain, snapshot date, seed namespace), `liveIntegrations: false` ([../demo-mode.md](../demo-mode.md)) |
+| `POST /session` | public | Synthetic sign-in: `{"subject": "synthetic.securityiam.one"}`. Sets the session cookie and returns the principal and `csrfToken` |
+| `GET /session` | session | The principal (subject, roles, permissions) and the CSRF token |
 | `POST /session/logout` | session | Ends the session and expires the cookie |
 
 Every other `POST` needs the session's token in the `X-OGWA-CSRF` header.
@@ -172,34 +166,34 @@ All need `READ_INVENTORY` unless stated otherwise. Paged endpoints are marked *(
 
 | Method and path | Returns |
 | --- | --- |
-| `GET /dashboard` | Candidate counts by state, how many await each approval stage, collector run summary, evidence counts, the policy in force, the safety posture (`executionMode`, `productionMutationPermittedByBuild: false`, `executionRoutes: DRY_RUN_PLANNING_ONLY`), the store's audit head, and a dependency findings summary: checks, checks with findings, findings, and blocking findings |
+| `GET /dashboard` | Candidate counts by state, how many await each approval stage, collector run summary, evidence counts, the policy in force, the safety posture (`executionMode`, `productionMutationPermittedByBuild: false`, `executionRoutes: DRY_RUN_PLANNING_ONLY`), and the store's audit head, and (OGWA-UI-IA-01) a dependency findings summary: checks, checks with findings, findings, and blocking findings |
 | `GET /applications` *(paged)*, `GET /applications/{applicationId}` | Okta applications (latest observation, provenance, digest); the detail view adds assignments |
 | `GET /groups` *(paged)*, `GET /groups/{groupId}` | Okta groups; the detail view adds assignments, the identity mapping, the mapped AD group, and candidate ids |
 | `GET /mappings` *(paged)*, `GET /mappings/{groupId}` | Identity-mapping evidence; the detail view adds the AD group or ambiguous candidates and the review registry (`currentApprovalId`, `pendingSelectionId`) |
 | `GET /candidates` *(paged; `state=`)* | The candidate queue, oldest first, each loaded with history verification |
-| `GET /candidates/{candidateId}` | The candidate (with `quarantineApprover`, `quarantineHoldUntil`, `deletionProposer`, `deletionProposedAt`), its `evidenceFingerprint`, its classification (`isApproval: false`), `quarantine` (the mapped AD group's domain, that domain's quarantine OU from deployment configuration, and whether the group is in it; read-only, D136), `allowedActions` for the signed-in principal, and `evidenceAssessment`: each source's evidence state, conflicts, the identity mapping's state, the next approval step with the lifecycle guard's answer, the decision OGWA can safely make, and the evidence still needed (`isApproval: false`, `autoRemediationEligible: false`; see [evidence-assessment.md](evidence-assessment.md)). The assessment names the `policy` that produced its decision, and `decisionExplanation` explains it under that exact version: the policy, each condition as that version states it with its status and the evidence it read, whether evidence forced manual review, and what would change ([evidence-assessment.md](evidence-assessment.md#decision-explanation)) |
+| `GET /candidates/{candidateId}` | The candidate (since P10B also `quarantineApprover`, `quarantineHoldUntil`, `deletionProposer`, `deletionProposedAt`), its `evidenceFingerprint`, its classification (`isApproval: false`), `quarantine` (the mapped AD group's domain, that domain's quarantine OU from deployment configuration, and whether the group is in it; read-only, D136), `allowedActions` for the signed-in principal, and (OGWA-DEMO-01) `evidenceAssessment`: each source's evidence state, conflicts, the identity mapping's state, the next approval step with the lifecycle guard's answer, the decision OGWA can safely make, and the evidence still needed (`isApproval: false`, `autoRemediationEligible: false`; see [evidence-assessment.md](evidence-assessment.md)). Since OGWA-DEMO-02 the assessment names the `policy` that produced its decision, and `decisionExplanation` explains it under that exact version: the policy, each condition as that version states it with its status and the evidence it read, whether evidence forced manual review, and what would change ([evidence-assessment.md](evidence-assessment.md#decision-explanation-ogwa-demo-02)) |
 | `GET /candidates/{candidateId}/evidence` | The full evidence bundle with provenance and digests |
 | `GET /candidates/{candidateId}/dependencies` | Dependency findings (with `FindingCode`, blocking flag) and the per-kind coverage report |
-| `GET /candidates/{candidateId}/decisions` | Lifecycle decisions, oldest first; each with the `policy` it recorded (`policyId`, `version`, `name`, digests, recorded version, and `publishedRelease`), or `null` if it recorded none. Never the policy in force now. Approvals (per candidate and the `/approvals` listing) carry their `policy` the same way |
+| `GET /candidates/{candidateId}/decisions` | Lifecycle decisions, oldest first; each with the `policy` it recorded (OGWA-DEMO-02: `policyId`, `version`, `name`, digests, recorded version, and `publishedRelease`), or `null` if it recorded none. Never the policy in force now. Approvals (per candidate and the `/approvals` listing) carry their `policy` the same way |
 | `GET /candidates/{candidateId}/approvals` | Approvals and rejections, with `expired` |
 | `GET /candidates/{candidateId}/execution-jobs`, `GET /execution-jobs/{jobId}` | Jobs with their full status history |
-| `GET /execution-jobs` *(paged)* | Every job, newest first, with its status history, and `executionAvailable: false` |
-| `GET /candidates/{candidateId}/remediation-dry-runs` | The candidate's recorded remediation dry runs, oldest first, each checked against its audit digest: operation, outcome, adapter, target and identity digest, approval, fingerprint, `executed: false`, `policy` (the reference its event recorded; `null` when it recorded none), and `chain` (policy, decision, approval, operation id); plus `executionAvailable: false` |
-| `GET /remediation-drill-scenarios` | The synthetic drill's closed fault-scenario catalog (key, title, description, scripted submissions, expected final state), its modes, every execution state's label, `maxSubmissions` (2), `maxVerificationReads` (2), and the drill notice |
-| `GET /approvals` *(paged)* | Every approval and rejection, newest first, with `expired` |
-| `GET /dependency-findings` *(paged)* | Every dependency check (latest observation) with its findings and provenance |
+| `GET /execution-jobs` *(paged)* | P09. Every job, newest first, with its status history, and `executionAvailable: false` |
+| `GET /candidates/{candidateId}/remediation-dry-runs` | P10. The candidate's recorded remediation dry runs, oldest first, each checked against its audit digest: operation, outcome, adapter, target and identity digest, approval, fingerprint, `executed: false`; since OGWA-DEMO-04 also `policy` (the reference its event recorded, as recorded; `null` for a record made before) and `chain` (policy, decision, approval, operation id); plus `executionAvailable: false` |
+| `GET /remediation-drill-scenarios` | OGWA-DEMO-03. The synthetic drill's closed fault-scenario catalog (key, title, description, scripted submissions, expected final state), its modes, every execution state's label, `maxSubmissions` (2), `maxVerificationReads` (2), and the drill notice |
+| `GET /approvals` *(paged)* | P09. Every approval and rejection, newest first, with `expired` |
+| `GET /dependency-findings` *(paged)* | P09. Every dependency check (latest observation) with its findings and provenance |
 | `GET /collector-runs` *(paged)* | Collector runs, newest first, with outcome and error code; plus a summary |
-| `GET /policy` | The policy in force (`RECORDED_VERSION`, or in a SYNTHETIC store only `UNRECORDED_SYNTHETIC_DEMO` with `label: "DEMO POLICY — UNRECORDED"`) and recorded versions. The policy in force carries `versionSequence`, `policyId`, `version`, `name`, and `release` (null when no release carries its rules); each version its `release`; and a SYNTHETIC store's demo dataset lists its synthetic `releases` (identity, purpose, and the full document). `editableViaApi: false` |
+| `GET /policy` | The policy in force (`RECORDED_VERSION`, or in a SYNTHETIC store only `UNRECORDED_SYNTHETIC_DEMO` with `label: "DEMO POLICY — UNRECORDED"`) and recorded versions. Since OGWA-DEMO-02 the policy in force carries `versionSequence`, `policyId`, `version`, `name`, and `release` (null when no release carries its rules); each version its `release`; and a SYNTHETIC store's demo dataset lists its synthetic `releases` (identity, purpose, and the full document). `editableViaApi: false` |
 | `GET /audit-events` *(paged; `subjectId=`)* | **`READ_AUDIT`.** The audit chain, newest first, each event verified against its digest |
 | `GET /candidates/{candidateId}/audit-events` *(paged)* | **`READ_AUDIT`.** One candidate's audit events |
 | `GET /system/role-bindings` | **`READ_SYSTEM`.** The bindings in force, read-only (`editable: false`) |
 | `GET /system/integrity` | **`READ_SYSTEM`.** Re-verifies migrations, the audit chain, every evidence digest, and every candidate history. A read-only store (the hosted demo's image) reports its last full verification while its audit head and contents are unchanged (`Store.verified_integrity`) |
-| `GET /directory` | The synthetic directory snapshot (0012), if the store holds one: company profile, counts, departments, the application estate with health, and `deactivations`: per year, and in the 90 days to the snapshot date. `available: false` in a store without one (the classic world) |
+| `GET /directory` | The synthetic directory snapshot (0012), if the store holds one: company profile, counts, departments, the application estate with health, and (OGWA-UI-IA-01) `deactivations`: per year, and in the 90 days to the snapshot date. `available: false` in a store without one (the classic world) |
 | `GET /people` *(paged; `department=`, `status=ACTIVE\|TERMINATED`, `q=`)*, `GET /people/{personId}` | Synthetic people; the detail view adds manager, direct reports, employment and account history, direct groups, and every application the person reaches with each route (assigned group › nested groups › a group they are a direct member of, or an individual assignment) |
 | `GET /directory-groups` *(paged; `era=`, `health=`, `source=`, `q=`: any name the group goes by, or exactly its OGWA id, AD evidence id, objectSid, objectGUID, or Okta group id)*, `GET /directory-groups/{directoryGroupId}` | Every AD and Okta group in the snapshot with era, naming style, dates, health, effective members, and nesting depth; the detail view adds owner, parents, children, lineage (replaced by / replaces / push target), assignments, direct members (first 200), findings, and an example membership path |
 | `GET /governance-findings` *(paged; `severity=`, `code=`, `subjectKind=`)* | Governance findings (`app/governance/analysis.py`), most serious first, plus counts by severity and rule. Evidence for review; none authorizes a change |
-| `GET /demo-scenarios` | The dataset's portfolio scenarios with their groups, applications, and lifecycle candidate; and `walkthrough`: the dataset's guided reviewer walkthrough (title, disclosures, two parts with their steps and resolved `candidateId`), or `null` for a dataset without one |
-| `GET /identities?ids=a,b,…` | `app/api/resolve.py`: for up to 50 OGWA ids or AD domain objectSids, each one's kind, common name, canonical page (`route`, `routeId`), and a `qualifier` (an AD distinguished name or an Okta group id) with `ambiguous` (whether the snapshot has another group of that name; `null` when unknown). An Okta group with an exact mapping adds `mappedAdGroup`. An id that names nothing comes back `resolved: false`. Lookups go by stable id only: a name is never accepted (`400`), and a renamed group resolves to its new name under the same id |
+| `GET /demo-scenarios` | The dataset's portfolio scenarios with their groups, applications, and lifecycle candidate; and `walkthrough` (OGWA-DEMO-04): the dataset's guided reviewer walkthrough (title, disclosures, two parts with their steps and resolved `candidateId`), or `null` for a dataset without one |
+| `GET /identities?ids=a,b,…` | OGWA-UI-IA-01 (`app/api/resolve.py`): for up to 50 OGWA ids or AD domain objectSids, each one's kind, common name, canonical page (`route`, `routeId`), and a `qualifier` (an AD distinguished name or an Okta group id) with `ambiguous` (whether the snapshot has another group of that name; `null` when unknown). An Okta group with an exact mapping adds `mappedAdGroup`. An id that names nothing comes back `resolved: false`. Lookups go by stable id only: a name is never accepted (`400`), and a renamed group resolves to its new name under the same id |
 
 `GET /applications/{applicationId}` adds `profile` (the snapshot's view of the application:
 category, provisioning, owner, every group and individual assignment, findings) and
@@ -231,9 +225,9 @@ follows (D64, D65):
 
 The governed routes are: `POST …/transitions`, `POST /candidates/{id}/approvals`,
 `POST /candidates/{id}/execution-jobs`, `POST /execution-jobs/{id}/execute`,
-`POST /candidates/{id}/remediation-dry-runs`, and the mapping `selections`,
+`POST /candidates/{id}/remediation-dry-runs` (P10), and the mapping `selections`,
 `approvals`, and `rejections`. Mapping `inspection` and `searches` change nothing and are
-not governed; nor is `POST /candidates/{id}/remediation-drills`, which records
+not governed; nor is `POST /candidates/{id}/remediation-drills` (OGWA-DEMO-03), which records
 nothing and changes no governed state. If chaining a refusal fails, the refusal stands (nothing changed), and the
 failure is logged.
 
@@ -248,8 +242,8 @@ failure is logged.
   re-entry need `LIFECYCLE_ADVANCE`, moving to a safer state needs `LIFECYCLE_DIVERT`,
   `→ APPROVED`, `→ QUARANTINE_APPROVED`, and `→ DELETION_APPROVED` need `APPROVAL_DECIDE`,
   and `→ *_DRY_RUN` needs `EXECUTION_PLAN_DRY_RUN`. The deletion proposal,
-  `DELETION_REVALIDATION_REQUIRED → DELETION_PROPOSED`, needs `LIFECYCLE_ADVANCE` and a human;
-  the proposer is recorded and may not approve the deletion (D143).
+  `DELETION_REVALIDATION_REQUIRED → DELETION_PROPOSED`, needs `LIFECYCLE_ADVANCE` and a human
+  (P10B); the proposer is recorded and may not approve the deletion (D143).
 - A forward or re-entry step needs `expectedEvidenceFingerprint`, which must equal the
   current fingerprint. Otherwise the answer is `EVIDENCE_CHANGED`. A move to a safer state
   needs only a reason (L-5).
@@ -261,7 +255,7 @@ failure is logged.
   and are not listed in `allowedActions`.
 - `→ STALE_EVIDENCE` and `→ EVIDENCE_INCOMPLETE` record what the evidence says. The lifecycle
   allows them to system actors only, so they are never operator actions either
-  (`NOT_AN_OPERATOR_ACTION`, chained as a governed refusal). An
+  (`NOT_AN_OPERATOR_ACTION`, chained as a governed refusal; owner decisions after P09). An
   operator who wants to stop a candidate holds it (`→ BLOCKED`). `allowedActions` lists these
   steps with `operatorAction: false` and `permission: null`.
 - The lifecycle guard decides the rest (`TRANSITION_REFUSED`, with its problems).
@@ -320,7 +314,7 @@ step itself is then recorded with `POST …/transitions`, citing the approval an
 is offered in those three states. Each kind takes its own stage's approval only (D146). The
 legacy `AD_RETIREMENT` kind is refused with `409 LEGACY_AD_RETIREMENT` (D148).
 
-### `POST /candidates/{candidateId}/remediation-dry-runs`
+### `POST /candidates/{candidateId}/remediation-dry-runs` (P10)
 
 ```json
 {"operation": "AD_GROUP_DELETE", "target": {"adGroupId": "adg_…"}, "approvalId": "apr_…",
@@ -339,16 +333,16 @@ PowerShell worker), always with `executed: false` and `productionMutation: false
 `BLOCKED` request is `409 REMEDIATION_BLOCKED`, listing every gate with its problems and
 never a planned change (D133). Once the gates pass, the approval, and the decision that applied
 it, must have been judged by the policy version in force (`409 APPROVAL_POLICY_NOT_IN_FORCE`,
-chained as a refusal). The `201` also carries `authorization` and `record` (the
+chained as a refusal; OGWA-DEMO-04). The `201` also carries `authorization` and `record` (the
 recorded dry run with its `policy` and `chain`); the event records the policy reference its gates
 were judged by. `AD_GROUP_DELETE` needs an `AD_DELETION` approval in
-`DELETION_APPROVED` or `DELETION_DRY_RUN`, and every operation needs complete, empty
+`DELETION_APPROVED` or `DELETION_DRY_RUN` (P10B), and every operation needs complete, empty
 membership evidence (D132). A dry
 run never moves the lifecycle and never creates a job. See
 [remediation.md](remediation.md) and
 [../security/mutation-gates.md](../security/mutation-gates.md).
 
-### `POST /candidates/{candidateId}/remediation-drills`
+### `POST /candidates/{candidateId}/remediation-drills` (OGWA-DEMO-03)
 
 ```json
 {"operation": "OKTA_GROUP_UNASSIGN", "target": {"assignmentId": "asgn_…"}, "approvalId": "apr_…",
@@ -374,11 +368,11 @@ synthetic evidence and discarded after the answer.
   problems, scope differences), `finalState`, `finalLabel`, `succeeded` (true only for
   `POST_ACTION_VERIFIED`), `submissions`, the fixture's state, digest, and ledger, and
   `syntheticOnly: true`, `productionMutation: false`, `externalSystemsContacted: false`,
-  `recorded: false`, `lifecycleChanged: false`. The drill also carries
+  `recorded: false`, `lifecycleChanged: false`. Since OGWA-DEMO-04 the drill also carries
   `modeBanner` (DRY RUN — NO STATE CHANGED, or SYNTHETIC EXECUTION: "No external provider or
   persistent environment was modified."), `attempts`, and `postActionVerification` (`CONFIRMED`,
   `FAILED`, `NOT_REACHED`); the success label is POST-ACTION VERIFIED.
-- Once the gates pass, the approval and the decision that applied it must
+- Since OGWA-DEMO-04, once the gates pass, the approval and the decision that applied it must
   have been judged by the policy version in force (`409 APPROVAL_POLICY_NOT_IN_FORCE`; nothing is
   built), and the `200` also carries `authorization` (policy in force; the approval and the
   decision with their audit event ids, sequences, digests, recorded policy, and binding) and
@@ -433,12 +427,12 @@ to everyone who may use it, whatever roles or permissions they hold, and that re
 chained. That holds even if a role were granted `EXECUTION_EXECUTE`, which none is. Enabling execution is a reviewed source change (see
 [../security/execution-modes.md](../security/execution-modes.md)), never configuration.
 
-Remediation dry runs do not change this. There is no remediation execute route, and
-every remediation adapter can only plan. Drills do not change it either: a
+P10's remediation dry runs do not change this. There is no remediation execute route, and
+every remediation adapter can only plan. OGWA-DEMO-03's drills do not change it either: a
 drill's synthetic execution changes only an in-memory provider fixture, records nothing, and
 uses neither this route nor `ExecutionJob`.
 
-## Not in this build
+## Not in P08
 
 - **Policy-version writes.** No proposal or approval endpoint exists. D52 keeps v1
   unrecorded until real operator identities exist, and a two-step proposal needs a pending
@@ -448,4 +442,4 @@ uses neither this route nor `ExecutionJob`.
 - **Production hosting.** That needs a reviewed WSGI server, TLS, a real identity adapter,
   and a shared session store.
 - **A production AD directory for mapping review.** Only the synthetic directory exists
-  (D68); this build includes no AD reader.
+  (D68). The real one is the read-only AAP worker boundary.

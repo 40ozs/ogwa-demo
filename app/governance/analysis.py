@@ -96,8 +96,10 @@ def build_index(people: Iterable[Person], groups: Iterable[Group], nesting, memb
 
 def analyze(*, people: tuple[Person, ...], groups: tuple[Group, ...], applications: tuple[Application, ...],
             nesting, memberships, assignments: tuple[Assignment, ...], standard_since: date,
-            finding_id) -> Analysis:
-    """``finding_id(code, subject)`` mints a stable id for each finding."""
+            finding_id, standard_prefix: str = "sg") -> Analysis:
+    """``finding_id(code, subject)`` mints a stable id for each finding. ``standard_prefix`` is the naming
+    standard's prefix (``app.governance.naming``): ``sg`` (Null Meridian) or ``sec`` (Genesee Press)."""
+    modern = f"{standard_prefix}-okta-"
     index = build_index(people, groups, nesting, memberships, assignments)
     by_key = {g.key: g for g in groups}
     by_person = {p.id: p for p in people}
@@ -115,12 +117,14 @@ def analyze(*, people: tuple[Person, ...], groups: tuple[Group, ...], applicatio
     names: dict[str, list[str]] = {}
     for g in groups:
         names.setdefault(g.name.casefold(), []).append(g.key)
-    modern_apps = {g.application for g in groups if g.application and g.name.startswith("sg-okta-")}
+    modern_apps = {g.application for g in groups if g.application and g.name.startswith(modern)}
 
     findings: list[Finding] = []
 
     def add(code: str, kind: str, subject_id: str, subject_name: str, summary: str, **evidence) -> None:
         severity, recommendation = RULES[code]
+        if standard_prefix != "sg":
+            recommendation = recommendation.replace("sg-okta-", modern)
         findings.append(Finding(finding_id(code, subject_id), code, severity, kind, subject_id, subject_name, summary,
                                 recommendation, {k: v for k, v in sorted(evidence.items())}))
 
@@ -166,10 +170,10 @@ def analyze(*, people: tuple[Person, ...], groups: tuple[Group, ...], applicatio
         if g.application and g.tier and g.key in assigned_to:
             rivals = sorted(o.name for o in groups if o.key != g.key and o.application == g.application
                             and o.tier == g.tier and o.key in assigned_to)
-            if rivals and not g.name.startswith("sg-okta-"):
+            if rivals and not g.name.startswith(modern):
                 add("DUPLICATE_ENTITLEMENT", "GROUP", gid, name,
                     f"{g.application} {g.tier} is also granted by {', '.join(rivals)}", others=rivals)
-        check = check_name(name, applications=app_slugs, departments=dept_slugs)
+        check = check_name(name, applications=app_slugs, departments=dept_slugs, prefix=standard_prefix)
         created = g.created_at.date()
         if created >= standard_since and not check.conforms:
             add("NONSTANDARD_NAME_RECENT", "GROUP", gid, name, f"Created {created.isoformat()}: {check.problem}",
@@ -239,7 +243,7 @@ def analyze(*, people: tuple[Person, ...], groups: tuple[Group, ...], applicatio
         if app.status == "ACTIVE" and app.usage_events_90d <= 5:
             add("LOW_USAGE", "APPLICATION", app.id, app.label, f"{app.usage_events_90d} sign-ins in 90 days")
         if app.status == "ACTIVE" and app.slug not in modern_apps:
-            add("NOT_STANDARDIZED", "APPLICATION", app.id, app.label, "No sg-okta-* groups yet")
+            add("NOT_STANDARDIZED", "APPLICATION", app.id, app.label, f"No {modern}* groups yet")
 
     findings.sort(key=lambda f: (SEVERITY_RANK[f.severity], f.code, f.subject_name, f.subject_id))
     group_sev = {g.key: "CLEAN" for g in groups}

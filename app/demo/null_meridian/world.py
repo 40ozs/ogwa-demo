@@ -10,7 +10,7 @@ Seeding has three parts, all deterministic:
    outcome it expects for each group; seeding stops if the engine proves anything else.
 2. **Lifecycle candidates** for the portfolio scenarios (NM-C01 .. NM-C11), driven through
    the same lifecycle guards, approvals, dry runs, and audit trail as real use, in date order
-   with the policy releases: NM-LIFECYCLE-004 v1.1.0 is recorded, the candidates
+   with the policy releases (OGWA-DEMO-04): NM-LIFECYCLE-004 v1.1.0 is recorded, the candidates
    are triaged (2026-09-24/25), v1.2.0 is recorded (effective 2026-09-28), and then the
    snapshot day (``snapshot_day``, 2026-10-01): NM-C11's evidence is collected again
    (``RECOLLECTED``) and its Okta unassignment approved under v1.2.0, so it is the one
@@ -31,17 +31,9 @@ from app.core.database_url import DatabaseTarget
 from app.core.modes import ExecutionMode
 from app.demo.null_meridian import policy as nm_policy
 from app.demo.null_meridian import rng
-from app.demo.null_meridian.dataset import NullMeridianDataset, build_dataset
-from app.demo.null_meridian.manifest import CORRELATION_PATH
-from app.demo.null_meridian.profile import (
-    AD_DNS_DOMAIN,
-    AD_NETBIOS,
-    AS_OF,
-    COMPANY,
-    DATASET_KEY,
-    OKTA_AD_SOURCE_ID,
-    SEED,
-)
+from app.demo.null_meridian.dataset import NullMeridianDataset
+from app.demo.null_meridian.edition import Edition, null_meridian
+from app.demo.null_meridian.profile import AS_OF
 from app.demo.synthetic_directory import StoreSyntheticDirectory, load_synthetic_correlation_config
 from app.demo.synthetic_world import (
     COLLECTOR,
@@ -83,7 +75,7 @@ from app.store.environment import DatabaseEnvironment
 from app.store.errors import StoreError
 from app.store.store import Store
 
-# The lifecycle rules of the policy in force at the demo's clock: NM-LIFECYCLE-004 v1.2.0.
+# The lifecycle rules of the policy in force at the demo's clock: NM-LIFECYCLE-004 v1.2.0 (OGWA-DEMO-02).
 POLICY = nm_policy.current_release().rules.lifecycle
 COLLECTED = AS_OF - 7 * DAY  # the full read-only collection the inventory evidence comes from
 # NM-C11's evidence is collected again on the snapshot day, so it is inside the 24-hour
@@ -158,10 +150,22 @@ CANDIDATES = (
 )
 
 
+def candidates_for(edition: Edition) -> tuple[CandidateSpec, ...]:
+    """The eleven candidates as ``edition`` labels and words them (NM-C01 .. for Null Meridian)."""
+    return tuple(replace(c, key=edition.candidate_prefix + c.key[len("NM-C"):], title=edition.text(c.title),
+                         note=edition.text(c.note)) for c in CANDIDATES)
+
+
 class NullMeridianWorld(_World):
-    def __init__(self, store: Store, ds: NullMeridianDataset) -> None:
-        super().__init__(store, namespace=SEED, policy=POLICY,
-                         correlation=load_synthetic_correlation_config(CORRELATION_PATH), ad_source_id=OKTA_AD_SOURCE_ID)
+    def __init__(self, store: Store, ds: NullMeridianDataset, edition: Edition | None = None) -> None:
+        edition = edition or null_meridian()
+        super().__init__(store, namespace=edition.seed, policy=edition.policy.current_release().rules.lifecycle,
+                         correlation=load_synthetic_correlation_config(edition.correlation_path),
+                         ad_source_id=edition.okta_ad_source_id)
+        self.edition = edition
+        self.specs = candidates_for(edition)
+        self.collected = edition.as_of - 7 * DAY
+        self.recollected = edition.as_of - 6 * HOUR
         self.ds = ds
         self.groups = {g.key: g for g in ds.groups}
         self.apps = {a.slug: a for a in ds.applications}
@@ -170,12 +174,18 @@ class NullMeridianWorld(_World):
         self.candidate_ids: dict[str, str] = {}
 
     @staticmethod
-    def okta_ref(key: str) -> str:
-        return rng.record_id("ogrp", key)
+    def okta_ref(key: str, keyed=rng) -> str:
+        return keyed.record_id("ogrp", key)
 
     @staticmethod
-    def ad_ref(key: str) -> str:
-        return rng.record_id("adg", key)
+    def ad_ref(key: str, keyed=rng) -> str:
+        return keyed.record_id("adg", key)
+
+    def oref(self, key: str) -> str:
+        return self.okta_ref(key, self.edition.rng)
+
+    def aref(self, key: str) -> str:
+        return self.ad_ref(key, self.edition.rng)
 
     def assignment(self, label: str, app_id: str, group_id: str, at: datetime, present: bool = True) -> str:
         # Re-observations of a dataset assignment keep its id (the store refuses a second identity).
@@ -187,18 +197,18 @@ class NullMeridianWorld(_World):
     # --- 1. inventory evidence ------------------------------------------------------------
 
     def inventory(self) -> None:
-        at = COLLECTED
+        at = self.collected
         for app in self.ds.applications:
             self.observe(OktaApplication(app.id, app.okta_app_id, app.label, OktaAppStatus(app.status), app.sign_on_mode,
                                          self.prov(at, f"synthetic:okta:app:{app.okta_app_id}")), "okta-apps")
         for g in self.ds.groups:
             if g.okta_visible:
                 self.okta_group_evidence(g, at)
-        held = {c.group_key for c in CANDIDATES if c.expected is LifecycleState.HOLD}
+        held = {c.group_key for c in self.specs if c.expected is LifecycleState.HOLD}
         for a in self.ds.assignments:
             if a.group_key is None:
                 continue  # individual assignments are in the directory snapshot, not group evidence
-            app_id, group_id = self.apps[a.application].id, self.okta_ref(a.group_key)
+            app_id, group_id = self.apps[a.application].id, self.oref(a.group_key)
             self.assignment_ids[(app_id, group_id)] = a.id
             # A held candidate's assignment was present at collection; its removal is observed later.
             self.observe(ApplicationGroupAssignment(a.id, app_id, group_id, a.present or a.group_key in held,
@@ -212,18 +222,18 @@ class NullMeridianWorld(_World):
         self.directory = StoreSyntheticDirectory(self.store, clock=lambda: at).frozen()
         for g in self.ds.groups:
             if g.okta_visible:
-                self.mapping_ids[g.key] = self.correlate(g.key, self.okta_ref(g.key), at + 3 * HOUR,
+                self.mapping_ids[g.key] = self.correlate(g.key, self.oref(g.key), at + 3 * HOUR,
                                                          EXPECTED_CONFIDENCE[g.correlation_case])
         self.directory = None
 
     def okta_group_evidence(self, g, at: datetime) -> None:
         directory = {}
         if g.okta_group_type == "APP_GROUP":
-            directory = dict(source_directory_id=OKTA_AD_SOURCE_ID,
+            directory = dict(source_directory_id=self.edition.okta_ad_source_id,
                              directory_external_id=g.ad_object_guid if g.okta_reports_sid else None,
-                             directory_qualified_name=f"{AD_NETBIOS}\\{g.okta_name}",
+                             directory_qualified_name=f"{self.edition.ad_netbios}\\{g.okta_name}",
                              directory_object_sid_unverified=g.ad_sid if g.okta_reports_sid else None)
-        self.observe(OktaGroup(self.okta_ref(g.key), g.okta_group_id, g.okta_name, GROUP_TYPE[g.okta_group_type],
+        self.observe(OktaGroup(self.oref(g.key), g.okta_group_id, g.okta_name, GROUP_TYPE[g.okta_group_type],
                                self.prov(at, f"synthetic:okta:group:{g.okta_group_id}"), **directory), "okta-apps")
 
     def ad_group_evidence(self, g, at: datetime) -> None:
@@ -233,17 +243,18 @@ class NullMeridianWorld(_World):
             attributes = dict(sid=g.ad_sid, distinguished_name=g.ad_distinguished_name,
                               sam_account_name=g.ad_sam_account_name, member_count=direct, admin_count=g.admin_count,
                               protected_from_accidental_deletion=g.protected_from_deletion)
-        self.observe(ADGroup(self.ad_ref(g.key), g.ad_object_guid, AD_DNS_DOMAIN, g.ad_exists,
-                             self.prov(at, f"synthetic:ad:{AD_DNS_DOMAIN}:guid:{g.ad_object_guid}"), **attributes),
+        domain = self.edition.ad_dns_domain
+        self.observe(ADGroup(self.aref(g.key), g.ad_object_guid, domain, g.ad_exists,
+                             self.prov(at, f"synthetic:ad:{domain}:guid:{g.ad_object_guid}"), **attributes),
                      "ad-groups")
 
     def usage_evidence(self, app, at: datetime, group_key: str | None = None, events: int | None = None) -> None:
         label = f"{app.slug}:{group_key or '*'}"
         events = app.usage_events_90d if events is None else events
         users = app.usage_users_90d if group_key is None else 0
-        last = at - timedelta(hours=1 + rng.below(70, "last", label)) if events else None
+        last = at - timedelta(hours=1 + self.edition.rng.below(70, "last", label)) if events else None
         self.observe(ApplicationUsageObservation(
-            self.sid(IdKind.USAGE_OBSERVATION, label), app.id, self.okta_ref(group_key) if group_key else None,
+            self.sid(IdKind.USAGE_OBSERVATION, label), app.id, self.oref(group_key) if group_key else None,
             at - 90 * DAY, at, events, users, last,
             self.prov(at, f"synthetic:okta:systemlog:app:{label}:90d")), "okta-usage")
 
@@ -253,8 +264,8 @@ class NullMeridianWorld(_World):
         """Record ``release`` as the next policy version, as approved when it took effect, and judge
         every later seeded decision by it, as the API would."""
         previous = self.store.active_policy_version()
-        version = nm_policy.policy_version(release, id=self.sid(IdKind.POLICY_VERSION, release.name),
-                                           previous=previous)
+        version = self.edition.policy.policy_version(release, id=self.sid(IdKind.POLICY_VERSION, release.name),
+                                                     previous=previous)
         self.store.record_policy_version(version)
         self.policy = version.policy.lifecycle
         self.policy_ref = PolicyRef.of(policy_digest=version.policy_digest, source=RECORDED_SOURCE,
@@ -264,33 +275,34 @@ class NullMeridianWorld(_World):
 
     def ids_for(self, spec: CandidateSpec) -> _Ids:
         g = self.groups[spec.group_key]
-        app_id, group_id = self.apps[spec.application].id, self.okta_ref(spec.group_key)
-        ad = self.ad_ref(spec.group_key) if g.source == "AD" and g.ad_exists else None
+        app_id, group_id = self.apps[spec.application].id, self.oref(spec.group_key)
+        ad = self.aref(spec.group_key) if g.source == "AD" and g.ad_exists else None
         if g.source == "OKTA" and g.push_target and self.groups[g.push_target].ad_exists:
-            ad = self.ad_ref(g.push_target)
+            ad = self.aref(g.push_target)
         return _Ids(app_id, group_id, self.assignment_ids[(app_id, group_id)], ad, self.mapping_ids[spec.group_key])
 
     def candidates(self) -> None:
         """Every candidate as it was triaged, a week before the snapshot."""
-        t = COLLECTED + 4 * HOUR
-        for spec in CANDIDATES:
+        t = self.collected + 4 * HOUR
+        for spec in self.specs:
             ids = self.ids_for(spec)
-            self.candidate_ids[spec.key] = getattr(self, "_" + spec.key.replace("-", "_").lower())(spec, ids, t)
+            self.candidate_ids[spec.key] = getattr(self, "_nm_c" + spec.key[-2:])(spec, ids, t)
 
     def snapshot_day(self) -> None:
-        """On the snapshot day and after everything else, so the seed stays
+        """OGWA-DEMO-03, on the snapshot day and after everything else, so the seed stays
         chronological (and anything recorded before it, such as a later policy release,
         governs it): NM-C11's evidence is collected again and its Okta unassignment approved."""
-        spec = next(c for c in CANDIDATES if c.key == "NM-C11")
+        spec = self.specs[10]
         cid, ids = self.candidate_ids[spec.key], self.ids_for(spec)
-        self.recollect(cid, spec, ids, RECOLLECTED)
-        approval = self.approve(cid, f"{spec.key}-okta", ApprovalStage.OKTA_UNASSIGN, RECOLLECTED + HOUR, REVIEWER_1)
-        self.step(cid, LifecycleState.APPROVED, RECOLLECTED + HOUR + 5 * MINUTE, actor=REVIEWER_1, approval=approval,
+        self.recollect(cid, spec, ids, self.recollected)
+        approval = self.approve(cid, f"{spec.key}-okta", ApprovalStage.OKTA_UNASSIGN, self.recollected + HOUR,
+                                REVIEWER_1)
+        self.step(cid, LifecycleState.APPROVED, self.recollected + HOUR + 5 * MINUTE, actor=REVIEWER_1, approval=approval,
                   reason="synthetic reviewer approved the Okta unassignment on re-collected evidence")
 
     def record_results(self) -> None:
         """Each candidate's final state, which must be the one its scenario states."""
-        for spec in CANDIDATES:
+        for spec in self.specs:
             cid = self.candidate_ids[spec.key]
             self.result(spec.key, spec.title, (), cid, spec.note)
             if self.store.load_candidate(cid).state is not spec.expected:
@@ -348,7 +360,7 @@ class NullMeridianWorld(_World):
         cid = self.candidate(ids, t + 30 * MINUTE, "APP_INACTIVE", "ZERO_USAGE_90D")
         self.step(cid, LifecycleState.CANDIDATE, t + HOUR)
         self.step(cid, LifecycleState.NEEDS_REVIEW, t + 2 * HOUR)
-        approval = self.approve(cid, "NM-C06-okta", ApprovalStage.OKTA_UNASSIGN, t + 3 * HOUR, REVIEWER_1)
+        approval = self.approve(cid, f"{spec.key}-okta", ApprovalStage.OKTA_UNASSIGN, t + 3 * HOUR, REVIEWER_1)
         self.step(cid, LifecycleState.APPROVED, t + 3 * HOUR + 5 * MINUTE, actor=REVIEWER_1, approval=approval,
                   reason="synthetic reviewer attempted approval", expect_refusal=True)
         return cid
@@ -368,7 +380,7 @@ class NullMeridianWorld(_World):
         return cid
 
     def direct_member_finding(self, group_key: str) -> DependencyFinding:
-        """The membership read's direct-member finding, as the AD report converter words it: every
+        """The membership read's direct-member finding, as the P05 converter words it: every
         member value, people and groups, the same values the AD group object counts."""
         people, groups = len(self.ds.index.direct_members(group_key)), len(self.ds.index.children(group_key))
         classes = ", ".join(f"{n} {name}" for name, n in (("user", people), ("group", groups)) if n)
@@ -383,7 +395,7 @@ class NullMeridianWorld(_World):
         return cid
 
     def _nm_c10(self, spec, ids, t):
-        """Every kind of imperfect evidence on one candidate, none of it repaired.
+        """OGWA-DEMO-01: every kind of imperfect evidence on one candidate, none of it repaired.
 
         - Confirmed: the Okta group, the application (ACTIVE), and the assignment still exist.
         - Says none: no sign-in attributed to the group in 90 days; complete Okta checks find no
@@ -420,7 +432,7 @@ class NullMeridianWorld(_World):
 
 
     def _nm_c11(self, spec, ids, t):
-        """The candidate a remediation drill runs on in the default demo.
+        """OGWA-DEMO-03: the candidate a remediation drill runs on in the default demo.
 
         Triaged like NM-C02 a week before the snapshot. On the snapshot day
         (``snapshot_day``) every record of its evidence is collected again, unchanged (the
@@ -453,10 +465,13 @@ class NullMeridianWorld(_World):
 # --- 3. the directory snapshot ---------------------------------------------------------------
 
 
-def directory_snapshot(ds: NullMeridianDataset, candidate_ids: dict[str, str]) -> DirectorySnapshot:
+def directory_snapshot(ds: NullMeridianDataset, candidate_ids: dict[str, str],
+                       edition: Edition | None = None) -> DirectorySnapshot:
+    edition = edition or null_meridian()
+    keyed = edition.rng
     index = ds.index
     health = ds.analysis.group_severity
-    records = [SnapshotRecord.of("COMPANY", DATASET_KEY, DATASET_KEY, {**ds.profile(), "counts": ds.counts()})]
+    records = [SnapshotRecord.of("COMPANY", edition.key, edition.key, {**ds.profile(), "counts": ds.counts()})]
     records += [SnapshotRecord.of("DEPARTMENT", d.id, d.slug, {**d.to_dict(), "teams": [t.to_dict() for t in d.teams]},
                                   d.slug) for d in ds.departments]
     records += [SnapshotRecord.of("PERSON", p.id, p.employee_number, p.to_dict(), p.department, p.status)
@@ -473,8 +488,8 @@ def directory_snapshot(ds: NullMeridianDataset, candidate_ids: dict[str, str]) -
             assigned.setdefault(a.group_key, []).append(a.application)
     for g in ds.groups:
         body = {**g.to_dict(), "health": health[g.key],
-                "oktaEvidenceId": rng.record_id("ogrp", g.key) if g.okta_visible else None,
-                "adEvidenceId": rng.record_id("adg", g.key) if g.source == "AD" else None,
+                "oktaEvidenceId": keyed.record_id("ogrp", g.key) if g.okta_visible else None,
+                "adEvidenceId": keyed.record_id("adg", g.key) if g.source == "AD" else None,
                 "effectiveMembers": len(index.effective(g.key)), "directMembers": len(index.direct_members(g.key)),
                 "nestingDepth": index.depth(g.key), "parents": index.parents(g.key), "children": index.children(g.key),
                 "assignedTo": sorted(set(assigned.get(g.key, ())))}
@@ -489,15 +504,15 @@ def directory_snapshot(ds: NullMeridianDataset, candidate_ids: dict[str, str]) -
     records += [SnapshotRecord.of("SCENARIO", s.key, f"{s.number:02d}",
                                   {**s.to_dict(), "candidateId": candidate_ids.get(s.candidate_key)}, s.candidate_key)
                 for s in ds.scenarios]
-    return DirectorySnapshot(DATASET_KEY, SEED, COMPANY, AS_OF, tuple(records))
+    return DirectorySnapshot(edition.key, edition.seed, edition.company, edition.as_of, tuple(records))
 
 
 # --- policy chronology -------------------------------------------------------------------------
 
 
-def policy_chronology_problems(store: Store, candidate_ids: tuple[str, ...], releases) -> list[str]:
-    """Every seeded decision and approval must record the release in force when it was made:
-    the one whose window, from its ``effectiveFrom`` up to the next release's,
+def policy_chronology_problems(store: Store, candidate_ids: tuple[str, ...], releases, as_of: datetime = AS_OF) -> list[str]:
+    """Every seeded decision and approval must record the release in force when it was made
+    (OGWA-DEMO-04): the one whose window, from its ``effectiveFrom`` up to the next release's,
     holds the record's ``decided_at``. The store already refuses a reference that is not the
     latest recorded version; this checks the seed's own dates against the releases' dates, in
     both directions, so no record names a version that took effect after it, or one that a
@@ -515,7 +530,7 @@ def policy_chronology_problems(store: Store, candidate_ids: tuple[str, ...], rel
         records += [(f"approval:{a.id}", a.decided_at) for a in store.approvals_for(cid)]
         for key, at in records:
             ref, release = recorded.get(key), expected(at)
-            if at > AS_OF:
+            if at > as_of:
                 problems.append(f"{key} is dated {at.isoformat()}, after the snapshot")
             if ref is None:
                 problems.append(f"{key} records no policy")
@@ -530,16 +545,17 @@ def policy_chronology_problems(store: Store, candidate_ids: tuple[str, ...], rel
 # --- entry points ------------------------------------------------------------------------------
 
 
-def seed_null_meridian(store: Store) -> SeedSummary:
-    """Load the Null Meridian dataset into an empty SYNTHETIC store."""
+def seed_null_meridian(store: Store, edition: Edition | None = None) -> SeedSummary:
+    """Load the edition's dataset (Null Meridian by default) into an empty SYNTHETIC store."""
+    edition = edition or null_meridian()
     if store.marker.environment is not DatabaseEnvironment.SYNTHETIC or store.mode is not ExecutionMode.LOCAL_SYNTHETIC:
-        raise StoreError("the Null Meridian dataset can only be seeded into a SYNTHETIC store in LOCAL_SYNTHETIC mode")
+        raise StoreError(f"the {edition.company} dataset can only be seeded into a SYNTHETIC store in LOCAL_SYNTHETIC mode")
     if store.candidate_ids() or store.connection.execute("SELECT count(*) FROM collector_runs").fetchone()[0]:
-        raise StoreError("the Null Meridian dataset can only be seeded into an empty store")
-    ds = build_dataset()
-    first, *later = nm_policy.releases()
-    with deterministic_ids(f"{SEED}:seed"):
-        world = NullMeridianWorld(store, ds)
+        raise StoreError(f"the {edition.company} dataset can only be seeded into an empty store")
+    ds = edition.dataset()
+    first, *later = edition.policy.releases()
+    with deterministic_ids(f"{edition.seed}:seed"):
+        world = NullMeridianWorld(store, ds, edition)
         world.inventory()
         # The candidates were triaged on 2026-09-24/25, under 1.1.0; 1.2.0 took effect on 2026-09-28.
         world.record_policy(first)
@@ -549,34 +565,37 @@ def seed_null_meridian(store: Store) -> SeedSummary:
             if release.effective_from <= last_decision:
                 raise StoreError(f"{release.name} takes effect before the last seeded decision ({last_decision})")
             world.record_policy(release)
-        # The snapshot day (2026-10-01), after every release that took effect before it:
+        # The snapshot day (2026-10-01), after every release that took effect before it (OGWA-DEMO-04):
         # NM-C11's re-collection and approval are judged by, and record, the version in force then (1.2.0).
         world.snapshot_day()
         world.record_results()
-        problems = policy_chronology_problems(store, tuple(world.candidate_ids.values()), (first, *later))
+        problems = policy_chronology_problems(store, tuple(world.candidate_ids.values()), (first, *later), edition.as_of)
         if problems:
             raise StoreError("the seeded policy chronology is wrong: " + "; ".join(problems))
         for run_id, state in world.runs.items():
             if not state["finished"]:
                 world.finish_run(run_id, ResultStatus.COMPLETE)
-        store.record_synthetic_seed(actor=SEEDER, namespace=SEED, scenario_count=len(world.results), as_of=AS_OF,
-                                    directory=directory_snapshot(ds, world.candidate_ids))
+        store.record_synthetic_seed(actor=SEEDER, namespace=edition.seed, scenario_count=len(world.results),
+                                    as_of=edition.as_of, directory=directory_snapshot(ds, world.candidate_ids, edition))
     _, head = store.audit_head()
-    return SeedSummary(SEED, AS_OF, tuple(world.results), head)
+    return SeedSummary(edition.seed, edition.as_of, tuple(world.results), head)
 
 
-def create_null_meridian_store(target: DatabaseTarget, *, clock=None) -> tuple[Store, SeedSummary]:
-    """Initialize a new SYNTHETIC store at ``target`` and load Null Meridian. Deterministic end to end."""
-    clock = clock or SeedClock(AS_OF + HOUR)
-    with deterministic_ids(f"{SEED}:init"):
+def create_null_meridian_store(target: DatabaseTarget, *, clock=None, edition: Edition | None = None
+                               ) -> tuple[Store, SeedSummary]:
+    """Initialize a new SYNTHETIC store at ``target`` and load the edition's dataset (Null Meridian by default).
+    Deterministic end to end."""
+    edition = edition or null_meridian()
+    clock = clock or SeedClock(edition.as_of + HOUR)
+    with deterministic_ids(f"{edition.seed}:init"):
         store = Store.initialize(target, environment=DatabaseEnvironment.SYNTHETIC, mode=ExecutionMode.LOCAL_SYNTHETIC,
                                  actor=SEEDER, clock=clock)
     try:
-        return store, seed_null_meridian(store)
+        return store, seed_null_meridian(store, edition)
     except BaseException:
         store.close()
         raise
 
 
-__all__ = ["CANDIDATES", "COLLECTED", "POLICY", "ScenarioResult", "create_null_meridian_store", "seed_null_meridian",
+__all__ = ["CANDIDATES", "COLLECTED", "POLICY", "candidates_for", "ScenarioResult", "create_null_meridian_store", "seed_null_meridian",
            "COLLECTOR", "policy_chronology_problems"]

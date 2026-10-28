@@ -1,4 +1,4 @@
-"""API contract: response shape, validation, pagination, lifecycle flow, mapping review.
+"""P08 API contract: response shape, validation, pagination, lifecycle flow, mapping review.
 
 Synthetic only. Requests are handed to the WSGI application in-process, except one smoke
 test that serves on 127.0.0.1 with an ephemeral port. No external system is contacted.
@@ -203,7 +203,7 @@ class ReadEndpointTests(unittest.TestCase):
                                           "productionMutationPermittedByBuild": False,
                                           "executionRoutes": "DRY_RUN_PLANNING_ONLY"})
         self.assertEqual(sum(body["candidatesByState"].values()), 16)
-        # S07 and S08 await the Okta stage, S12 the AD quarantine, and S16 the AD deletion.
+        # S07 and S08 await the Okta stage, S12 the AD quarantine, and S16 the AD deletion (P10B).
         self.assertEqual(body["awaitingApproval"], {"OKTA_UNASSIGN": 2, "AD_QUARANTINE": 1, "AD_DELETION": 1})
         self.assertEqual(body["policy"]["source"], "UNRECORDED_SYNTHETIC_DEMO")
         self.assertEqual(body["store"]["environment"], "SYNTHETIC")
@@ -368,7 +368,7 @@ HR = ad_group(4, "SYNTH-App-HR")
 
 
 class SyntheticMappingGateway:
-    """A mapping-review gateway over the synthetic directory (tests only)."""
+    """A mapping-review gateway over P06's synthetic directory (tests only)."""
 
     def __init__(self) -> None:
         self.clock = Clock()
@@ -498,7 +498,7 @@ class StaticSafetyTests(unittest.TestCase):
         self.assertGreater(statements, 5)
 
     def test_api_imports_no_network_mutation_or_integration_module(self):
-        forbidden = ("app.integrations", "http.client",
+        forbidden = ("app.core.http_mutation", "app.core.http_client", "app.integrations", "http.client",
                      "urllib.request", "subprocess", "socket", "ssl", "requests")
         for path in sorted(API_DIR.glob("*.py")):
             tree = ast.parse(path.read_text(encoding="utf-8"))

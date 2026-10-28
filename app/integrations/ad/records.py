@@ -20,7 +20,7 @@ Rules:
   A name that is not found proves nothing about any particular group.
 - Internal ids are derived from (forest, objectGUID), so re-observing a group yields the
   same record id even after a rename or move.
-- Owner decision D19: live behaviors not yet verified against real AD cannot
+- Owner decision D19: live behaviors that P11 has not yet verified against real AD cannot
   contribute to COMPLETE evidence from a real source (``AD_VIA_AAP``). See
   ``VERIFIED_LIVE_BEHAVIORS``. Synthetic evidence is unaffected: the synthetic directory
   is exact by construction.
@@ -66,8 +66,9 @@ class LiveBehavior(StrEnum):
     DELETION_PROTECTION_READABILITY = "DELETION_PROTECTION_READABILITY"
 
 
-# Owner decision D19: none of these is verified until it is proven against real AD, which
-# this build cannot read. Adding a member is a reviewed source change; tests pin this set.
+# Owner decision D19: none of these is verified until P11 proves it against real AD and
+# records the result. Adding a member is a reviewed source change, like
+# APPROVED_MUTATING_IMPORTERS; tests pin this set.
 VERIFIED_LIVE_BEHAVIORS: frozenset[LiveBehavior] = frozenset()
 # The default LDAP MaxValRange: from here on, member values come back in ranges.
 LARGE_GROUP_THRESHOLD = 1500

@@ -1,4 +1,4 @@
-"""Why a control decision came out as it did, under the exact policy that produced it.
+"""Why a control decision came out as it did, under the exact policy that produced it (OGWA-DEMO-02).
 
 ``explain`` answers, for one candidate's evidence assessment:
 

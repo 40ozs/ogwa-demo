@@ -1,4 +1,4 @@
-"""Remediation: the future execution path for Okta and AD changes, dry-run only.
+"""Remediation (P10): the future execution path for Okta and AD changes, dry-run only.
 
 - ``app.domain.remediation``: operations, outcomes, gates, and the result record (pure).
 - ``allowlist``: the server-side configuration that decides what answers each operation.
@@ -6,7 +6,7 @@
 - ``aap``: AAP job-template metadata and its safety classification.
 - ``worker``: the JSON contract with the PowerShell worker ``worker/OGWA.Remediation``.
 - ``engine``: one dry run end to end.
-- ``quarantine``: loads the deployment-controlled quarantine OU configuration (D136).
+- ``quarantine``: loads the deployment-controlled quarantine OU configuration (P10B, D136).
 
 Every request resolves to SIMULATED, WHATIF, VALIDATION_ONLY, or BLOCKED. Nothing in this
 package imports an HTTP client, a process module, or the mutating client. See

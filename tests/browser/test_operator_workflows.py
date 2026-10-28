@@ -25,9 +25,10 @@ IN_VIEW = """(() => { const r = document.activeElement.getBoundingClientRect();
 
 
 def skip_reason() -> str | None:
-    # Once requested, a missing browser fails the run (``Browser``); it never skips every test.
     if not enabled():
         return "browser tests are opt-in: set UI_BROWSER_TESTS=1 (scripts/browser-check.ps1)"
+    if browser_path() is None:
+        return "no Chrome or Edge executable found (set UI_BROWSER)"
     return None
 
 
@@ -71,8 +72,8 @@ class BrowserCase(unittest.TestCase):
         self.nav(f"#/candidates/{self.server.scenarios[key]}", prefix="Candidate: ")
 
     def public_demo(self) -> bool:
-        """Whether the server is the anonymous public demo: it has no sign-in, and every visitor is the same
-        synthetic viewer. Asked of GET /health once the page is on the origin."""
+        """Whether the server is the anonymous public demo (OGWA-DEMO-HOSTED-ANON-01): it has no sign-in, and
+        every visitor is the same synthetic viewer. Asked of GET /health once the page is on the origin."""
         return bool(self.browser.evaluate("fetch('/api/v1/health').then(r => r.json()).then(j => j.publicDemo === true)"))
 
     def sign_in(self, subject: str) -> None:
@@ -507,7 +508,7 @@ class DecisionWorkflowTests(BrowserCase):
         self.assertIn("Post-unassignment hold period", b.text(".detail-main"))
 
     def test_gb_an_ad_deletion_is_approved_by_an_independent_person(self):
-        """The post-quarantine hold offers no approval; a proposed deletion offers one to a
+        """P10B: the post-quarantine hold offers no approval; a proposed deletion offers one to a
         person who approved no earlier stage and did not propose it (D139, D143)."""
         b = self.browser
         self.sign_in("synthetic.securityiam.one")

@@ -27,7 +27,7 @@ from app.cloudflare.export import (
 )
 from app.cloudflare.hosted import HostedDemo, read_gzip_image
 from app.cloudflare.identity import SCHEMA_SQL, read_identity, read_schema_digest
-from tests.test_null_meridian_seed import GOLDEN_AUDIT_HEAD
+from tests.test_genesee_press import GOLDEN_AUDIT_HEAD  # the hosted demo serves Genesee Press (SYNTH-OGWA-01)
 
 REPO = Path(__file__).resolve().parents[1]
 _TMP: tempfile.TemporaryDirectory | None = None
@@ -146,7 +146,7 @@ class BuildTests(unittest.TestCase):
         src = WORKER / "src"
         manifest = json.loads((src / cli.MANIFEST_NAME).read_text())
         self.assertEqual(manifest["audit_head"], GOLDEN_AUDIT_HEAD)
-        self.assertEqual(manifest["environment"], {"OGWA_RUNTIME_MODE": "demo", "OGWA_DEMO_DATASET": "null-meridian"})
+        self.assertEqual(manifest["environment"], {"OGWA_RUNTIME_MODE": "demo", "OGWA_DEMO_DATASET": "genesee-press"})
         self.assertEqual((OUT / cli.MANIFEST_NAME).read_text(), (src / cli.MANIFEST_NAME).read_text())
         self.assertTrue((src / "app" / "cloudflare" / "hosted.py").is_file())
         self.assertFalse(any(p.suffix not in (".py",) for p in (src / "app").rglob("*") if p.is_file()))
@@ -168,16 +168,15 @@ class BuildTests(unittest.TestCase):
         hosted = HostedDemo(lambda: image, manifest["environment"], expected=manifest)  # as the Worker, at import
         hosted.app.close()
 
-    def test_a_worker_whose_vars_select_production_is_refused(self):
+    def test_a_worker_whose_vars_do_not_select_demo_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             worker = Path(tmp) / "worker"
             worker.mkdir()
             config = json.loads((WORKER / "wrangler.jsonc").read_text())
-            config["vars"] = {"OGWA_RUNTIME_MODE": "production", "OGWA_DEMO_DATASET": "null-meridian"}
+            config["vars"] = {"OGWA_DEMO_DATASET": "null-meridian"}
             (worker / "wrangler.jsonc").write_text(json.dumps(config))
             code, _, err = run("build", "--worker", str(worker), "--out", str(Path(tmp) / "out"))
         self.assertEqual(code, 2, err)
-        self.assertIn("Demo Mode only", err)
 
 
 class NextPhaseTests(unittest.TestCase):
@@ -231,12 +230,12 @@ class VerifyExportTests(unittest.TestCase):
     def test_an_export_of_the_complete_import_verifies(self):
         code, out, err = run("verify-export", str(self.export(self.phases_sql())), "--out", str(OUT))
         self.assertEqual(code, 0, err)
-        self.assertIn(f"OK: dataset null-meridian, audit_head {GOLDEN_AUDIT_HEAD}", out)
-        self.assertIn("seed_namespace: null-meridian-v1", out)
+        self.assertIn(f"OK: dataset genesee-press, audit_head {GOLDEN_AUDIT_HEAD}", out)
+        self.assertIn("seed_namespace: genesee-press-v1", out)
 
     def test_a_tampered_or_partial_export_fails(self):
         sql = self.phases_sql()
-        tampered = sql.replace("'Null Meridian'", "'Null Meridiam'", 1)
+        tampered = sql.replace("'Genesee Press'", "'Genesee Prest'", 1)
         self.assertNotEqual(tampered, sql)
         code, _, err = run("verify-export", str(self.export(tampered)), "--out", str(OUT))
         self.assertEqual(code, 1, err)

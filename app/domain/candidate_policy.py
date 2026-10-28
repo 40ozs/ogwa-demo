@@ -1,4 +1,4 @@
-"""Candidate-classification policy: thresholds, their document form, and versions.
+"""Candidate-classification policy (P07): thresholds, their document form, and versions.
 
 ``CandidatePolicy`` holds every threshold the classifier uses. None of them is business
 truth in code: each has a default, a floor or ceiling the configuration cannot cross, and
@@ -42,8 +42,8 @@ MAX_DOCUMENT_LENGTH = 100_000
 @dataclass(frozen=True)
 class CandidatePolicy:
     lifecycle: LifecyclePolicy = field(default_factory=LifecyclePolicy)
-    # At or below this many sign-ins in the window, usage is LOW. Above it, the application is
-    # in use.
+    # At or below this many sign-ins in the window, usage is LOW (the conventional
+    # low-usage threshold of 5). Above it, the application is in use.
     low_usage_max_sign_ins: int = 5
     # Optional second ceiling on distinct users. None: sign-ins alone decide.
     low_usage_max_unique_users: int | None = None

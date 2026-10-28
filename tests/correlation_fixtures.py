@@ -1,7 +1,7 @@
 """Synthetic fixtures for identity correlation. Every name, id, SID, and GUID is invented.
 
 The synthetic forest has three domains. ``SyntheticDirectory`` answers identity lookups
-with the same resolution rules as the AD report contract: narrowest scope, the
+with the same resolution rules as the P05 worker (``Resolve.ps1``): narrowest scope, the
 SID's own domain for a SID lookup, and "Inconclusive" when a domain in scope cannot be
 searched. It never touches a real directory.
 """
@@ -29,10 +29,10 @@ from app.integrations.ad.contract import LookupKind
 
 
 def sid_verified(test):
-    """Run ``test`` as if the mechanism had been verified directory-source objectSid matches (D37).
+    """Run ``test`` as if P11 had verified directory-source objectSid matches (D37).
 
     The default (False) makes such a match review evidence only; these tests cover the path
-    the code keeps for a verified mechanism.
+    the code keeps for after P11. Their assertions are unchanged from P06.
     """
     return mock.patch.object(correlation_model, "DIRECTORY_SOURCE_SID_VERIFIED", True)(test)
 
@@ -131,7 +131,7 @@ def _cn(dn: str) -> str:
 
 
 class SyntheticDirectory:
-    """An in-memory forest answering exact-match lookups like the AD reader."""
+    """An in-memory forest answering exact-match lookups like the P05 worker."""
 
     def __init__(self, groups: Iterable[ADIdentity] = (), *, clock: Clock, unreachable: Iterable[str] = (),
                  failing: Iterable[str] = (), domains: Iterable[str] = (CORP, EMEA, APAC)) -> None:

@@ -1,4 +1,4 @@
-"""The UI's information architecture in a real headless browser, over Null Meridian (opt-in, UI_BROWSER_TESTS=1).
+"""OGWA-UI-IA-01 in a real headless browser, over Null Meridian (opt-in, UI_BROWSER_TESTS=1).
 
 The docked side navigation, the tabbed pages (Company Directory, Okta, Findings), shared table
 sorting and paging, identity links (common names first, AD groups opening their canonical page,

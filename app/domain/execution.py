@@ -20,8 +20,8 @@ from app.domain.ids import IdKind, check_enum, check_id, check_utc
 class JobKind(StrEnum):
     OKTA_UNASSIGN = "OKTA_UNASSIGN"
     AD_RETIREMENT = "AD_RETIREMENT"  # legacy (D148): history only; no new job may use it
-    AD_QUARANTINE = "AD_QUARANTINE"  # move the AD group into its quarantine OU
-    AD_DELETION = "AD_DELETION"  # delete the quarantined AD group
+    AD_QUARANTINE = "AD_QUARANTINE"  # move the AD group into its quarantine OU (P10B)
+    AD_DELETION = "AD_DELETION"  # delete the quarantined AD group (P10B)
 
 
 # Kinds whose stored jobs are history only. Recording a new one is refused (D148).

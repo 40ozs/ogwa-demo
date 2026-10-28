@@ -1,4 +1,4 @@
-"""Candidate classification. Synthetic fixtures only (tests/classification_fixtures.py).
+"""P07 candidate classification. Synthetic fixtures only (tests/classification_fixtures.py).
 
 The central property: RETIREMENT_CANDIDATE needs every safety condition. Removing,
 degrading, or contradicting any single one of them stops promotion.
@@ -202,7 +202,7 @@ SINGLE_CONDITION_CASES = [
      C.EVIDENCE_INCOMPLETE, R.EVIDENCE_INCONSISTENT),
     # Freshness
     ("stale evidence", lambda b: world(T0 - 45 * DAY), C.STALE_EVIDENCE, R.EVIDENCE_STALE),
-    # Future-dated evidence was never properly obtained: incomplete, not stale (owner decision).
+    # Future-dated evidence was never properly obtained: incomplete, not stale (owner decision after P09).
     ("future-dated evidence", _set(ad_group=ad_group(NOW + DAY)), C.EVIDENCE_INCOMPLETE, R.EVIDENCE_FUTURE_DATED),
 ]
 SINGLE_CONDITION_CASES += [
@@ -224,7 +224,7 @@ class BaselineTests(unittest.TestCase):
         self.assertFalse(r.ad_deletion_prohibited)
         self.assertIsNone(r.lifecycle_diversion)
 
-    def test_the_example_reasons_appear_for_an_inactive_app(self):
+    def test_the_prompt_example_reasons_appear_for_an_inactive_app(self):
         b = world(applications=(application(T0, status=OktaAppStatus.INACTIVE),))
         r = run(b)
         self.assertIs(r.classification, C.RETIREMENT_CANDIDATE)
@@ -411,7 +411,7 @@ class DependencyCoverageTests(unittest.TestCase):
         self.assertIs(status[K.AD_GROUP_MEMBERS], KindStatus.COVERED)
 
     def test_no_dependency_domain_is_covered_from_production_yet(self):
-        # Pinned like VERIFIED_LIVE_BEHAVIORS: no live collector exists, so nothing is live-verified.
+        # Pinned like VERIFIED_LIVE_BEHAVIORS: changing this needs a reviewed run report (P11+).
         self.assertEqual(set(PRODUCTION_COLLECTORS), set(DependencyKind))
         self.assertFalse([k for k, c in PRODUCTION_COLLECTORS.items() if c is not None and c.live_verified])
         with_collector = {k for k, c in PRODUCTION_COLLECTORS.items() if c is not None}
@@ -421,7 +421,7 @@ class DependencyCoverageTests(unittest.TestCase):
 
     def test_ad_via_aap_evidence_counts_when_complete(self):
         # The classifier treats AD_VIA_AAP like any counting source. It is the D19 gate in
-        # app/integrations/ad/records.py that keeps live results PARTIAL.
+        # app/integrations/ad/records.py that keeps live results PARTIAL until P11.
         b = world()
         for kind in (K.AD_GROUP_MEMBERS, K.AD_NESTED_MEMBERSHIP):
             b = with_check(b, kind, check(T0, kind, source=EvidenceSource.AD_VIA_AAP))

@@ -27,7 +27,7 @@ export const STATE_INFO = Object.freeze({
     text: "Discovery observed the Okta unassignment. The AD quarantine waits for the hold period to end and for evidence to be revalidated." },
   REVALIDATION_REQUIRED: { label: "Revalidation required", tone: "caution",
     text: "Evidence must be revalidated before anyone may approve an AD quarantine." },
-  // The AD stages: quarantine, a 30-day hold, then a separately proposed and approved deletion.
+  // The AD stages (P10B): quarantine, a 30-day hold, then a separately proposed and approved deletion.
   QUARANTINE_APPROVED: { label: "Approved for a future AD quarantine", tone: "caution",
     text: "The AD quarantine is approved for a future, separately executed step. It authorizes no deletion. Nothing has been changed." },
   QUARANTINE_DRY_RUN: { label: "AD quarantine dry run recorded", tone: "caution",
@@ -54,7 +54,7 @@ export const STATE_INFO = Object.freeze({
   DEPENDENCY_BLOCKED: { label: "Blocked: dependency", tone: "blocked", text: "Blocked by a dependency finding." },
   PROTECTED: { label: "Protected", tone: "blocked", text: "A protected group. OGWA never retires it. Terminal." },
   // The two evidence conditions are recorded by discovery and classification, never by an
-  // operator, and they are different facts (owner decisions).
+  // operator, and they are different facts (owner decisions after P09).
   STALE_EVIDENCE: { label: "Blocked: evidence stale", tone: "blocked",
     text: "Evidence that was once complete has outlived its freshness window. Fresh evidence is needed before any decision; other conditions below may still apply." },
   EVIDENCE_INCOMPLETE: { label: "Blocked: evidence incomplete", tone: "blocked",
@@ -144,7 +144,7 @@ const REASON_TEXT = Object.freeze({
     detail: "Some evidence is older than the policy allows for this step. Fresh evidence must be collected before a decision; any other condition listed here still applies." },
   EVIDENCE_NOT_DECISION_GRADE: { tone: "blocked", headline: "Evidence incomplete — a collection did not finish.",
     detail: "At least one collector returned a partial or failed result, so the evidence cannot support a decision. This condition only clears when a complete, decision-grade collection is recorded." },
-  // Owner decision: future-dated evidence is never fresh and never
+  // Owner decision after the P09 addendum: future-dated evidence is never fresh and never
   // stale; it is incomplete/invalid evidence with its own reason.
   EVIDENCE_FUTURE_DATED: { tone: "blocked", headline: "Future-dated evidence — invalid, decisions blocked.",
     detail: "A record's timestamp is ahead of the server clock (beyond the allowed clock skew). It is neither fresh nor stale: it is treated as invalid, incomplete evidence until the timestamp is explained." },
@@ -340,7 +340,7 @@ export function membershipFacts(evidence) {
   let direct;
   if (!ad) direct = { value: "Unknown: AD group not observed", basis: "unavailable", count: null };
   else if (ad.exists === false) direct = { value: "AD group does not exist", basis: "observed", count: null };
-  // An unread member attribute is unknown, never zero.
+  // An unread member attribute is unknown, never zero (OGWA-DEMO-01).
   else if (ad.memberCount === null || ad.memberCount === undefined) direct = { value: "Unknown: the member attribute was not read", basis: "unavailable", count: null };
   else direct = { value: `${ad.memberCount} (AD member attribute)`, basis: "observed", count: ad.memberCount };
   return {
@@ -381,7 +381,7 @@ export function usageSummary(usage) {
 
 // --- actions ----------------------------------------------------------------------------------
 
-// The only lifecycle targets the UI offers, and what each is called (the action list).
+// The only lifecycle targets the UI offers, and what each is called (P09 action list).
 // HOLD in the lifecycle is the post-unassignment period, not an operator action, so the
 // operator's "Hold" is the generic BLOCKED diversion.
 export const UI_TRANSITIONS = Object.freeze({
@@ -411,7 +411,7 @@ export function usableApprovals(approvals, candidate, stage) {
 }
 
 /**
- * What the signed-in person can be offered on this candidate. Only these actions exist:
+ * What the signed-in person can be offered on this candidate. Only the P09 actions exist:
  * approve for future action / decline approval, hold, exclude, reject, request
  * revalidation, plan a dry run, and record a planned dry run. allowedActions is the
  * server's hint; the server checks everything again when the action is requested.

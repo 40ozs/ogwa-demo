@@ -1,4 +1,4 @@
-"""Candidate classification and dependency policy. See docs/architecture/candidate-policy.md.
+"""Candidate classification and dependency policy (P07). See docs/architecture/candidate-policy.md.
 
 Pure functions over evidence the store already holds. Nothing here reads a network
 service, changes an external system, or approves anything. A ``RETIREMENT_CANDIDATE`` is

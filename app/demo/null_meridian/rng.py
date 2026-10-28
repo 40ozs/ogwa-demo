@@ -73,3 +73,32 @@ def allocate(total: int, weights: Sequence[float]) -> list[int]:
     for i in order[: total - sum(counts)]:
         counts[i] += 1
     return counts
+
+
+class Keyed:
+    """The same keyed draws and identifiers under another seed (the Genesee Press dataset's).
+
+    ``Keyed(SEED)`` gives exactly the module functions above; the world and dataset code take
+    either, so one seed path serves both datasets."""
+
+    def __init__(self, seed: str) -> None:
+        self.seed = seed
+        self.namespace = uuid.uuid5(uuid.NAMESPACE_URL, f"urn:ogwa:synthetic:{seed}")
+
+    def stable_uuid(self, *parts: object) -> uuid.UUID:
+        return uuid.uuid5(self.namespace, "/".join(str(p) for p in parts))
+
+    def record_id(self, prefix: str, *parts: object) -> str:
+        return f"{prefix}_{self.stable_uuid(prefix, *parts).hex}"
+
+    def h(self, *parts: object) -> int:
+        text = self.seed + "|" + "|".join(str(p) for p in parts)
+        return int.from_bytes(hashlib.sha256(text.encode("utf-8")).digest()[:8], "big")
+
+    def unit(self, *parts: object) -> float:
+        return self.h(*parts) / 2 ** 64
+
+    def below(self, n: int, *parts: object) -> int:
+        if n <= 0:
+            raise ValueError("below() needs a positive bound")
+        return self.h(*parts) % n

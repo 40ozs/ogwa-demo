@@ -31,8 +31,8 @@ REVIEWED_KEYS = {"name", "main", "compatibility_date", "compatibility_flags", "w
 class WorkerConfigTests(unittest.TestCase):
     def test_only_reviewed_products_are_configured(self):
         self.assertLessEqual(set(CONFIG), REVIEWED_KEYS)
-        # The CPU guardrail: 5,000 ms while GET /system/integrity used up to
-        # 2,623 ms. Since that route serves the import-time report, 2,000 ms: ~2.4x the heaviest request measured under a 1,000 ms
+        # The CPU guardrail (OGWA-CLOUDFLARE-COST-GUARD-02): 5,000 ms while GET /system/integrity used up to
+        # 2,623 ms. Since OGWA-INTEGRITY-COST-03, 2,000 ms: ~2.4x the heaviest request measured under a 1,000 ms
         # trial cap (mapping inspection, 823 ms in a cold isolate; median 244 ms).
         self.assertEqual(CONFIG["limits"], {"cpu_ms": 2000})
         self.assertEqual(CONFIG["name"], "ogwa-demo")
@@ -55,8 +55,10 @@ class WorkerConfigTests(unittest.TestCase):
         self.assertLessEqual(set(variables), KNOWN_KEYS, "OGWA's own names, no aliases")
         self.assertEqual(DEFAULT_DEMO_DATASET, registry.DEFAULT_DATASET)
         settings = load_settings(variables)
-        self.assertEqual(settings.runtime_mode.value, "demo")
-        self.assertEqual(settings.demo_dataset, "null-meridian")
+        self.assertTrue(settings.is_demo)
+        self.assertEqual(settings.demo_dataset, "genesee-press")
+        self.assertIsNone(settings.okta_api_token)
+        self.assertIsNone(settings.aap_token)
         self.assertEqual(worker_environment(WORKER), variables)
 
     def test_the_static_assets_carry_the_ui_headers(self):

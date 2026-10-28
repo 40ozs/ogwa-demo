@@ -1,6 +1,6 @@
 """``python -m app``: validate configuration and print the startup banner.
 
-Starts no service and contacts no external system. ``python -m app.api serve`` serves the demo.
+The P01 build starts no services and contacts no external systems.
 """
 
 import logging
@@ -19,7 +19,7 @@ def main() -> int:
         log.error("OGWA startup refused: %s", exc)
         return 2
     configure_logging(context.settings.log_level)
-    log.info("Configuration valid: no services started, no external systems contacted.")
+    log.info("Bootstrap build: no services started, no external systems contacted.")
     return 0
 
 

@@ -1,4 +1,4 @@
-"""Human review of Okta-to-AD identity mappings.
+"""Human review of Okta-to-AD identity mappings (P06).
 
 A ``MappingReview`` is one append-only event in the mapping registry of one Okta group:
 an operator proposed a pairing (by selecting an AD object from bounded search results),

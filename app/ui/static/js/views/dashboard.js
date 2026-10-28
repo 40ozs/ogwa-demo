@@ -31,11 +31,12 @@ export async function dashboard(ctx) {
   const groupsLink = (value) => hashFor("/directory", {}, { tab: "groups", health: value });
 
   ctx.view.append(
-    // The demo's entry point. Only a store with the synthetic company directory has
+    // OGWA-DEMO-04: the demo's entry point. Only a store with the synthetic company directory has
     // the walkthrough's candidates.
     dir ? h("p", { class: "lede walkthrough-entry" }, "New to this demo? ",
       link("#/scenarios", "Start the five-minute reviewer walkthrough"),
-      ": evidence quality on NM-C10, then a verified synthetic remediation on NM-C11. All data is synthetic.") : null,
+      `: evidence quality on ${walkthroughKey(dir, 10)}, then a verified synthetic remediation on ${walkthroughKey(dir, 11)}. ` +
+      "All data is synthetic.") : null,
     keyFigures(data, dir, bySeverity, governanceTotal, deps),
     attention(data, dir, bySeverity, deps),
     h("div", { class: "chart-grid" },
@@ -58,6 +59,13 @@ export async function dashboard(ctx) {
 }
 
 // --- key figures ------------------------------------------------------------------------------
+
+// The walkthrough's two candidates (OGWA-DEMO-04) in the store's dataset: GP-C10 and GP-C11 for Genesee
+// Press (the default demo), NM-C10 and NM-C11 for the legacy Null Meridian dataset.
+function walkthroughKey(dir, n) {
+  const prefix = dir.snapshot && dir.snapshot.dataset === "null-meridian" ? "NM-C" : "GP-C";
+  return `${prefix}${n}`;
+}
 
 function keyFigures(data, dir, bySeverity, governanceTotal, deps) {
   const ev = data.evidence || {};

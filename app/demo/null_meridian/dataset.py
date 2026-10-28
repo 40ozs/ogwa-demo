@@ -114,6 +114,10 @@ class NullMeridianDataset:
     findings: tuple[Finding, ...]
     scenarios: tuple[Scenario, ...]
     analysis: Analysis
+    # Another dataset built into the same shape (app.demo.genesee_press) states its own profile and the
+    # prefix of its naming standard; None and "sg" are Null Meridian's.
+    company_profile: dict[str, Any] | None = None
+    standard_prefix: str = "sg"
 
     @property
     def index(self) -> DirectoryIndex:
@@ -126,6 +130,8 @@ class NullMeridianDataset:
         return next(a for a in self.applications if a.slug == slug)
 
     def profile(self) -> dict[str, Any]:
+        if self.company_profile is not None:
+            return dict(self.company_profile)
         return {
             "dataset": DATASET_KEY, "seed": SEED, "company": COMPANY, "primaryDomain": PRIMARY_DOMAIN,
             "founded": FOUNDED.isoformat(), "oktaAdopted": OKTA_ADOPTED.isoformat(),
@@ -150,7 +156,8 @@ class NullMeridianDataset:
             "oktaVisibleGroups": sum(1 for g in groups if g.okta_visible),
             "adGroups": sum(1 for g in groups if g.source == "AD"),
             "groupsByEra": dict(sorted(Counter(g.era for g in groups).items())),
-            "modernNamedGroups": sum(1 for g in groups if g.name.startswith(("sg-okta-", "sg-share-"))),
+            "modernNamedGroups": sum(1 for g in groups if g.name.startswith(
+                (f"{self.standard_prefix}-okta-", f"{self.standard_prefix}-share-"))),
             "groupsByStatus": dict(sorted(Counter(g.status for g in groups).items())),
             "nestingEdges": len(self.nesting),
             "directMemberships": len(self.memberships),
@@ -164,7 +171,7 @@ class NullMeridianDataset:
         }
 
 
-def _usage(applications: tuple[Application, ...], index: DirectoryIndex) -> tuple[Application, ...]:
+def _usage(applications: tuple[Application, ...], index: DirectoryIndex, keyed=rng) -> tuple[Application, ...]:
     specs = {s.slug: s for s in CATALOG}
     out = []
     for app in applications:
@@ -173,9 +180,9 @@ def _usage(applications: tuple[Application, ...], index: DirectoryIndex) -> tupl
         if app.status != "ACTIVE" or spec.events_per_user == 0:
             out.append(replace(app, usage_events_90d=0, usage_users_90d=0))
             continue
-        jitter = 0.9 + 0.2 * rng.unit("usage", app.slug)
+        jitter = 0.9 + 0.2 * keyed.unit("usage", app.slug)
         users = min(entitled, round(entitled * spec.activity * jitter))
-        events = max(users, round(users * spec.events_per_user * (0.85 + 0.3 * rng.unit("events", app.slug))))
+        events = max(users, round(users * spec.events_per_user * (0.85 + 0.3 * keyed.unit("events", app.slug))))
         out.append(replace(app, usage_users_90d=users, usage_events_90d=events))
     return tuple(out)
 

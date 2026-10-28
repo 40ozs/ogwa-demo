@@ -1,9 +1,9 @@
 """0008 — Okta's directory objectSid, stored as unverified source metadata.
 
-Owner decision: persist the objectSid that Okta's AD integration reports for an
+Owner decision before P09: persist the objectSid that Okta's AD integration reports for an
 imported group (``profile.objectSid``), explicitly as *unverified source metadata*. It is
 not mapping evidence. D37 stays authoritative: on its own it cannot establish an exact
-mapping until the mechanism is validated against a known AD-backed Okta group.
+mapping until P11 validates the mechanism against a known AD-backed Okta group.
 
 It is one more column of ``okta_group_observations``, so each value carries that
 observation's provenance (source, observed_at, scope, collector version, result status)

@@ -3,7 +3,7 @@
 The fixtures are produced here, by the real API over a freshly seeded synthetic world, so
 the UI's wording is tested against what the server actually returns. Node is used only as
 a local test runner (no packages, no network). These tests are part of the standard check
-(owner decision): without Node this test fails rather than skips.
+(owner decision after P09): without Node this test fails rather than skips.
 """
 
 import json

@@ -1,6 +1,6 @@
 # Dependency coverage: what OGWA can and cannot check
 
-This page lists which dependency domains OGWA actually covers.
+Status: P07, 2026-10-05. This page lists which dependency domains OGWA actually covers.
 It is the operator-facing companion to `PRODUCTION_COLLECTORS` in
 `app/classification/coverage.py`. A test pins that table, so it and this page change
 together, by review.
@@ -35,10 +35,10 @@ never drop the four mandatory kinds (`OKTA_OTHER_APP_ASSIGNMENT`, `OKTA_POLICY_R
 
 | Kind | What it means | OGWA collector | Covered from production today? |
 | --- | --- | --- | --- |
-| `AD_GROUP_MEMBERS` | Direct members and primaryGroupID references of the AD group | `OGWA.ADReader` worker, run by a read-only AAP job (not included in this build) | **No.** There is no AAP transport, and live results stay PARTIAL until the D19 behaviors are verified (deletion-protection readability always; cross-domain parent lookup in multi-domain forests; completeness for groups of 1500+ members) |
+| `AD_GROUP_MEMBERS` | Direct members and primaryGroupID references of the AD group | `OGWA.ADReader` worker (P05), run by a read-only AAP job | **No.** There is no AAP transport yet, and live results stay PARTIAL until P11 verifies the D19 behaviors (deletion-protection readability always; cross-domain parent lookup in multi-domain forests; completeness for groups of 1500+ members) |
 | `AD_NESTED_MEMBERSHIP` | Parent groups, member groups, principals reached through nesting | same worker | **No**, for the same reasons |
-| `OKTA_OTHER_APP_ASSIGNMENT` | The Okta group is assigned to other applications | none | **No.** A reverse listing (Okta's group "assigned apps" endpoint; confirm its scope against the D28 read-only set before use) or a complete per-app sweep is needed |
-| `OKTA_POLICY_REFERENCE` | Sign-on, MFA, and password policies, group rules, and admin role assignments that name the group | none | **No.** Needs policy and group-rule reads, which OGWA does not implement |
+| `OKTA_OTHER_APP_ASSIGNMENT` | The Okta group is assigned to other applications | none. P04 lists one application's groups, not one group's applications | **No.** A reverse listing (Okta's group "assigned apps" endpoint; confirm its scope against the D28 read-only set before use) or a complete per-app sweep is needed |
+| `OKTA_POLICY_REFERENCE` | Sign-on, MFA, and password policies, group rules, and admin role assignments that name the group | none | **No.** Needs policy and group-rule reads; P04 requested no scope for them |
 | `AD_ACL_REFERENCE` | File-share, OU-delegation, and other ACEs that name the group's SID | none | **No.** Needs an ACL inventory (file servers, AD delegation); out of OGWA's current reach |
 | `GPO_REFERENCE` | Security filtering, Restricted Groups, Group Policy Preferences | none | **No.** Needs a read-only GPO report collector |
 | `AAP_REFERENCE` | AAP inventories, RBAC teams, surveys, and credentials that name the group | none | **No.** Needs a read-only AAP API collector |
@@ -55,10 +55,10 @@ A kind becomes coverable from production only when **all** of the following hold
 
 1. A read-only collector exists that emits `DependencyEvidence` of that kind, with
    COMPLETE provenance only when the whole scope was read (E-2).
-2. It runs under an approved least-privilege identity (D6, D18, D28) and records which
-   systems it contacted.
-3. Its live behavior is verified against a known object and the result is recorded.
-   For the AD kinds, that means adding entries to `VERIFIED_LIVE_BEHAVIORS` (D19).
+2. It runs under an approved least-privilege identity (D6, D18, D28), and its run report
+   records which systems it contacted.
+3. Its live behavior is verified against a known object and recorded in a run report.
+   For the AD kinds, that means P11 adding entries to `VERIFIED_LIVE_BEHAVIORS` (D19).
 4. `PRODUCTION_COLLECTORS` is updated by a reviewed change. Its test pins the current state.
 
 Until every **required** kind meets those conditions, AD deletion stays prohibited,
@@ -84,5 +84,5 @@ whatever the classifier says about anything else.
 - A blocking finding from any source, including an attestation, stops the candidate
   (`DEPENDENCY_BLOCKED`, `HAS_MEMBERS`, `NESTED_DEPENDENCY`, or `SHARED_OKTA_ASSIGNMENT`).
 - Okta unassignment (the first lifecycle step) still requires the lifecycle's own guards,
-  approvals, and dry run. The classifier's review tiers are cues for human
+  approvals, and dry run. The classifier's review tiers are prompts for human
   investigation, not approvals.

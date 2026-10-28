@@ -3,8 +3,8 @@ API and UI over the demo store, the demo mutation policy, and isolation from eve
 
 The dataset here is the classic 16-scenario lifecycle world (selector ``classic``, seed
 namespace ``ogwa-synthetic-demo-v1``), selected explicitly through the dataset registry: it
-covers every lifecycle state and can be compared route by route with the API built directly
-over the same seed, without the demo layer (``tests.api_fixtures.World``). Its canonical ids come from ``app.demo.synthetic_world`` itself.
+covers every lifecycle state and can be compared route by route with the standard runtime's
+``tests.api_fixtures.World``. Its canonical ids come from ``app.demo.synthetic_world`` itself.
 The canonical (default) demo dataset, Null Meridian, is covered end to end, with the same
 isolation and mutation-policy checks, by ``tests/test_null_meridian_demo.py``. Every store
 lives in a temporary directory.
@@ -17,7 +17,6 @@ import socket
 import subprocess
 import sys
 import tempfile
-import time
 import unittest
 import urllib.request
 from dataclasses import replace
@@ -30,10 +29,13 @@ from app.api.local import build_local_api
 from app.api.routes import ROUTES
 from app.core.config import load_settings
 from app.core.errors import ConfigError
+from app.core.http_client import _BaseHttpClient
 from app.core.modes import ExecutionMode
 from app.demo.synthetic_world import COLLECTOR, create_seeded_store
 from app.domain.actors import Actor, ActorKind
 from app.domain.audit import AuditAction
+from app.integrations.aap.client import AapReadOnlyClient
+from app.integrations.okta.client import OktaReadOnlyClient
 from app.runtime import api as demo_api
 from app.runtime.api import (
     BLOCKED,
@@ -99,7 +101,7 @@ class DemoWorld:
 
 @contextlib.contextmanager
 def no_live_system():
-    """Fail on any network connection or process launch. (This build has no live-system client to construct.)"""
+    """Fail on any network connection, process launch, or construction of a live-system client."""
     def refuse(name):
         return AssertionError(f"{name} was reached in Demo Mode")
 
@@ -109,6 +111,9 @@ def no_live_system():
         mock.patch.object(subprocess, "Popen", side_effect=refuse("subprocess.Popen")),
         mock.patch.object(urllib.request, "urlopen", side_effect=refuse("urllib.request.urlopen")),
         mock.patch.object(http.client.HTTPConnection, "connect", side_effect=refuse("HTTPConnection.connect")),
+        mock.patch.object(OktaReadOnlyClient, "__init__", side_effect=refuse("OktaReadOnlyClient")),
+        mock.patch.object(AapReadOnlyClient, "__init__", side_effect=refuse("AapReadOnlyClient")),
+        mock.patch.object(_BaseHttpClient, "__init__", side_effect=refuse("an HTTP client")),
         # Any other way of starting a process (a PowerShell AD worker, an AAP CLI, a shell).
         *(mock.patch.object(os, name, side_effect=refuse(f"os.{name}"))
           for name in ("system", "posix_spawn", "posix_spawnp", "execv", "execve") if hasattr(os, name)),
@@ -161,8 +166,11 @@ class DemoPersistenceTests(DemoTestCase):
                              allowed_root=self.tmp / "var")
         self.assertTrue(path.exists())
 
-    def test_the_demo_reset_runs_only_where_allowed(self):
+    def test_the_demo_reset_runs_only_in_demo_and_only_where_allowed(self):
         dataset = resolve_dataset(DATASET)
+        production = load_settings({"OGWA_DATABASE_URL": f"sqlite:///{self.path().as_posix()}"})
+        with self.assertRaises(ResetRefused):
+            reset_demo_store(production, dataset, confirmed=True, allowed_root=self.tmp / "var")
         with self.assertRaises(ResetRefused):
             reset_demo_store(demo_settings(self.path()), dataset, confirmed=False, allowed_root=self.tmp / "var")
         outside = self.tmp / "elsewhere" / "ogwa-demo.sqlite3"
@@ -170,49 +178,6 @@ class DemoPersistenceTests(DemoTestCase):
             reset_demo_store(demo_settings(outside), dataset, confirmed=True, allowed_root=self.tmp / "var")
         self.assertFalse(self.path().exists())
         self.assertFalse(outside.exists())
-
-    def test_an_interrupted_reset_leaves_no_partial_store_and_the_next_reset_recovers(self):
-        # A first start stopped mid-seed (Ctrl+C, a container stop, a laptop sleep) must not leave a partial
-        # store where the demo looks for one: the next start would skip the seed and refuse to serve it.
-        path, var = self.path(), self.tmp / "var"
-        child = ("import sys; from pathlib import Path; from app.runtime.datasets import resolve_dataset; "
-                 "from app.runtime.demo_store import reset_demo_store; from tests.test_demo_mode import demo_settings; "
-                 "reset_demo_store(demo_settings(Path(sys.argv[1]), 'null-meridian'), resolve_dataset('null-meridian'), "
-                 "confirmed=True, allowed_root=Path(sys.argv[2]))")
-        proc = subprocess.Popen([sys.executable, "-c", child, str(path), str(var)], cwd=REPO_ROOT)
-        try:
-            deadline = time.monotonic() + 120
-            while proc.poll() is None and time.monotonic() < deadline:
-                if var.is_dir() and any(p.stat().st_size > 500_000 for p in var.iterdir() if p.is_file()):
-                    break  # well into the seed
-                time.sleep(0.01)
-        finally:
-            proc.kill()
-            proc.wait()
-        self.assertNotEqual(proc.returncode, 0, "the seed finished before it could be interrupted")
-        self.assertFalse(path.exists(), "an interrupted reset left a partial store")
-        settings = demo_settings(path, "null-meridian")
-        result = reset_demo_store(settings, resolve_dataset("null-meridian"), confirmed=True, allowed_root=var)
-        self.assertEqual(result.audit_head, "sha256:e8793f89dbff9c124d9c3b00fe0ea81d2ab5f07c1dc9bb05c8fce128d682eb41")
-        self.assertEqual(sorted(p.name for p in var.iterdir()), [path.name], "nothing of the interrupted seed is left")
-        store, _ = open_demo_store(settings, resolve_dataset("null-meridian"), clock=TickClock())
-        store.close()
-
-    def test_a_seed_that_is_interrupted_or_fails_validation_never_replaces_the_store(self):
-        settings, var = demo_settings(self.path()), self.tmp / "var"
-        head = reset_demo_store(settings, resolve_dataset(DATASET), confirmed=True, allowed_root=var).audit_head
-        before = self.path().read_bytes()
-        unverifiable = replace(resolve_dataset(DATASET), metadata=replace(resolve_dataset(DATASET).metadata,
-                                                                          seed="some-other-dataset-v1"))
-        with self.assertRaises(DemoPersistenceUnavailable):  # the seed's namespace is not the dataset's
-            reset_demo_store(settings, unverifiable, confirmed=True, allowed_root=var)
-        self.assertEqual(self.path().read_bytes(), before)
-        with mock.patch.object(Store, "record_synthetic_seed", side_effect=KeyboardInterrupt):
-            with self.assertRaises(KeyboardInterrupt):
-                reset_demo_store(settings, resolve_dataset(DATASET), confirmed=True, allowed_root=var)
-        self.assertEqual(self.path().read_bytes(), before)
-        self.assertEqual(reset_demo_store(settings, resolve_dataset(DATASET), confirmed=True, allowed_root=var)
-                         .audit_head, head, "a later reset still succeeds")
 
     def test_a_store_holding_another_dataset_is_refused(self):
         settings = demo_settings(self.path())
@@ -278,7 +243,7 @@ class DemoApplicationTests(DemoTestCase):
         super().setUp()
         self.world = DemoWorld(self.tmp)
         self.addCleanup(self.world.close)
-        self.standard = World()  # the API over the same seed without the demo layer, for comparison
+        self.standard = World()  # the standard runtime over the same dataset, for comparison
         self.addCleanup(self.standard.close)
 
     def test_health_identifies_the_demo_without_anything_sensitive(self):
@@ -296,7 +261,7 @@ class DemoApplicationTests(DemoTestCase):
         for leak in ("sqlite", str(self.tmp).lower(), "token", "secret", "password", "okta.com"):
             self.assertNotIn(leak, text)
 
-    def test_the_api_without_the_demo_layer_is_unlabelled(self):
+    def test_the_standard_runtime_s_health_and_routes_are_unchanged(self):
         health = self.standard.client().get(f"{V}/health").json
         health.pop("policyNotice", None)  # the existing label of the unrecorded policy, on every response
         self.assertEqual(health, {"status": "ok"})
@@ -317,7 +282,7 @@ class DemoApplicationTests(DemoTestCase):
             with self.subTest(path=path):
                 served, reference = demo.get(V + path), standard.get(V + path)
                 self.assertEqual(served.status, 200, served.json)
-                self.assertEqual(served.json, reference.json, "the demo serves the same data as the API without its layer")
+                self.assertEqual(served.json, reference.json, "the demo serves the same data as the standard runtime")
 
     def test_correlation_runs_the_shared_engine_over_the_synthetic_directory(self):
         demo, standard = self.world.client(SECURITY), self.standard.client(SECURITY)
@@ -408,17 +373,17 @@ class DemoIsolationTests(DemoTestCase):
                 candidate, approval = approve_okta(world)
                 self.assertEqual(dry_run(world, world.client(EXECUTOR), candidate, approval).status, 201)
                 self.assertEqual(world.app.providers.okta.name, "SyntheticOktaProvider")
-                self.assertEqual(world.app.providers.data_source, "synthetic")
+                self.assertEqual(world.app.providers.aap.name, "DisabledAapProvider")
             finally:
                 world.close()
 
-    def test_a_demo_process_imports_no_outbound_network_client(self):
+    def test_a_demo_process_never_imports_the_aap_client(self):
         # For the default dataset (Null Meridian) and the classic world alike.
         for dataset in (None, DATASET):
             with self.subTest(dataset=dataset or "default"):
-                self._assert_demo_process_imports_no_outbound_client(dataset)
+                self._assert_demo_process_imports_no_aap_client(dataset)
 
-    def _assert_demo_process_imports_no_outbound_client(self, dataset):
+    def _assert_demo_process_imports_no_aap_client(self, dataset):
         code = (
             "import sys\n"
             "from app.core.config import load_settings\n"
@@ -431,8 +396,7 @@ class DemoIsolationTests(DemoTestCase):
             "reset_demo_store(s, resolve_dataset(s.demo_dataset), confirmed=True, allowed_root=Path(sys.argv[1]))\n"
             "d = build_demo_application(s, clock=utc_now)\n"
             "d.close()\n"
-            "print(sorted(m for m in sys.modules if m in ('urllib.request', 'subprocess') or (m.startswith('app.')\n"
-            "    and any(w in m for w in ('client', 'http_', 'integrations.aap', 'okta.auth', 'okta.usage', 'okta.pacing')))))\n")
+            "print('app.integrations.aap.client' in sys.modules, 'app.core.http_mutation' in sys.modules)\n")
         root = self.tmp / "var"
         env = {"PATH": "/usr/bin:/bin", "OGWA_RUNTIME_MODE": "demo",
                "OGWA_DATABASE_URL": f"sqlite:///{(root / 'ogwa-demo.sqlite3').as_posix()}",
@@ -440,7 +404,7 @@ class DemoIsolationTests(DemoTestCase):
         result = subprocess.run([sys.executable, "-c", code, str(root)], cwd=REPO_ROOT, env=env, capture_output=True,
                                 text=True, timeout=120)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip(), "[]")
+        self.assertEqual(result.stdout.strip(), "False False")
 
     def test_the_demo_refuses_to_start_with_production_credentials(self):
         for extra in ({"OGWA_OKTA_API_TOKEN": "synthetic-not-a-token"}, {"OKTA_CLIENT_SECRET": "synthetic-value"},
@@ -472,7 +436,7 @@ class DemoMutationPolicyTests(unittest.TestCase):
         self.assertEqual([(r.method, r.pattern, r.access, r.any_of, r.query, r.governed_subject) for r in routes],
                          [(r.method, r.pattern, r.access, r.any_of, r.query, r.governed_subject) for r in ROUTES])
 
-    def test_the_api_builder_without_the_demo_layer_uses_the_plain_routes(self):
+    def test_the_standard_api_builder_still_uses_the_standard_routes(self):
         store, _ = canonical_world()
         try:
             self.assertIs(build_local_api(store, clock=TickClock()).routes, ROUTES)

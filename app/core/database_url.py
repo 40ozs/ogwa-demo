@@ -17,7 +17,7 @@ from app.core.errors import ConfigError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATABASE_URL_ENV_VAR = "OGWA_DATABASE_URL"
-DEFAULT_DATABASE_URL = "sqlite:///var/ogwa-demo.sqlite3"  # the demo store
+DEFAULT_DATABASE_URL = "sqlite:///var/ogwa-local.sqlite3"
 _SQLITE_PREFIX = "sqlite:///"
 _POSTGRES_SCHEMES = ("postgresql", "postgres", "postgresql+psycopg", "postgresql+psycopg2", "postgresql+asyncpg")
 

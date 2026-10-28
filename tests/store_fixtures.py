@@ -114,7 +114,7 @@ def _no_ad_stage_columns(candidate) -> dict:
 
 
 def legacy_s12(w) -> None:
-    """S12 exactly as the demo world seeded it before migration 0011: the single AD
+    """S12 exactly as the demo world seeded it before P10B (migration 0011): the single AD
     stage's AD_RETIREMENT approval and dry-run job, and a refused RETIREMENT_DRY_RUN step.
     Seeding it at schema 10 gives the 0011 tests real legacy rows to preserve (D148)."""
     from app.demo.synthetic_world import (

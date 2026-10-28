@@ -1,7 +1,7 @@
 # Lifecycle state machine
 
-Implemented in `app/domain/lifecycle.py`; the AD quarantine and deletion stages follow owner
-decisions D128–D155 (migration 0011). Tested exhaustively in
+Status: P02; the AD quarantine and deletion stages since P10B (owner decisions D128–D155,
+migration 0011). Implemented in `app/domain/lifecycle.py`. Tested exhaustively in
 `tests/test_lifecycle_state_machine.py` and `tests/test_lifecycle_ad_stages.py`, including a
 check that this document lists every forward transition and every state.
 
@@ -42,7 +42,7 @@ Related: [domain-model.md](domain-model.md),
 | `DELETION_PROPOSED` | progressing (post-quarantine) | A human proposed deleting the quarantined group on fresh, complete post-hold evidence |
 | `DELETION_APPROVED` | progressing (post-quarantine) | A different human approved the deletion (`AD_DELETION`, D143) |
 | `DELETION_DRY_RUN` | progressing (post-quarantine) | A dry run of the deletion succeeded under that approval |
-| `RETIREMENT_DRY_RUN` | progressing (legacy, pre-quarantine) | **Legacy (D148).** The dry run of the single AD stage that preceded quarantine and deletion. Kept so recorded history verifies; nothing new enters it, and from it only a diversion is possible |
+| `RETIREMENT_DRY_RUN` | progressing (legacy, pre-quarantine) | **Legacy (D148).** The P02–P10 single AD stage's dry run. Kept so recorded history verifies; nothing new enters it, and from it only a diversion is possible |
 | `RETIRED` | terminal | Read-only discovery observed that the AD group no longer exists |
 | `EXCLUDED` | terminal | A human excluded the group from lifecycle management |
 | `REJECTED` | terminal | A human decided not to proceed |
@@ -51,7 +51,7 @@ Related: [domain-model.md](domain-model.md),
 | `MAPPING_AMBIGUOUS` | blocked (resumable) | The mapping is `AMBIGUOUS` or `NOT_FOUND` |
 | `DEPENDENCY_BLOCKED` | blocked (resumable) | A blocking dependency was found |
 | `STALE_EVIDENCE` | blocked (resumable) | Once-complete evidence has outlived its freshness window. Assigned by discovery or classification, never by an operator |
-| `EVIDENCE_INCOMPLETE` | blocked (resumable) | Required evidence was never fully or properly obtained (a partial or failed result, or a record dated in the future). Assigned by discovery or classification, never by an operator. Since migration 0009 |
+| `EVIDENCE_INCOMPLETE` | blocked (resumable) | Required evidence was never fully or properly obtained (a partial or failed result, or a record dated in the future). Assigned by discovery or classification, never by an operator. Since migration 0009 (owner decision after P09) |
 
 Terminal states have no outgoing transitions. If new evidence appears later, it creates a
 new candidate.
@@ -124,7 +124,7 @@ zero (D132); and the deployment's quarantine OU configuration (D136) shows the g
 the step needs it. With no quarantine OU configured for the group's domain, no AD-stage
 step can pass.
 
-## The AD stages
+## The AD stages (P10B)
 
 Owner decisions D128–D155. The AD side has two governed stages, each with its own approval
 (`AD_QUARANTINE`, then `AD_DELETION`, D147):
@@ -155,8 +155,8 @@ excluded, or rejected, and anything else happens outside OGWA.
 
 ### The legacy single AD stage (D148)
 
-Before the quarantine and deletion stages there was one AD stage: an `AD_RETIREMENT`
-approval in `REVALIDATION_REQUIRED`, then `REVALIDATION_REQUIRED` → `RETIREMENT_DRY_RUN` → `RETIRED`. Those two transitions stay in
+P02–P10 had one AD stage: an `AD_RETIREMENT` approval in `REVALIDATION_REQUIRED`, then
+`REVALIDATION_REQUIRED` → `RETIREMENT_DRY_RUN` → `RETIRED`. Those two transitions stay in
 the table with category `legacy`, so recorded history still verifies, but their guard
 always refuses, `allowed_targets()` does not offer them, and the API answers
 `LEGACY_AD_RETIREMENT`. Stored `AD_RETIREMENT` approvals and jobs are kept verbatim and
@@ -221,11 +221,11 @@ every approval from before the block becomes invalid and a new one is required.
 `verify_history(candidate, decisions)` replays the decision records from `DISCOVERED`.
 It checks that each move is in the table and was made by an allowed actor kind, that
 times never go backwards, that the epoch increments exactly on re-entry, and that the
-replay ends at the candidate's stored state and epoch. It also reconstructs the
+replay ends at the candidate's stored state and epoch. Since P10B it also reconstructs the
 quarantine approver, the post-quarantine hold, and the deletion proposal from the decisions
 and compares them with the stored candidate, and it refuses a history in which the
 quarantine was approved by the Okta-stage approver (D11), the deletion was approved by a
-person D143 excludes, or a quarantined candidate returned before its quarantine (D144). The store must run it when
+person D143 excludes, or a quarantined candidate returned before its quarantine (D144). The store (P03+) must run it when
 loading a candidate, so a state written directly to the database is detected.
 
 ## What this build can and cannot reach
@@ -234,9 +234,9 @@ With synthetic data, the whole path to `RETIRED` can be exercised: at the domain
 through the store, and through the operator API in `LOCAL_SYNTHETIC` (D152). Every job is a
 dry run, and the unassignment, the quarantine, and the deletion are *observed* (synthetic
 observations in tests and in the demo world, whose S15 and S16 stand in the quarantine hold
-and with a proposed deletion). This build includes no live integration and never changes a
-real system: `ExecutionJob` refuses `PRODUCTION_MUTATION` and any non-synthetic execution. In
-the design, someone outside OGWA makes the change under a recorded approval, and OGWA then
-observes it read-only. Enabling OGWA to perform these changes itself would require the steps
-in [../security/execution-modes.md](../security/execution-modes.md), which this build does
-not take.
+and with a proposed deletion). Against real systems, OGWA in this build can plan and record but never perform:
+`ExecutionJob` refuses `PRODUCTION_MUTATION` and any non-synthetic execution. Someone
+outside OGWA would have to make the change under a recorded approval, and OGWA would then
+observe it read-only. Enabling OGWA to perform these changes itself requires the steps in
+[../security/execution-modes.md](../security/execution-modes.md), and this prompt package
+does not authorize them.

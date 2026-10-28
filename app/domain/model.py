@@ -104,8 +104,8 @@ class OktaGroup(Evidence):
     directory_external_id: str | None = None  # the directory's immutable id (AD objectGUID)
     directory_qualified_name: str | None = None  # e.g. DOMAIN\sAMAccountName
     # Okta's copy of the AD group's objectSid (profile.objectSid), as the directory
-    # integration reported it. Unverified source metadata (migration 0008): until the
-    # mechanism is verified (D37) it may corroborate an exact mapping, never establish one.
+    # integration reported it. Unverified source metadata (migration 0008): until P11
+    # verifies the mechanism (D37) it may corroborate an exact mapping, never establish one.
     directory_object_sid_unverified: str | None = None
 
     def __post_init__(self) -> None:
@@ -432,7 +432,7 @@ class DependencyCoverage(StrEnum):
 
 
 class FindingCode(StrEnum):
-    """What a finding is, for findings whose meaning a policy must tell apart.
+    """What a finding is, for findings whose meaning a policy must tell apart (P07).
 
     Direct members, nested members, parent groups, and primaryGroupID references stay
     separate facts (owner decision D20). A finding without a code still blocks if it is
@@ -476,7 +476,7 @@ class DependencyFinding:
             check_enum(self.code, FindingCode, "code")
 
     def material(self) -> list:
-        # The code is appended only when set, so uncoded findings keep their original digests.
+        # The code is appended only when set, so uncoded findings keep their P03 digests.
         return [self.description, self.blocking, self.reference or "", *([self.code.value] if self.code else [])]
 
 

@@ -1,6 +1,6 @@
-"""0011 — the AD quarantine and AD deletion stages (owner decisions D143–D155).
+"""0011 — the AD quarantine and AD deletion stages (P10B, owner decisions D143–D155).
 
-Earlier stores had one AD stage: an ``AD_RETIREMENT`` approval given in ``REVALIDATION_REQUIRED``
+P02–P10 had one AD stage: an ``AD_RETIREMENT`` approval given in ``REVALIDATION_REQUIRED``
 led to ``RETIREMENT_DRY_RUN`` and then ``RETIRED``. The owner separated it into two governed
 stages: an AD quarantine, then, after a 30-day post-quarantine hold, an AD deletion that
 needs its own proposal and a new, independent approval (D128–D130, D138–D147). This
@@ -34,8 +34,8 @@ rebuilt in this migration's transaction, as 0009 rebuilt two of them:
    while the triggers are absent. ``candidates`` is v0001's definition with the state lists
    extended and the four columns and their CHECKs appended; it is written out in full
    below. The other three are v0001's DDL with only their value lists extended. The new
-   candidate columns start NULL for every existing row: no stored candidate has reached an
-   AD quarantine or deletion state. Then the backups are dropped;
+   candidate columns start NULL for every existing row: no stored candidate has reached a
+   P10B state. Then the backups are dropped;
 5. recreate v0001's five indexes and v0002's eleven triggers on these tables. Ten are byte
    for byte; ``trg_candidates_start_discovered`` also requires the four new columns to be
    NULL. Then add the three triggers that refuse new legacy records.
@@ -104,7 +104,7 @@ _CANDIDATES = table(
     ts("updated_at"),
     count("decision_count"),
     "CHECK (updated_at >= created_at)",
-    # Projections of the decisions, NULL until reached.
+    # P10B: projections of the decisions, NULL until reached.
     *actor("quarantine_approver", null=True, human_only=True),
     ts("quarantine_hold_until", null=True),
     *actor("deletion_proposer", null=True, human_only=True),

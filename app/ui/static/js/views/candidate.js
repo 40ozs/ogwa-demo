@@ -83,7 +83,7 @@ export async function candidate(ctx) {
       actionsPanel(ctx, detail, plan, fingerprintDrift))));
 }
 
-// --- synthetic remediation drill ------------------------------------------------
+// --- synthetic remediation drill (OGWA-DEMO-03) ------------------------------------------------
 
 const DRILL_TITLE = "Remediation: dry run or synthetic drill";
 
@@ -99,7 +99,7 @@ function drillSection(detail, evidence, approvals, catalog) {
   const intro = banner("caution", "A drill changes only a synthetic provider fixture, and records nothing.", catalog.notice);
   if (!canDrill(c.id)) {
     return section(DRILL_TITLE, intro, h("p", { class: "muted" }, anonymous()
-      ? "In this public demo, the drill runs only on the walkthrough's controlled-remediation candidate, NM-C11 (Portfolio scenarios)."
+      ? "In this public demo, the drill runs only on the walkthrough's controlled-remediation candidate (Portfolio scenarios, part 2)."
       : "Running a drill needs the dry-run planning permission (the executor role), and the stage's approver cannot run it."));
   }
   const approved = usableApprovals(approvals, c, stage.stage);
@@ -174,7 +174,7 @@ function drillResult(drill, data) {
   const attempts = attemptRows(data && data.chain);
   return h("div", { class: "drill-outcome", "data-mode": drill.mode },
     h("h3", { tabindex: "-1" }, title),
-    // The mode, in the server's words, above everything else: a dry run and a
+    // OGWA-DEMO-04: the mode, in the server's words, above everything else: a dry run and a
     // synthetic execution can never be mistaken for each other, or for a real change.
     h("div", { class: "banner drill-mode-banner", "data-tone": mode.tone, "data-mode": mode.mode || "UNKNOWN" },
       h("strong", { class: "drill-mode" }, mode.headline), h("p", null, mode.detail)),
@@ -218,7 +218,7 @@ function drillResult(drill, data) {
     ], ledgerRows(drill), "Nothing was submitted to the synthetic provider."));
 }
 
-// --- evidence assessment --------------------------------------------------------
+// --- evidence assessment (OGWA-DEMO-01) --------------------------------------------------------
 
 /**
  * "Is this safe to act on?": the server's evidence assessment, grouped by the six questions a
@@ -261,7 +261,7 @@ function assessmentSection(assessment) {
     a.notes.map((n) => h("p", { class: "muted" }, n)));
 }
 
-// --- decision explanation -------------------------------------------------------
+// --- decision explanation (OGWA-DEMO-02) -------------------------------------------------------
 
 /**
  * "Why this decision": which policy version produced it, each condition as that version states

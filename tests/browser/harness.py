@@ -50,10 +50,7 @@ CANDIDATE_BROWSERS = (
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
 )
-PATH_BROWSERS = ("google-chrome", "chromium", "chromium-browser", "microsoft-edge")  # Linux: found on PATH
 BROWSER_FLAGS = (
     "--headless=new",
     "--remote-debugging-port=0",
@@ -101,14 +98,10 @@ def browser_flags() -> tuple[str, ...]:
 
 
 def browser_path() -> str | None:
-    """``UI_BROWSER``, which must name a file; else the first standard Chrome or Edge install; else None."""
     chosen = os.environ.get(BROWSER_VAR)
     if chosen:
-        if not Path(chosen).is_file():
-            raise FileNotFoundError(f"{BROWSER_VAR} names no file: {chosen}")
-        return chosen
-    return next((p for p in CANDIDATE_BROWSERS if Path(p).is_file()), None) \
-        or next(filter(None, map(shutil.which, PATH_BROWSERS)), None)
+        return chosen if Path(chosen).is_file() else None
+    return next((p for p in CANDIDATE_BROWSERS if Path(p).is_file()), None)
 
 
 def free_port() -> int:
@@ -185,12 +178,13 @@ class DemoServer:
     The demo store is reset in this process with the demo reset (``app.runtime.demo_store``)
     into a temporary ``var/``; the server is then ``python -m app.api serve`` in a child
     process whose environment selects ``OGWA_RUNTIME_MODE=demo`` and holds no other OGWA
-    setting. ``dataset`` is a registry selector; None leaves the default (Null Meridian)."""
+    setting. ``dataset`` is a registry selector; None means the legacy Null Meridian dataset, which these
+    browser suites were written against (the runtime's default is Genesee Press since SYNTH-OGWA-01)."""
 
     REPO_ROOT = Path(__file__).resolve().parents[2]
 
     def __init__(self, dataset: str | None = None) -> None:
-        self.dataset = dataset
+        self.dataset = dataset or "null-meridian"
         self.port = free_port()
         self.origin = f"http://127.0.0.1:{self.port}"
         self.tmp = Path(tempfile.mkdtemp(prefix="ogwa-ui-demo-"))
@@ -271,7 +265,8 @@ class HostedDemoServer(DemoServer):
         hosted = HostedDemo(lambda: self.image, {"OGWA_RUNTIME_MODE": "demo",
                                                  "OGWA_DEMO_DATASET": self.dataset or "null-meridian"})
         connection = hosted.app.store.connection
-        assert hosted.check_environment({"OGWA_RUNTIME_MODE": "demo", "HOSTED_SESSION_KEY": secrets.token_hex(32)})
+        assert hosted.check_environment({"OGWA_RUNTIME_MODE": "demo", "OGWA_DEMO_DATASET": self.dataset or "null-meridian",
+                                         "HOSTED_SESSION_KEY": secrets.token_hex(32)})
         assert hosted.check_schema([dict(r) for r in connection.execute(SCHEMA_SQL)])
         assets = StaticAssets()
 
@@ -310,9 +305,7 @@ class HostedDemoServer(DemoServer):
 class Browser:
     """A headless browser with one page, driven over DevTools."""
 
-    def __init__(self, executable: str | None) -> None:
-        if executable is None:
-            raise CdpError(f"{ENABLE_VAR}=1, but no Chrome or Edge was found: set {BROWSER_VAR} to one")
+    def __init__(self, executable: str) -> None:
         self.profile = tempfile.mkdtemp(prefix="ogwa-ui-browser-")
         self.process = subprocess.Popen([executable, *browser_flags(), f"--user-data-dir={self.profile}", "about:blank"],
                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

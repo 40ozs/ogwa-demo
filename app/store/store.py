@@ -326,8 +326,8 @@ class Store:
         Rows that agree only with other rows prove nothing to someone who can write the file. Bound to
         the chain, a forged or edited row either fails here or changes the anchored audit head.
 
-        Decision and approval events may also carry the policy reference they were judged by.
-        It lives only in the event, so it is compared apart from the row's details:
+        Decision and approval events may also carry the policy reference they were judged by
+        (OGWA-DEMO-02). It lives only in the event, so it is compared apart from the row's details:
         those must still match exactly, and the reference must be complete and valid."""
         rows = self._conn.execute("SELECT * FROM audit_events WHERE subject_id = ? AND action = ? AND after_ref = ?",
                                   (subject_id, action.value, ref)).fetchall()
@@ -406,7 +406,7 @@ class Store:
     def audit_events_page(self, *, limit: int, offset: int = 0, subject_id: str | None = None,
                           oldest_first: bool = False) -> tuple[AuditEvent, ...]:
         """A bounded page of audit events, newest first unless ``oldest_first``, each checked
-        against its stored digest."""
+        against its stored digest (P08)."""
         if not 1 <= limit <= 1000 or offset < 0:
             raise StoreError("audit page limit must be 1-1000 and offset non-negative")
         where, params = ("WHERE subject_id = ? ", (subject_id,)) if subject_id is not None else ("", ())
@@ -427,7 +427,7 @@ class Store:
                                details=details, result=AuditResult.REFUSED, correlation_id=correlation_id,
                                before_ref=before_ref)
 
-    # --- remediation dry runs ------------------------------------------------------
+    # --- remediation dry runs (P10) ------------------------------------------------------
 
     def record_remediation_dry_run(self, *, actor: Actor, candidate_id: str, result: RemediationResult,
                                    approval_id: str, evidence_fingerprint: str, correlation_id: str,
@@ -438,7 +438,7 @@ class Store:
         SIMULATED, WHATIF, or VALIDATION_ONLY: a BLOCKED dry run is a refusal (chained as
         GOVERNED_REQUEST_REFUSED), and no result can claim an execution.
 
-        With ``policy_ref``, the event also records the policy its gates were judged
+        With ``policy_ref`` (OGWA-DEMO-04), the event also records the policy its gates were judged
         by, which must be the policy in force (``_check_policy_ref``, as for a decision), so a
         recorded dry run names its policy version for good, whatever is in force later."""
         if not isinstance(actor, Actor) or actor.kind is not ActorKind.HUMAN:
@@ -473,7 +473,7 @@ class Store:
 
     def audit_event_for(self, action: AuditAction, after_ref: str) -> AuditEvent | None:
         """The one audit event of ``action`` that recorded ``after_ref`` (``approval:<id>``,
-        ``decision:<id>``), checked against its digest; None if there is none."""
+        ``decision:<id>``), checked against its digest; None if there is none (OGWA-DEMO-04)."""
         rows = self._conn.execute("SELECT * FROM audit_events WHERE action = ? AND after_ref = ? ORDER BY sequence",
                                   (AuditAction(action).value, after_ref)).fetchall()
         if len(rows) > 1:
@@ -880,7 +880,7 @@ class Store:
         ).fetchall()
         return [self._approval_from_row(r) for r in rows]
 
-    # --- identity-mapping reviews ------------------------------------------------
+    # --- identity-mapping reviews (P06) ------------------------------------------------
 
     def record_mapping_review(self, review: MappingReview, *, correlation_id: str | None = None) -> None:
         """Append one human review to its Okta group's mapping chain. Never changes an earlier review."""
@@ -958,7 +958,7 @@ class Store:
                 checked += 1
         return checked
 
-    # --- candidate-classification policy versions --------------------------------
+    # --- candidate-classification policy versions (P07) --------------------------------
 
     def record_policy_version(self, version: PolicyVersion, *, correlation_id: str | None = None) -> None:
         """Append one approved policy configuration. Never changes an earlier version."""

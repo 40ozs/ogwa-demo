@@ -1,4 +1,4 @@
-"""The remediation allowlist, the adapters, and the worker contract (both directions).
+"""P10: the remediation allowlist, the adapters, and the worker contract (both directions).
 
 The worker-contract tests read the golden request/result pairs that
 tests/powershell/Test-OgwaRemediation.ps1 produces, so the Python parser and the PowerShell
@@ -240,7 +240,7 @@ class AapAdapterTests(unittest.TestCase):
 
 
 class PackageBoundaryTests(unittest.TestCase):
-    FORBIDDEN = ("app.integrations", "http", "urllib", "socket",
+    FORBIDDEN = ("app.core.http_client", "app.core.http_mutation", "app.integrations", "http", "urllib", "socket",
                  "ssl", "subprocess", "requests", "httpx", "ctypes", "os")
 
     def test_the_remediation_package_cannot_reach_a_network_or_a_process(self):

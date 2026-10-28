@@ -1,4 +1,4 @@
-"""Guards on the browser gate itself (owner decisions). Runs in the standard check.
+"""Guards on the browser gate itself (owner decisions after P09). Runs in the standard check.
 
 The browser suite (tests/browser, scripts/browser-check.ps1) is a required pre-pilot and
 pre-release gate wherever a supported browser is available. These tests keep it honest
@@ -13,7 +13,6 @@ from pathlib import Path
 from unittest import mock
 
 from tests.browser import harness
-from tests.browser.cdp import CdpError
 
 REPO = Path(__file__).resolve().parents[1]
 WORKFLOWS = (REPO / "tests" / "browser" / "test_operator_workflows.py").read_text(encoding="utf-8")
@@ -78,36 +77,6 @@ class ExternalHostBlockingTests(unittest.TestCase):
                        'if not k.upper().startswith("OGWA_")'):
             with self.subTest(needle=needle):
                 self.assertIn(needle, HARNESS)
-
-
-class BrowserDiscoveryTests(unittest.TestCase):
-    def test_standard_chrome_and_edge_installs_are_found_on_windows_macos_and_linux(self):
-        for path in (r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"):
-            self.assertIn(path, harness.CANDIDATE_BROWSERS)
-        on_path = {"chromium": "/usr/bin/chromium"}
-        with mock.patch.dict("os.environ"), mock.patch.object(harness, "CANDIDATE_BROWSERS", ()), \
-                mock.patch.object(harness.shutil, "which", side_effect=on_path.get):
-            os.environ.pop(harness.BROWSER_VAR, None)
-            self.assertEqual(harness.browser_path(), "/usr/bin/chromium")
-
-    def test_a_ui_browser_that_names_no_file_is_an_error_not_a_skip(self):
-        with mock.patch.dict("os.environ", {harness.BROWSER_VAR: "/no/such/browser"}), \
-                self.assertRaises(FileNotFoundError):
-            harness.browser_path()
-
-    def test_a_requested_run_without_a_browser_fails_instead_of_skipping_everything(self):
-        from tests.browser.test_operator_workflows import skip_reason
-
-        with mock.patch.dict("os.environ", {harness.ENABLE_VAR: "1"}), \
-                mock.patch.object(harness, "CANDIDATE_BROWSERS", ()), mock.patch.object(harness.shutil, "which",
-                                                                                     return_value=None):
-            os.environ.pop(harness.BROWSER_VAR, None)
-            self.assertIsNone(harness.browser_path())
-            self.assertIsNone(skip_reason(), "requested browser tests run, and fail without a browser")
-            with self.assertRaisesRegex(CdpError, "no Chrome or Edge was found"):
-                harness.Browser(None)
 
 
 class CleanPageAssertionTests(unittest.TestCase):

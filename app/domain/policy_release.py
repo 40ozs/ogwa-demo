@@ -1,4 +1,4 @@
-"""Named, versioned policy releases, and the policy reference a decision records.
+"""Named, versioned policy releases, and the policy reference a decision records (OGWA-DEMO-02).
 
 A ``CandidatePolicy`` (``ogwa-candidate-policy/v1``) is the rules: thresholds, freshness windows,
 required dependency kinds, and protected lists, identified by the SHA-256 digest of its canonical

@@ -30,7 +30,7 @@ There is no outcome for a performed change: ``RemediationOutcome`` has no such m
 ``RemediationResult`` that claims ``executed`` or ``production_mutation`` cannot be built.
 
 A dry run is refused unless every gate passes. ``evaluate_gates`` evaluates all of them, so
-an operator sees every reason at once. The first eight are the hard gates; the last two
+an operator sees every reason at once. The first eight are the P10 hard gates; the last two
 are backstops that keep the remediation layer at least as strict as the rest of OGWA:
 
 - ``EXECUTION_MODE_PERMITS_DRY_RUN``: the process can plan mutations (``LOCAL_SYNTHETIC`` or
@@ -131,7 +131,7 @@ class Gate(StrEnum):
     LIFECYCLE_RULES = "LIFECYCLE_RULES"
 
 
-# The hard gates; the other two are backstops.
+# The P10 hard gates; the other two are backstops.
 REQUIRED_GATES = (
     Gate.EXECUTION_MODE_PERMITS_DRY_RUN, Gate.SINGLE_EXPLICIT_TARGET, Gate.EXACT_VERIFIED_MAPPING,
     Gate.FRESH_EVIDENCE, Gate.NOT_PROTECTED, Gate.VALID_APPROVAL, Gate.APPROVAL_FINGERPRINT_MATCHES,

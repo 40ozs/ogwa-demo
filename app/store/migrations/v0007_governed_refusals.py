@@ -1,6 +1,6 @@
 """0007 — a dedicated audit action for refused governed requests.
 
-Owner decision: an authenticated, well-formed attempt to change governed state
+Owner decision after P08: an authenticated, well-formed attempt to change governed state
 that policy or authorization refuses is recorded in the hash-chained audit trail as
 ``GOVERNED_REQUEST_REFUSED``. Unauthenticated, malformed, and generic authorization
 failures stay in the API's security log.

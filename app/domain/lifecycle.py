@@ -13,12 +13,12 @@ This build cannot change Okta or AD. HOLD, QUARANTINE_HOLD, and RETIRED are reac
 observing, through read-only discovery, that an approved change has happened, never by OGWA
 making it.
 
-The AD side has two governed stages (owner decisions D128–D155). The AD quarantine is
+The AD side has two governed stages (P10B, owner decisions D128–D155). The AD quarantine is
 approved in REVALIDATION_REQUIRED, after the Okta hold. Once the quarantine is observed, a
 30-day hold runs (D138). After it, the candidate is revalidated in
 DELETION_REVALIDATION_REQUIRED, a person proposes the deletion on fresh post-hold evidence,
 and a different person approves it (D139, D143). A candidate never returns from the
-post-quarantine states to the pre-quarantine ones (D144). The original single AD stage
+post-quarantine states to the pre-quarantine ones (D144). The single AD stage of P02–P10
 (REVALIDATION_REQUIRED -> RETIREMENT_DRY_RUN -> RETIRED, approved as AD_RETIREMENT) remains
 only so that recorded history still verifies; its steps are refused (D148).
 See docs/architecture/lifecycle-state-machine.md.
@@ -68,12 +68,12 @@ class LifecycleState(StrEnum):
     MAPPING_AMBIGUOUS = "MAPPING_AMBIGUOUS"
     DEPENDENCY_BLOCKED = "DEPENDENCY_BLOCKED"
     PROTECTED = "PROTECTED"
-    # Once-complete evidence has outlived its freshness window (owner decision).
+    # Once-complete evidence has outlived its freshness window (owner decision after P09).
     STALE_EVIDENCE = "STALE_EVIDENCE"
     # Required evidence was never fully or properly obtained: a partial or failed result,
-    # or a record dated in the future (owner decision; migration 0009).
+    # or a record dated in the future (owner decision after P09; migration 0009).
     EVIDENCE_INCOMPLETE = "EVIDENCE_INCOMPLETE"
-    # The AD stages (migration 0011): approved for quarantine, its dry run recorded,
+    # The AD stages (P10B; migration 0011): approved for quarantine, its dry run recorded,
     # the quarantine observed and its hold running, revalidation after that hold, deletion
     # proposed, deletion approved by someone else, the deletion dry run recorded.
     QUARANTINE_APPROVED = "QUARANTINE_APPROVED"
@@ -108,7 +108,7 @@ LEGACY_STATES = frozenset({S.RETIREMENT_DRY_RUN})
 BLOCKED_STATES = frozenset({S.BLOCKED, S.MAPPING_AMBIGUOUS, S.DEPENDENCY_BLOCKED, S.STALE_EVIDENCE,
                             S.EVIDENCE_INCOMPLETE})
 # What the evidence itself says, as judged by discovery and classification. An operator
-# never assigns these (owner decision): a person who wants to stop a candidate
+# never assigns these (owner decision after P09): a person who wants to stop a candidate
 # holds it (BLOCKED).
 EVIDENCE_CONDITION_STATES = frozenset({S.STALE_EVIDENCE, S.EVIDENCE_INCOMPLETE})
 # No outgoing transitions. New evidence means a new candidate.
@@ -141,7 +141,7 @@ FORWARD_PATH = (
     S.DELETION_DRY_RUN,
     S.RETIRED,
 )
-# The legacy single AD stage. Kept so recorded history verifies; refused (D148).
+# The legacy single AD stage (P02–P10). Kept so recorded history verifies; refused (D148).
 LEGACY_PATH = ((S.REVALIDATION_REQUIRED, S.RETIREMENT_DRY_RUN), (S.RETIREMENT_DRY_RUN, S.RETIRED))
 # The approval steps, each made by the operator who gave an approval of this stage.
 APPROVAL_STEPS = {S.APPROVED: ApprovalStage.OKTA_UNASSIGN, S.QUARANTINE_APPROVED: ApprovalStage.AD_QUARANTINE,
@@ -381,7 +381,7 @@ def _fresh(records: Iterable[Evidence], purpose: EvidencePurpose, now: datetime,
 
 def _evidence_conditions(records: Iterable[Evidence], purpose: EvidencePurpose, now: datetime,
                          policy: LifecyclePolicy) -> tuple[list[str], list[str]]:
-    """``_fresh``'s problems, split as the classifier splits them (owner decision).
+    """``_fresh``'s problems, split as the classifier splits them (owner decision after P09).
 
     Incomplete: a record that was never properly obtained (a partial or failed result, or
     one dated in the future). Stale: a complete record that has outlived its window.

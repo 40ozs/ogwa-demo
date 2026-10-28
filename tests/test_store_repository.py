@@ -121,7 +121,7 @@ class StoreJourney:
         self.step(S.REVALIDATION_REQUIRED, j.T_HOLD_ENDS, evidence=j.unassigned_evidence())
         if state is S.REVALIDATION_REQUIRED:
             return self
-        # The AD quarantine, approved by a second reviewer.
+        # The AD quarantine, approved by a second reviewer (P10B).
         five = timedelta(minutes=5)
         j.post = j.post_hold_evidence()
         j.quarantine_approval = approval(self.candidate, ApprovalStage.AD_QUARANTINE, j.T_QUARANTINE_APPROVE, j.post,
@@ -246,7 +246,7 @@ class EvidenceRoundTripTests(StoreTestCase):
 
 class LifecyclePersistenceTests(StoreTestCase):
     def test_full_journey_is_persisted_and_replayable(self):
-        self.clock.advance(timedelta(days=10))  # the path now ends after two 30-day holds
+        self.clock.advance(timedelta(days=10))  # the path now ends after two 30-day holds (P10B)
         journey = StoreJourney(self.store).to(S.RETIRED)
         loaded = self.store.load_candidate(journey.candidate.id)
         self.assertEqual(loaded, journey.candidate)

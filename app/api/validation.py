@@ -113,8 +113,8 @@ class Page:
     offset: int
 
     def envelope(self, items: list, *, more: bool, total: int | None = None) -> dict[str, Any]:
-        """``offset``, ``previousCursor``, and ``total`` (``null`` when not counted) are additive:
-        they let a table say "51–100 of 298" and step back a page."""
+        """``offset``, ``previousCursor``, and ``total`` (``null`` when not counted) are additive
+        (OGWA-UI-IA-01): they let a table say "51–100 of 298" and step back a page."""
         next_cursor = encode_cursor(self.offset + self.limit) if more else None
         previous = encode_cursor(max(0, self.offset - self.limit)) if self.offset else None
         return {"items": items, "page": {"limit": self.limit, "nextCursor": next_cursor, "previousCursor": previous,

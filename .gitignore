@@ -12,7 +12,7 @@
 *.p12
 *.kdbx
 
-# --- Local data stores (the demo store lives in var/) ---------------------------
+# --- Local data stores (may contain production data) -------------------------
 var/
 data/
 *.db
@@ -20,20 +20,14 @@ data/
 *.sqlite
 *.sqlite3
 
-# --- Generated evidence and exports -------------------------------------------
+# --- Generated evidence and exports (may contain production identifiers) -----
 evidence/
 exports/
 reports/
+docs/agent-runs/private/
 *.csv
 *.xlsx
 !tests/fixtures/**/*.csv
-
-# --- Local tool state --------------------------------------------------------
-.DS_Store
-.wrangler/
-.dev.vars
-.dev.vars.*
-node_modules/
 
 # --- Logs --------------------------------------------------------------------
 *.log
@@ -48,7 +42,6 @@ venv/
 .mypy_cache/
 .ruff_cache/
 .coverage
-coverage/
 htmlcov/
 build/
 dist/

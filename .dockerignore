@@ -1,6 +1,0 @@
-# The image needs only the application and its configuration.
-*
-!app/
-!config/
-**/__pycache__
-**/*.py[cod]

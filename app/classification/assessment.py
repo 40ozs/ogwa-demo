@@ -1,4 +1,4 @@
-"""Evidence quality and the control decision it allows.
+"""Evidence quality and the control decision it allows (OGWA-DEMO-01).
 
 ``assess`` answers, for one lifecycle candidate, the questions a reviewer asks before
 anything is done to a group:
@@ -683,7 +683,7 @@ def _conflicts(b: _Builder, bundle: EvidenceBundle, candidate: LifecycleCandidat
                     and d.kind is DependencyKind.AD_GROUP_MEMBERS), None)
     if ad is not None and ad.exists and ad.member_count is not None and members is not None \
             and "dependency:AD_GROUP_MEMBERS" in keys:
-        # AD's member attribute and the membership read count the same values (the AD report converter).
+        # AD's member attribute and the membership read count the same values (P05 converter).
         direct = any(f.code is FindingCode.AD_DIRECT_MEMBERS or (f.code is None and f.blocking)
                      for f in members.findings)
         record_has = ad.member_count > 0

@@ -187,7 +187,7 @@ class HostedDemoBuildTests(unittest.TestCase):
 
     def test_only_the_demo_runtime_builds(self):
         with self.assertRaises(OgwaSafetyError):
-            HostedDemo(lambda: IMAGE, {"OGWA_RUNTIME_MODE": "production", "OGWA_DEMO_DATASET": "null-meridian"})
+            HostedDemo(lambda: IMAGE, {"OGWA_DEMO_DATASET": "null-meridian"})
 
     def test_building_and_serving_reach_no_live_system(self):
         with no_live_system():
@@ -199,6 +199,7 @@ class HostedDemoBuildTests(unittest.TestCase):
                          "/candidates", "/applications", "/groups"):
                 self.assertEqual(client.request("GET", V + path)[0], 200, path)
             self.assertEqual(client.request("POST", f"{V}/mappings/{GROUP}/inspection", {})[0], 200)
+        self.assertEqual(type(hosted.app.providers.aap).__name__, "DisabledAapProvider")
         self.assertEqual(type(hosted.app.providers.okta).__name__, "SyntheticOktaProvider")
 
 
@@ -242,7 +243,7 @@ class HostedDemoChecksTests(unittest.TestCase):
         self.assertIsInstance(h.app.api.sessions, VisitorSessions)
         refused = ({**ENVIRONMENT, "OKTA_API_TOKEN": "x"}, {**ENVIRONMENT, "OGWA_AAP_URL": "https://aap.example"},
                    {**ENVIRONMENT, "OGWA_OKTA_API_TOKEN": "x"}, {**ENVIRONMENT, "LDAP_BIND_PASSWORD": "x"},
-                   {**ENVIRONMENT, "OGWA_DEMO_DATASET": "classic"}, {**ENVIRONMENT, "OGWA_RUNTIME_MODE": "production"},
+                   {**ENVIRONMENT, "OGWA_DEMO_DATASET": "classic"}, {"OGWA_DEMO_DATASET": "null-meridian"},
                    {**ENVIRONMENT, "OGWA_UNKNOWN": "x"})
         for environment in refused:
             with self.subTest(environment=sorted(environment)):
@@ -354,9 +355,9 @@ class HostedDemoRequestTests(unittest.TestCase):
         self.assertEqual((status, answer["error"]["code"]), (403, "CSRF_FAILED"), "CSRF is still checked first")
 
     def test_a_visitor_drills_nm_c11_and_nothing_else_and_it_records_nothing(self):
-        # NM-C11 is approved on evidence fresh at the demo's clock. Its drill changes
+        # OGWA-DEMO-03: NM-C11 is approved on evidence fresh at the demo's clock. Its drill changes
         # only an in-memory provider fixture, so the read-only demo serves it (tearDown: the
-        # audit head never moves). An anonymous visitor runs it, on NM-C11 only.
+        # audit head never moves). OGWA-DEMO-HOSTED-ANON-01: an anonymous visitor runs it, on NM-C11 only.
         visitor = self._visitor()
         candidate = visitor.scenario("NM-C11")
         detail = visitor.request("GET", f"{V}/candidates/{candidate}")[2]
@@ -468,7 +469,7 @@ class HostedDemoRequestTests(unittest.TestCase):
 
 
 class HostedIntegrityTests(unittest.TestCase):
-    """``GET /system/integrity`` in the hosted demo: the store cannot change, so
+    """``GET /system/integrity`` in the hosted demo (OGWA-INTEGRITY-COST-03): the store cannot change, so
     the route serves the full verification made when the image was opened instead of re-running it."""
 
     def setUp(self):

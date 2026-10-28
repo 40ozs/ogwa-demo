@@ -1,4 +1,4 @@
-"""The reviewer walkthrough of the Null Meridian demo: about five minutes.
+"""The reviewer walkthrough of the Null Meridian demo (OGWA-DEMO-04): about five minutes.
 
 Two parts, two candidates, each showing what the other cannot:
 

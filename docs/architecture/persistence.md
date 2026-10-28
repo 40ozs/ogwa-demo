@@ -1,33 +1,41 @@
 # Persistence, audit trail, and synthetic demo data
 
-This describes `app/store/` and `app/demo/`.
+Status: P03. This describes `app/store/` and `app/demo/`.
 
 ## Stack decision
 
-The store uses the Python standard library rather than SQLAlchemy 2.x with Alembic. Those
-would be new dependencies, and decision D5 allows installs only into a project-local
-`.venv` from an organization-approved package source. The schema is written so that moving
-to SQLAlchemy and Alembic later changes no table:
+The P03 prompt preferred SQLAlchemy 2.x with Alembic. That would need new packages,
+and decision D5 allows installs only into a project-local `.venv` from an
+organization-approved package source. On this workstation:
 
-| Concern | This build | Path to SQLAlchemy and Alembic |
+- SQLAlchemy 2.0.49 is installed in the global interpreter but is not declared by the
+  project;
+- Alembic is not installed and there is no cached wheel;
+- pip has no configured index, so it would fall back to public PyPI, which has not been
+  shown to be org-approved.
+
+On 2026-10-04 the owner chose to use the standard library for now:
+
+| Concern | P03 implementation | Path to the preferred stack |
 | --- | --- | --- |
 | Database access | `sqlite3`, explicit SQL, one module per concern | Map the same tables with SQLAlchemy 2.x Core or ORM |
 | Migrations | `app/store/migrator.py`: ordered, forward-only, per-migration transaction, checksums verified on every open | Turn each `vNNNN_*.py` into an Alembic revision with the same DDL, and stamp existing databases |
 | Configuration | `OGWA_DATABASE_URL` in SQLAlchemy URL syntax (`sqlite:///…`) | Unchanged |
 | PostgreSQL | DDL restricted to the SQL that SQLite and PostgreSQL share. PostgreSQL URLs are refused | Needs an approved driver and the PostgreSQL version of migration 0002 |
 
+This choice is not yet in [decisions.md](decisions.md). The owner should record it there.
+
 ## Configuration
 
 `OGWA_DATABASE_URL` (see `.env.example`):
 
-- The default is the demo store, `sqlite:///var/ogwa-demo.sqlite3`. Relative paths resolve
-  against the project root, and `var/` is git-ignored.
-- The configured database must be a file: `sqlite:///:memory:` fails startup. Tests open
-  in-memory stores directly.
+- The default is `sqlite:///var/ogwa-local.sqlite3`. Relative paths resolve against the
+  project root, and `var/` is git-ignored.
+- `sqlite:///:memory:` is accepted for tests.
 - PostgreSQL URLs, other schemes, query strings, and embedded credentials fail startup
   (`ConfigError`).
-- A missing database file is never created implicitly. Only
-  `python -m app.runtime reset-demo --confirm-synthetic-reset` creates the demo store.
+- A missing database file is never created implicitly. Only `init` and `reset-demo`
+  create one.
 
 ## Schema
 
@@ -48,7 +56,7 @@ to SQLAlchemy and Alembic later changes no table:
 | Audit events | — | `audit_events` |
 | Environment marker | `store_metadata` (one row, written once) | — |
 
-The anchor/observation split follows the identity model in [domain-model.md](domain-model.md#identity-internal-ids-vs-external-identifiers). A stable internal ID
+The anchor/observation split follows the P02 identity model. A stable internal ID
 identifies an object or scope. Re-observing it adds a row with a new provenance and
 never overwrites the earlier one. "Latest" means the latest `observed_at`, so evidence
 that arrives late cannot displace newer evidence. Each observation stores its material
@@ -79,9 +87,7 @@ digest, and the digest is recomputed and compared on every load.
 
 ## Migrations
 
-A new store gets every migration when it is created (`Store.initialize`). A store whose
-schema is behind or ahead of the build is refused when opened; the demo store is recreated
-with `python -m app.runtime reset-demo --confirm-synthetic-reset` instead.
+`python -m app.store upgrade` applies pending migrations.
 
 - Migrations are forward-only. A downgrade would destroy append-only history.
 - Each migration runs in one transaction together with its bookkeeping row.
@@ -96,15 +102,16 @@ The migrations:
 | --- | --- |
 | 0001 `core_schema` | Every table, constraint, and index above (portable DDL) |
 | 0002 `append_only_guards` | SQLite triggers: `UPDATE`/`DELETE` refused on every history and anchor table, including `schema_migrations` and `store_metadata`. Candidates are never deleted and their identity columns are immutable. New candidates start in `DISCOVERED`. A candidate's state, epoch, and decision count can change only in step with a newly appended decision, and the decision must continue from the candidate's current state. Audit inserts must extend the chain head. Job status events are sequential and stop once a job has finished |
-| 0003 `mapping_registry` | `mapping_reviews`: one append-only chain of human mapping reviews per Okta group (PROPOSED, APPROVED, REJECTED). SQLite triggers refuse `UPDATE`/`DELETE`, a row that does not extend its group's chain, and an approval of an operator selection by the operator who selected it. CHECKs refuse non-exact or name-only approvals and non-human reviewers. No PostgreSQL implementation, so the runner refuses it there. See [identity-correlation.md](identity-correlation.md#persistence-mapping_reviews-migration-0003) |
-| 0004 `candidate_policy` | `dependency_findings.code` (nullable, CHECKed against the frozen `FindingCode` list; an uncoded finding keeps its original digest). `policy_versions`: one append-only chain of approved candidate-policy documents with their digests; CHECKs require two different human actors, and SQLite triggers refuse `UPDATE`/`DELETE`, a row that does not extend the chain, a back-dated row, and an unchanged policy. No PostgreSQL implementation. See [candidate-policy.md](candidate-policy.md#auditable-changes) |
+| 0003 `mapping_registry` (P06) | `mapping_reviews`: one append-only chain of human mapping reviews per Okta group (PROPOSED, APPROVED, REJECTED). SQLite triggers refuse `UPDATE`/`DELETE`, a row that does not extend its group's chain, and an approval of an operator selection by the operator who selected it. CHECKs refuse non-exact or name-only approvals and non-human reviewers. No PostgreSQL implementation, so the runner refuses it there. See [identity-correlation.md](identity-correlation.md#persistence-mapping_reviews-migration-0003) |
+| 0004 `candidate_policy` (P07) | `dependency_findings.code` (nullable, CHECKed against the frozen `FindingCode` list; an uncoded finding keeps its P03 digest). `policy_versions`: one append-only chain of approved candidate-policy documents with their digests; CHECKs require two different human actors, and SQLite triggers refuse `UPDATE`/`DELETE`, a row that does not extend the chain, a back-dated row, and an unchanged policy. No PostgreSQL implementation. See [candidate-policy.md](candidate-policy.md#auditable-changes) |
 | 0005 `review_audit_actions` (D33, D41) | Rebuilds `audit_events` with the action list extended by `MAPPING_REVIEW_RECORDED` and `POLICY_REVIEW_RECORDED`. SQLite cannot alter a CHECK, so the migration creates the new table from v0001's DDL, copies every row verbatim, drops and renames, and recreates v0001's audit indexes and v0002's three audit triggers byte for byte. Earlier events, their digests, and the chain are unchanged. It also adds `policy_versions.proposed_by_role` (`IDENTITY_AUTOMATION`) and `approved_by_role` (`SECURITY_IAM`), required by a trigger. No PostgreSQL implementation |
 | 0006 `unverified_stable_id` (D56) | Rebuilds `identity_mapping_observations` with the confidence list extended by `UNVERIFIED_STABLE_ID`. `identity_mapping_candidates` references the table, so foreign-key checks are deferred. Rows are stashed in a backup table, and the table is dropped, recreated under its own name, and refilled verbatim; a rename would leave SQLite's deferred-violation count uncleared, and the commit would fail. v0001's index and v0002's two triggers are recreated byte for byte. No PostgreSQL implementation |
 | 0007 `governed_refusals` (D65) | Rebuilds `audit_events` exactly as 0005 did, with the action list extended by `GOVERNED_REQUEST_REFUSED`: a refused, authenticated, valid governed API request. Rows, digests, the chain, v0001's indexes, and v0002's three triggers are unchanged. `Store.record_governed_refusal` writes only the audit event, and only for a human actor. No PostgreSQL implementation |
 | 0008 `okta_directory_sid` (D84–D87) | `okta_group_observations.directory_object_sid_unverified`: Okta's copy of the AD objectSid (`profile.objectSid`), stored as unverified source metadata, never as mapping evidence. `ADD COLUMN`, so existing rows keep their values (NULL here) and v0002's per-table triggers still apply; a CHECK allows a value only on an `APP_GROUP` row and only in SID shape. It is part of the Okta group observation, so it shares that observation's provenance and freshness. `OktaGroup.material()` includes it only when present, so earlier digests and evidence fingerprints are unchanged. No PostgreSQL implementation |
-| 0009 `evidence_incomplete_state` | The `EVIDENCE_INCOMPLETE` lifecycle state. The state lists are inline CHECKs on `candidates` (`state`, `blocked_from`) and `decisions` (`from_state`, `to_state`), so both tables are rebuilt in the migration's transaction (deferred foreign keys; backup, drop, recreate under the same name, re-insert verbatim with their triggers absent, then v0001's three indexes and v0002's seven triggers byte for byte). Rows, digests, histories, and the audit chain are unchanged; no audit event is added, so an upgraded store keeps its head. No PostgreSQL implementation |
-| 0010 `remediation_dry_runs` | Rebuilds `audit_events` exactly as 0005 and 0007 did, with the action list extended by `REMEDIATION_DRY_RUN_RECORDED`: a remediation dry run that passed every gate and resolved to `SIMULATED`, `WHATIF`, or `VALIDATION_ONLY`. The audit event is the record; no other table changes. `Store.record_remediation_dry_run` refuses a `BLOCKED` or executed result (a blocked dry run is `GOVERNED_REQUEST_REFUSED`), a non-human actor, and an approval of another candidate. Rows, digests, the chain, v0001's indexes, and v0002's three triggers are unchanged, so an upgraded store keeps its head. No PostgreSQL implementation. See [remediation.md](remediation.md) |
-| 0011 `ad_quarantine_deletion_stages` (D143–D155) | The AD quarantine and deletion stages. Seven lifecycle states, the approval stages and job kinds `AD_QUARANTINE` and `AD_DELETION`, and four nullable candidate columns (`quarantine_approver_*`, `quarantine_hold_until`, `deletion_proposer_*`, `deletion_proposed_at`), projections of the decisions like `okta_unassign_approver`. The value lists are inline CHECKs, so `candidates`, `approvals`, `execution_jobs`, and `decisions` are rebuilt as 0009 rebuilt two of them (deferred foreign keys; backup, drop children first, recreate parents first, re-insert verbatim, then v0001's five indexes and v0002's eleven triggers). `trg_candidates_start_discovered` also requires the new columns to be NULL. New: a CHECK that a candidate with a post-quarantine hold never stands in, or is blocked from, a pre-quarantine state (D144), and three triggers refusing a new `AD_RETIREMENT` approval or job, or a new decision of the legacy stage (D148). Legacy rows stay, verbatim; the audit chain is not touched, so an upgraded store keeps its head. No PostgreSQL implementation |
+| 0009 `evidence_incomplete_state` (owner decisions after P09) | The `EVIDENCE_INCOMPLETE` lifecycle state. The state lists are inline CHECKs on `candidates` (`state`, `blocked_from`) and `decisions` (`from_state`, `to_state`), so both tables are rebuilt in the migration's transaction (deferred foreign keys; backup, drop, recreate under the same name, re-insert verbatim with their triggers absent, then v0001's three indexes and v0002's seven triggers byte for byte). Rows, digests, histories, and the audit chain are unchanged; no audit event is added, so an upgraded store keeps its head. No PostgreSQL implementation |
+| 0010 `remediation_dry_runs` (P10) | Rebuilds `audit_events` exactly as 0005 and 0007 did, with the action list extended by `REMEDIATION_DRY_RUN_RECORDED`: a remediation dry run that passed every gate and resolved to `SIMULATED`, `WHATIF`, or `VALIDATION_ONLY`. The audit event is the record; no other table changes. `Store.record_remediation_dry_run` refuses a `BLOCKED` or executed result (a blocked dry run is `GOVERNED_REQUEST_REFUSED`), a non-human actor, and an approval of another candidate. Rows, digests, the chain, v0001's indexes, and v0002's three triggers are unchanged, so an upgraded store keeps its head. No PostgreSQL implementation. See [remediation.md](remediation.md) |
+
+| 0011 `ad_quarantine_deletion_stages` (P10B, D143–D155) | The AD quarantine and deletion stages. Seven lifecycle states, the approval stages and job kinds `AD_QUARANTINE` and `AD_DELETION`, and four nullable candidate columns (`quarantine_approver_*`, `quarantine_hold_until`, `deletion_proposer_*`, `deletion_proposed_at`), projections of the decisions like `okta_unassign_approver`. The value lists are inline CHECKs, so `candidates`, `approvals`, `execution_jobs`, and `decisions` are rebuilt as 0009 rebuilt two of them (deferred foreign keys; backup, drop children first, recreate parents first, re-insert verbatim, then v0001's five indexes and v0002's eleven triggers). `trg_candidates_start_discovered` also requires the new columns to be NULL. New: a CHECK that a candidate with a post-quarantine hold never stands in, or is blocked from, a pre-quarantine state (D144), and three triggers refusing a new `AD_RETIREMENT` approval or job, or a new decision of the legacy stage (D148). Legacy rows stay, verbatim; the audit chain is not touched, so an upgraded store keeps its head. No PostgreSQL implementation |
 | 0012 `synthetic_directory` (Null Meridian) | `synthetic_directory_snapshots` (at most one row: dataset, seed, as-of, record count, content digest) and `synthetic_directory_records` (kind, id, sort key, two indexed references, a bounded JSON body). A seed writes both in the transaction of its `SYNTHETIC_SEED_LOADED` audit event, which carries the digest; `verify` recomputes the digest and requires that event. SQLite triggers refuse `UPDATE`/`DELETE` on both tables and any insert into a store not marked `SYNTHETIC`. New tables only: no existing row, digest, or audit event changes, so an upgraded store keeps its head. A fresh seed by the schema-12 build records `schema_version` 12 in `STORE_INITIALIZED`, so its head differs from a schema-11 seed's. No PostgreSQL implementation. See [../demo/null-meridian.md](../demo/null-meridian.md) |
 
 **PostgreSQL:** 0002 through 0012 have no PostgreSQL implementation, so the runner refuses to apply them
@@ -172,8 +179,8 @@ roles (PostgreSQL `REVOKE`) and a separate migration role.
 
 ## Environment marker and the reset command
 
-`Store.initialize` writes `store_metadata` once, when the store is created. The marker
-decides which modes may open the store and which evidence it accepts:
+`init --environment` writes `store_metadata` once. The marker decides which modes may
+open the store and which evidence it accepts:
 
 | Marker | Modes that may open it | Evidence accepted | Resettable |
 | --- | --- | --- | --- |
@@ -181,33 +188,24 @@ decides which modes may open the store and which evidence it accepts:
 | `DEVELOPMENT` | `LOCAL_SYNTHETIC`, `READ_ONLY_PRODUCTION`, `DRY_RUN_MUTATION` | Any. In `LOCAL_SYNTHETIC` mode, only `SYNTHETIC` | Only while it holds no non-synthetic evidence |
 | `PRODUCTION` | `READ_ONLY_PRODUCTION`, `DRY_RUN_MUTATION` | Non-synthetic only | Never |
 
-The demo seeds and opens only a `SYNTHETIC` store; the other markers and the other
-execution modes remain as store-level safety rules, and this build permits no
-`PRODUCTION_MUTATION` (`BUILD_ALLOWS_PRODUCTION_MUTATION` is `False`).
-
-The guarded reset (`app.store.reset.reset_synthetic_store`) deletes the database and
+`python -m app.store reset-demo --confirm-synthetic-reset` deletes the database and
 re-seeds it. It refuses unless all of these hold:
 
 - the mode is `LOCAL_SYNTHETIC`;
-- the target is a local SQLite file inside the allowed root (`<project>/var/`);
-- the caller confirmed the reset;
+- the target is a SQLite file inside `<project>/var/`;
+- the confirmation flag is given;
 - any existing file is an OGWA store marked `SYNTHETIC` or `DEVELOPMENT`;
 - the store holds no non-synthetic evidence or collector run.
 
 It reads the existing file read-only before deleting it. A file it cannot identify
 (another SQLite database, plain text) is never deleted.
 
-`python -m app.runtime reset-demo --confirm-synthetic-reset` is the one command that runs
-it. It also refuses an existing file not marked `SYNTHETIC`, and validates the new store
-before it reports success. `python -m app.store` has only `status` and `verify`.
-
 ## Synthetic demo datasets
 
-`python -m app.runtime reset-demo --confirm-synthetic-reset` seeds one of two datasets
-(`app/demo/datasets.py`), the one named by `OGWA_DEMO_DATASET` (default `null-meridian`); it
-has no `--dataset` flag, so the store and the server always agree. The Python API
-(`reset_synthetic_store`, `create_seeded_store`) defaults to `classic`, which most tests
-use. The API reads which dataset a store holds from its snapshot (none: classic)
+`python -m app.store reset-demo --confirm-synthetic-reset [--dataset null-meridian|classic]`
+seeds one of two datasets (`app/demo/datasets.py`); the CLI's default is `null-meridian`, and
+the Python API (`reset_synthetic_store`, `create_seeded_store`) defaults to `classic`, which
+most tests use. The API reads which dataset a store holds from its snapshot (none: classic)
 to choose the demo policy and the correlation configuration; nothing switches it at runtime.
 
 - **Null Meridian** (`app/demo/null_meridian/`, described in
@@ -219,7 +217,10 @@ to choose the demo policy and the correlation configuration; nothing switches it
   people, history, nesting, memberships, findings, and scenarios.
 - **Classic** (below): the sixteen-scenario lifecycle harness.
 
-[Demo Mode](../demo-mode.md) accepts a store only when its marker, its single `SYNTHETIC_SEED_LOADED`
+The same registry serves [Demo Mode](../demo-mode.md) (`OGWA_RUNTIME_MODE=demo`), whose own
+store (`var/ogwa-demo.sqlite3`) is reset only by `python -m app.runtime reset-demo` with the
+dataset from `OGWA_DEMO_DATASET`; under the demo runtime the store CLI's `reset-demo`
+refuses. Demo Mode accepts a store only when its marker, its single `SYNTHETIC_SEED_LOADED`
 event's namespace, the dataset `dataset_of` reads from the 0012 snapshot, the snapshot's
 seed and company, and integrity verification all agree. No migration was added for that:
 0012 and the seed's audit event are the identity evidence.
@@ -248,11 +249,11 @@ API, so the seed exercises the same guards and audit trail as real use.
 | S09 | Ambiguous mapping (same name in two domains) | 9 | `MAPPING_AMBIGUOUS` | The engine's name search fails closed |
 | S10 | Mapped AD group missing | 10 | `BLOCKED` | The configured objectGUID resolves nowhere (`NOT_FOUND`); a reviewer blocked it |
 | S11 | Stale evidence (120 days) | 11 | `STALE_EVIDENCE` | Older than the 30-day review limit |
-| S12 | Partial dependency coverage after the hold | 12 | `REVALIDATION_REQUIRED` | The AD quarantine approval step is refused: coverage `PARTIAL`. (A store seeded under the legacy `AD_RETIREMENT` stage keeps that approval and dry-run job as legacy rows) |
+| S12 | Partial dependency coverage after the hold | 12 | `REVALIDATION_REQUIRED` | The AD quarantine approval step is refused: coverage `PARTIAL`. (Before P10B, an `AD_RETIREMENT` approval and dry-run job; stores seeded then keep those legacy rows) |
 | S13 | Collector rate-limited and timed out | 13 | `DISCOVERED` | Usage `PARTIAL` (429), AD lookup `TIMEOUT`; candidacy refused |
 | S14 | AAP dry-run job failure | 14 | `APPROVED` | Job `FAILED`; the dry-run transition is refused |
-| S15 | Quarantined; post-quarantine hold running | 15 | `QUARANTINE_HOLD` | A second reviewer's quarantine approval, a successful dry run, the group observed in its quarantine OU; the 30-day hold runs |
-| S16 | Deletion proposed after the post-quarantine hold | 16 | `DELETION_PROPOSED` | Quarantined, held 30 days, revalidated on fresh evidence, proposed by a third reviewer; awaits an independent deletion approval (D143) |
+| S15 | Quarantined; post-quarantine hold running (P10B) | 15 | `QUARANTINE_HOLD` | A second reviewer's quarantine approval, a successful dry run, the group observed in its quarantine OU; the 30-day hold runs |
+| S16 | Deletion proposed after the post-quarantine hold (P10B) | 16 | `DELETION_PROPOSED` | Quarantined, held 30 days, revalidated on fresh evidence, proposed by a third reviewer; awaits an independent deletion approval (D143) |
 
 Identity mappings are not seeded as already-exact evidence (D75). Each is what the
 correlation engine proves over the AD groups seeded so far, with

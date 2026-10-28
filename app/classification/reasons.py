@@ -44,7 +44,7 @@ class Classification(StrEnum):
     # Once-complete evidence has outlived its freshness window for review.
     STALE_EVIDENCE = "STALE_EVIDENCE"
     # Required evidence was never fully or properly obtained: missing, PARTIAL/FAILED,
-    # dated in the future, inconsistent, or undetermined (owner decision).
+    # dated in the future, inconsistent, or undetermined (owner decision after P09).
     EVIDENCE_INCOMPLETE = "EVIDENCE_INCOMPLETE"
     # Every retirement condition is proven, including COMPLETE dependency coverage.
     # Evidence for human review. NOT approval, NOT authorization to change anything.
@@ -210,7 +210,7 @@ REASON_EFFECTS: dict[ReasonCode, ReasonEffect] = {
     R.EVIDENCE_CURRENT: _SUPPORTING,
     R.EVIDENCE_STALE: _forces(C.STALE_EVIDENCE),
     # A future-dated record was never properly obtained; it has not outlived any window, so
-    # it is incomplete, not stale (owner decision).
+    # it is incomplete, not stale (owner decision after P09).
     R.EVIDENCE_FUTURE_DATED: _forces(C.EVIDENCE_INCOMPLETE),
     R.EVIDENCE_NOT_DECISION_GRADE: _forces(C.EVIDENCE_INCOMPLETE),
     R.EVIDENCE_INCONSISTENT: _forces(C.EVIDENCE_INCOMPLETE),

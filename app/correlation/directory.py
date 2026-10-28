@@ -1,10 +1,10 @@
 """The AD side of correlation: a narrow, read-only identity-lookup port.
 
 Correlation never queries AD itself. It asks an ``ADIdentityDirectory`` for exact-match
-lookups. ``ReportBackedDirectory`` answers them through the AD report contract: each lookup
-is one ``ADReadRequest`` with every membership section switched off, so a reader only
-resolves identity. This build wires it only to synthetic reports (D22); it includes no AD
-reader and no transport to a real directory.
+lookups. The production implementation will be ``ReportBackedDirectory`` over the P05
+worker contract, run by a read-only AAP job: each lookup is one ``ADReadRequest`` with
+every membership section switched off, so the worker only resolves identity. P06 wires it
+only to synthetic reports (D22); there is no transport to a real directory in this build.
 
 ``BoundedLookups`` caps and de-duplicates the lookups of one correlation. When the budget
 is spent, further lookups FAIL rather than run, so a correlation can never fan out.
@@ -72,10 +72,11 @@ def identity_lookup_from_report(report: ADGroupReport) -> ADIdentityLookup:
 
 
 class ReportBackedDirectory:
-    """Identity lookups through the AD report contract.
+    """Identity lookups through the P05 worker contract.
 
-    ``run_worker`` takes the request JSON and returns the report JSON. This build includes
-    no AD reader, so it passes only synthetic reports.
+    ``run_worker`` takes the request JSON and returns the report JSON. In production it
+    will launch the approved read-only AAP job template; no such job exists yet (P05 §7),
+    and P06 passes only synthetic reports.
     """
 
     def __init__(self, run_worker: Callable[[str], str], *, clock: Callable[[], datetime], max_candidates: int = 10) -> None:

@@ -129,10 +129,13 @@ class TempDirCase(unittest.TestCase):
 
 
 class NullMeridianSelectionTests(TempDirCase):
-    def test_the_demo_defaults_to_null_meridian_through_the_registry(self):
-        settings = load_settings({"OGWA_RUNTIME_MODE": "demo"})
-        self.assertEqual(settings.demo_dataset, NULL_MERIDIAN_KEY)
-        self.assertEqual((NULL_MERIDIAN_KEY, registry.DEFAULT_DATASET), (CANONICAL["selector"],) * 2)
+    def test_null_meridian_is_selected_by_name_through_the_registry(self):
+        # SYNTH-OGWA-01: the default is Genesee Press (tests/test_genesee_press.py); Null Meridian, the legacy
+        # dataset, stays selectable by name until Genesee Press parity is accepted.
+        self.assertEqual(load_settings({"OGWA_RUNTIME_MODE": "demo"}).demo_dataset, registry.DEFAULT_DATASET)
+        self.assertEqual(registry.DEFAULT_DATASET, "genesee-press")
+        settings = load_settings({"OGWA_RUNTIME_MODE": "demo", "OGWA_DEMO_DATASET": NULL_MERIDIAN_KEY})
+        self.assertEqual(NULL_MERIDIAN_KEY, CANONICAL["selector"])
         dataset = resolve_dataset(settings.demo_dataset)
         from app.demo.null_meridian import world
 
@@ -180,7 +183,7 @@ class NullMeridianSelectionTests(TempDirCase):
         reset_demo_store(demo_settings(path, "classic"), resolve_dataset("classic"), confirmed=True,
                          allowed_root=self.root)
         before = path.read_bytes()
-        settings = demo_settings(path, None)  # the default: Null Meridian
+        settings = demo_settings(path, NULL_MERIDIAN_KEY)  # selected by name (the default is Genesee Press)
         with without_null_meridian():
             with self.assertRaises(DatasetUnavailable) as caught:
                 resolve_dataset(NULL_MERIDIAN_KEY)
@@ -209,7 +212,8 @@ class NullMeridianSelectionTests(TempDirCase):
 
 
 def settings_env(path: Path) -> dict[str, str]:
-    return {"OGWA_RUNTIME_MODE": "demo", "OGWA_DATABASE_URL": f"sqlite:///{path.as_posix()}"}
+    # The legacy dataset, named: Genesee Press is the default since SYNTH-OGWA-01 (tests/test_genesee_press.py).
+    return {"OGWA_RUNTIME_MODE": "demo", "OGWA_DEMO_DATASET": NULL_MERIDIAN_KEY, "OGWA_DATABASE_URL": f"sqlite:///{path.as_posix()}"}
 
 
 def run_runtime_cli(env: dict[str, str], root: Path, *args: str, cli=runtime_cli) -> tuple[int, str, str]:
@@ -246,7 +250,7 @@ def representative(store: Store) -> dict:
 class NullMeridianResetTests(TempDirCase):
     def test_two_resets_produce_the_identical_canonical_state(self):
         path = self.root / "ogwa-demo.sqlite3"
-        settings, dataset = demo_settings(path, None), resolve_dataset(NULL_MERIDIAN_KEY)
+        settings, dataset = demo_settings(path, NULL_MERIDIAN_KEY), resolve_dataset(NULL_MERIDIAN_KEY)
         first = reset_demo_store(settings, dataset, confirmed=True, allowed_root=self.root)
         self.assertFalse(first.replaced_existing)
         with Store.open(settings.database, mode=ExecutionMode.LOCAL_SYNTHETIC) as store:
@@ -269,7 +273,7 @@ class NullMeridianResetTests(TempDirCase):
 
     def test_demo_mode_does_not_alter_the_dataset_s_deterministic_output(self):
         path = self.root / "ogwa-demo.sqlite3"
-        reset_demo_store(demo_settings(path, None), resolve_dataset(NULL_MERIDIAN_KEY), confirmed=True,
+        reset_demo_store(demo_settings(path, NULL_MERIDIAN_KEY), resolve_dataset(NULL_MERIDIAN_KEY), confirmed=True,
                          allowed_root=self.root)
         reference, summary = create_null_meridian_store(memory_target())
         try:
@@ -309,11 +313,16 @@ class NullMeridianResetTests(TempDirCase):
         self.assertEqual(run_runtime_cli(env, self.root, "reset-demo", "--confirm-synthetic-reset")[0], 0)
         before = path.read_bytes()
         for dataset in ((), ("--dataset", "classic"), ("--dataset", "null-meridian")):
-            with self.subTest(args=dataset), self.assertRaises(SystemExit) as caught, \
-                    contextlib.redirect_stderr(io.StringIO()):
-                run_runtime_cli(env, self.root, "reset-demo", "--confirm-synthetic-reset", *dataset, cli=store_cli)
-            self.assertEqual(caught.exception.code, 2, "the store CLI has no reset command")
+            with self.subTest(args=dataset):
+                code, _, err = run_runtime_cli(env, self.root, "reset-demo", "--confirm-synthetic-reset", *dataset,
+                                               cli=store_cli)
+                self.assertEqual(code, 2)
+                self.assertIn("python -m app.runtime reset-demo", err)
         self.assertEqual(path.read_bytes(), before, "the store CLI never reseeds the demo store")
+        production = {"OGWA_DATABASE_URL": f"sqlite:///{path.as_posix()}"}
+        code, _, err = run_runtime_cli(production, self.root, "reset-demo", "--confirm-synthetic-reset")
+        self.assertEqual(code, 2)
+        self.assertIn("OGWA_RUNTIME_MODE=demo", err)
         code, _, err = run_runtime_cli(env, self.root, "reset-demo")
         self.assertEqual(code, 2)
         self.assertIn("confirmation", err)
@@ -328,7 +337,7 @@ class NullMeridianStoreIdentityTests(TempDirCase):
         cls.shared = Path(tempfile.mkdtemp(prefix="ogwa-nm-identity-"))
         (cls.shared / "var").mkdir()
         cls.seeded = cls.shared / "var" / "seeded.sqlite3"
-        reset_demo_store(demo_settings(cls.seeded, None), resolve_dataset(NULL_MERIDIAN_KEY), confirmed=True,
+        reset_demo_store(demo_settings(cls.seeded, NULL_MERIDIAN_KEY), resolve_dataset(NULL_MERIDIAN_KEY), confirmed=True,
                          allowed_root=cls.shared / "var")
 
     @classmethod
@@ -342,11 +351,12 @@ class NullMeridianStoreIdentityTests(TempDirCase):
 
     def refused(self, path: Path, dataset: str | None = None) -> str:
         with self.assertRaises(DemoPersistenceUnavailable) as caught:
-            open_demo_store(demo_settings(path, dataset), resolve_dataset(dataset or NULL_MERIDIAN_KEY), clock=utc_now)
+            open_demo_store(demo_settings(path, dataset or NULL_MERIDIAN_KEY), resolve_dataset(dataset or NULL_MERIDIAN_KEY),
+                            clock=utc_now)
         return str(caught.exception)
 
     def test_the_canonical_store_is_accepted_with_all_evidence_agreeing(self):
-        store, report = open_demo_store(demo_settings(self.copy(), None), resolve_dataset(NULL_MERIDIAN_KEY),
+        store, report = open_demo_store(demo_settings(self.copy(), NULL_MERIDIAN_KEY), resolve_dataset(NULL_MERIDIAN_KEY),
                                         clock=utc_now)
         with store:
             snapshot = store.synthetic_directory()
@@ -394,7 +404,7 @@ class NullMeridianStoreIdentityTests(TempDirCase):
         conn.close()
         self.refused(unmarked)
         with self.assertRaises(ResetRefused):
-            reset_demo_store(demo_settings(unmarked, None), resolve_dataset(NULL_MERIDIAN_KEY), confirmed=True,
+            reset_demo_store(demo_settings(unmarked, NULL_MERIDIAN_KEY), resolve_dataset(NULL_MERIDIAN_KEY), confirmed=True,
                              allowed_root=self.root)
         self.assertTrue(unmarked.exists(), "an unmarked file is never deleted")
         missing = self.root / "missing.sqlite3"
@@ -406,7 +416,7 @@ class NullMeridianStoreIdentityTests(TempDirCase):
         before = production.read_bytes()
         self.assertIn("PRODUCTION", self.refused(production))
         with self.assertRaises(ResetRefused):
-            reset_demo_store(demo_settings(production, None), resolve_dataset(NULL_MERIDIAN_KEY), confirmed=True,
+            reset_demo_store(demo_settings(production, NULL_MERIDIAN_KEY), resolve_dataset(NULL_MERIDIAN_KEY), confirmed=True,
                              allowed_root=self.root)
         self.assertEqual(production.read_bytes(), before)
 
@@ -420,7 +430,7 @@ class NullMeridianDemoApplicationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="ogwa-nm-demo-app-"))
-        cls.world = DemoWorld(cls.tmp, dataset=None)
+        cls.world = DemoWorld(cls.tmp, dataset=NULL_MERIDIAN_KEY)
         cls.viewer = cls.world.client(VIEWER)
 
     @classmethod
@@ -573,7 +583,7 @@ class NullMeridianDemoMutationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp(prefix="ogwa-nm-demo-mut-"))
-        cls.world = DemoWorld(cls.tmp, dataset=None)
+        cls.world = DemoWorld(cls.tmp, dataset=NULL_MERIDIAN_KEY)
 
     @classmethod
     def tearDownClass(cls):
@@ -642,7 +652,7 @@ class NullMeridianDemoMutationTests(unittest.TestCase):
 class NullMeridianDemoIsolationTests(TempDirCase):
     def test_no_live_system_is_reached_while_null_meridian_is_seeded_served_and_used(self):
         with no_live_system():
-            world = DemoWorld(self.tmp, dataset=None)
+            world = DemoWorld(self.tmp, dataset=NULL_MERIDIAN_KEY)
             try:
                 viewer, security = world.client(VIEWER), world.client(SECURITY)
                 admin = world.client(ADMIN)
@@ -664,8 +674,8 @@ class NullMeridianDemoIsolationTests(TempDirCase):
                 self.assertEqual(world.client(EXECUTOR).post(f"{V}/execution-jobs/{job}/execute", {}).code,
                                  "DEMO_MODE_BLOCKED")
                 providers = world.app.providers
-                self.assertEqual((providers.okta.name, type(providers.ad_directory).__name__),
-                                 ("SyntheticOktaProvider", "SyntheticMappingGateway"))
+                self.assertEqual((providers.okta.name, providers.aap.name, type(providers.ad_directory).__name__),
+                                 ("SyntheticOktaProvider", "DisabledAapProvider", "SyntheticMappingGateway"))
                 self.assertEqual({e.adapter.value for e in providers.remediation_allowlist.entries}, {"SYNTHETIC"})
             finally:
                 world.close()
@@ -674,7 +684,7 @@ class NullMeridianDemoIsolationTests(TempDirCase):
 
 class NullMeridianDemoClockTests(TempDirCase):
     def test_the_demo_world_clock_continues_from_the_seed(self):
-        world = DemoWorld(self.tmp, dataset=None)
+        world = DemoWorld(self.tmp, dataset=NULL_MERIDIAN_KEY)
         try:
             newest = world.store.audit_events_page(limit=1)[0].occurred_at
             self.assertGreater(world.clock(), newest)

@@ -1,4 +1,4 @@
-"""Authorization boundaries: roles, bindings, authentication, separation of duties.
+"""P08 authorization boundaries: roles, bindings, authentication, separation of duties.
 
 Synthetic only. The API runs in-process over a seeded in-memory SYNTHETIC store; no
 socket, identity provider, directory, or other external system is involved.
@@ -122,7 +122,7 @@ class RoleModelTests(unittest.TestCase):
                 elif (source, target) in LEGACY_STEPS:
                     self.assertIsNone(needed)  # the legacy single AD stage: history only (D148)
                 elif ActorKind.HUMAN not in rule.actors:
-                    # Evidence conditions are never assigned by an operator (owner decision).
+                    # Evidence conditions are never assigned by an operator (owner decision after P09).
                     self.assertIn(target, EVIDENCE_CONDITION_STATES)
                     self.assertIsNone(needed)
                 elif rule.category == "diversion":
@@ -133,7 +133,7 @@ class RoleModelTests(unittest.TestCase):
                     self.assertIs(needed, FORWARD_PERMISSIONS[(source, target)])
         self.assertIs(transition_permission(S.NEEDS_REVIEW, S.APPROVED), P.APPROVAL_DECIDE)
         self.assertIs(transition_permission(S.APPROVED, S.OKTA_UNASSIGN_DRY_RUN), P.EXECUTION_PLAN_DRY_RUN)
-        # The AD stages: approvals by APPROVAL_DECIDE, dry runs by EXECUTION_PLAN_DRY_RUN,
+        # The AD stages (P10B): approvals by APPROVAL_DECIDE, dry runs by EXECUTION_PLAN_DRY_RUN,
         # the deletion proposal by LIFECYCLE_ADVANCE; the quarantine and deletion are observed.
         self.assertIs(transition_permission(S.REVALIDATION_REQUIRED, S.QUARANTINE_APPROVED), P.APPROVAL_DECIDE)
         self.assertIs(transition_permission(S.QUARANTINE_APPROVED, S.QUARANTINE_DRY_RUN), P.EXECUTION_PLAN_DRY_RUN)
@@ -414,7 +414,7 @@ EXPECTED_ACCESS = {
     ("POST", "/execution-jobs/{jobId}/execute"): {EXECUTOR, APPROVER_EXECUTOR},  # then refused by the build
     ("GET", "/candidates/{candidateId}/remediation-dry-runs"): {VIEWER, AUTOMATION, AUTOMATION_2, SECURITY, SECURITY_2,
                                                                 EXECUTOR, ADMIN, DUAL, APPROVER_EXECUTOR},
-    ("POST", "/candidates/{candidateId}/remediation-dry-runs"): {EXECUTOR, APPROVER_EXECUTOR},  # dry run only
+    ("POST", "/candidates/{candidateId}/remediation-dry-runs"): {EXECUTOR, APPROVER_EXECUTOR},  # P10, dry run only
     ("POST", "/mappings/{groupId}/searches"): {AUTOMATION, AUTOMATION_2, DUAL},
     ("POST", "/mappings/{groupId}/selections"): {AUTOMATION, AUTOMATION_2, DUAL},
     ("POST", "/mappings/{groupId}/approvals"): {SECURITY, SECURITY_2, DUAL, APPROVER_EXECUTOR},

@@ -20,8 +20,8 @@ unit test) fails if either drifts from the code.
   system, or production evidence.
 - Application names are generic product categories ("CRM", "Team Chat"), never vendor names,
   so nothing implies the company is any vendor's customer.
-- `nullmeridian.info` is the fictional company's invented domain name. OGWA never resolves it,
-  mails it, or contacts anything under it. Okta-shaped ids carry `SYNTH` (`00gSYNTHNM…`, `0oaSYNTHNM…`).
+- `nullmeridian.info` is the fictional company's own name. OGWA never resolves it, mails it,
+  or contacts anything under it. Okta-shaped ids carry `SYNTH` (`00gSYNTHNM…`, `0oaSYNTHNM…`).
 - Seeding needs no credential, runs only in `LOCAL_SYNTHETIC` mode into a `SYNTHETIC` store,
   and contacts no Okta tenant, AD domain, or AAP instance. The dataset modules import no
   network, integration, remediation, or process module (a test pins this), and a test runs
@@ -170,14 +170,14 @@ have no finding beyond context, 19% are mildly questionable, and 8% clearly acti
 | NM-C07 | `Okta_Fax_Users` | `BLOCKED` | Its configured AD counterpart was deleted |
 | NM-C08 | `GG_App_Fax` | `HOLD` | Approved, dry run succeeded, unassignment observed |
 | NM-C09 | `CloudLegacy_Admins` | `PROTECTED` | adminCount and deletion protection still set |
-| NM-C10 | `KB-Admins` | `NEEDS_REVIEW` | Conflicting and incomplete evidence: OGWA refuses every control decision |
-| NM-C11 | `OKTA-AdAnalytics-Users` | `APPROVED` | Empty, unused group of an application used through direct assignments; evidence re-collected on the snapshot day and the Okta unassignment approved: the remediation drill's candidate |
+| NM-C10 | `KB-Admins` | `NEEDS_REVIEW` | Conflicting and incomplete evidence: OGWA refuses every control decision (OGWA-DEMO-01) |
+| NM-C11 | `OKTA-AdAnalytics-Users` | `APPROVED` | Empty, unused group of an application used through direct assignments; evidence re-collected on the snapshot day and the Okta unassignment approved: the remediation drill's candidate (OGWA-DEMO-03) |
 
-Every candidate page opens with the **evidence assessment**
-([`app/classification/assessment.py`](../../app/classification/assessment.py)): each source's state,
+Every candidate page opens with the **evidence assessment** (OGWA-DEMO-01,
+[`app/classification/assessment.py`](../../app/classification/assessment.py)): each source's state,
 the identity mapping's state, any conflict between sources, the decision OGWA can safely make, and
 the evidence it would need to go further. See
-[../architecture/evidence-assessment.md](../architecture/evidence-assessment.md).
+[../agent-runs/OGWA-DEMO-01.md](../agent-runs/OGWA-DEMO-01.md).
 
 ### NM-C10: conflicting and incomplete evidence
 
@@ -201,7 +201,7 @@ The correlation engine proves the mapping, the lifecycle guards move the candida
 `AMBIGUOUS_IDENTITY`, `BLOCKED_ON_REQUIRED_SOURCE`, and `INSUFFICIENT_EVIDENCE` also listed. An
 Okta-stage approval is refused by the lifecycle (the mapping is not exact), and a test proves it.
 
-### The policy each decision names
+### The policy each decision names (OGWA-DEMO-02)
 
 Every candidate is judged by Null Meridian's synthetic lifecycle policy,
 **[NM-LIFECYCLE-004](policies/NM-LIFECYCLE-004.md)**. The seed records two versions through the
@@ -209,9 +209,9 @@ store's real, append-only policy chain: **v1.1.0** (effective 2026-04-01; approv
 14 days old) before the candidates are triaged on 2026-09-24/25, so every triage decision and
 approval records v1.1.0; then **v1.2.0** (effective 2026-09-28; 7 days), the policy in force for
 the live demo. The snapshot day (2026-10-01) is seeded after v1.2.0 is recorded, so NM-C11's
-approval and its `APPROVED` decision record v1.2.0; the seed refuses any decision or approval
-that does not record the release in force on its own date. The candidate page's "Why this
-decision" names v1.2.0, lists each condition as it states it, and says whether evidence forced manual review; the decision and approval history
+approval and its `APPROVED` decision record v1.2.0 (OGWA-DEMO-04); the seed refuses any decision
+or approval that does not record the release in force on its own date. The candidate page's "Why this decision" names v1.2.0, lists each condition as it
+states it, and says whether evidence forced manual review; the decision and approval history
 shows v1.1.0, marked Superseded. Under v1.2.0 NM-C01's week-old evidence is too old for an
 approval (`LIFECYCLE_RULES_NOT_MET`); under v1.1.0 the same evidence would be eligible for a named
 human's approval.
@@ -234,7 +234,7 @@ execution (a timeout, a verification read, one safe retry, a post-action read) a
 provider fixture, and records nothing: the candidate stays `APPROVED`. See
 [../architecture/remediation-execution.md](../architecture/remediation-execution.md). A demo process
 left running for more than about a day lets this evidence age past the 24-hour window, as it would
-in production; restarting the server (or a fresh hosted isolate) starts the clock again.
+in production; a reset (or a fresh hosted isolate) starts the clock again.
 
 ## Portfolio scenarios
 
@@ -251,7 +251,7 @@ in production; restarting the server (or a fresh hosted isolate) starts the cloc
 
 The console's **Portfolio scenarios** page links each to its groups, applications, and candidate.
 
-### Reviewer walkthrough and audit sample
+### Reviewer walkthrough and audit sample (OGWA-DEMO-04)
 
 The **Portfolio scenarios** page opens with a five-minute **reviewer walkthrough** (the dashboard
 links to it): its disclosures first (all data synthetic; nothing external contacted; the drill's
@@ -278,28 +278,27 @@ in the generated, sanitized sample
 ## Running it
 
 Null Meridian is the dataset; [Demo Mode](../demo-mode.md) is the runtime and safety boundary
-that serves it. Null Meridian is the default dataset, selected as `null-meridian` in the dataset
-registry (`app/demo/datasets.py`) and identified in every store by its seed namespace
-`null-meridian-v1`.
+that serves it. Null Meridian is Demo Mode's default dataset, selected as `null-meridian`
+in the dataset registry (`app/demo/datasets.py`) and identified in every store by its seed
+namespace `null-meridian-v1`.
 
-**With Docker:**
-
-```text
-docker compose up --build        # seed the demo store on first start, then serve: http://localhost:8765
-docker compose down              # stop; the demo store volume is kept
-docker compose down -v           # also delete the demo store; the next start seeds it again
-```
-
-**With Python 3.11 or later** (standard library only):
+**In Demo Mode (the canonical way to show it):**
 
 ```text
-python -m app.runtime reset-demo --confirm-synthetic-reset         # (re)seed var/ogwa-demo.sqlite3, validated
+export OGWA_RUNTIME_MODE=demo                                      # Null Meridian is the default dataset
+python -m app.runtime reset-demo --confirm-synthetic-reset         # reseed var/ogwa-demo.sqlite3, validated
 python -m app.runtime verify                                       # re-validate (dataset identity + integrity)
 python -m app.api serve                                            # http://127.0.0.1:8765/, DEMO ENVIRONMENT
 ```
 
-To serve the classic 16-scenario lifecycle world instead, set `OGWA_DEMO_DATASET=classic` for
-the reset and for the server.
+**As a developer, under the standard runtime** (the local synthetic store,
+`var/ogwa-local.sqlite3`; this command refuses under `OGWA_RUNTIME_MODE=demo`):
+
+```text
+python -m app.store reset-demo --confirm-synthetic-reset                       # Null Meridian (the default)
+python -m app.store reset-demo --confirm-synthetic-reset --dataset classic     # the 16-scenario lifecycle world
+python -m app.api serve --demo-clock                                           # http://127.0.0.1:8765/
+```
 
 **The dataset itself:**
 
@@ -307,12 +306,11 @@ the reset and for the server.
 python -m app.demo.null_meridian check|write|summary                           # the committed manifest and configuration
 ```
 
-`reset-demo` runs the guarded reset (`app.store.reset.reset_synthetic_store`) and the dataset's
-seed (`app.demo.null_meridian.world.create_null_meridian_store`); the Docker image runs the same
-command on first start. The dataset is chosen when the store is seeded (`OGWA_DEMO_DATASET`),
-and the server refuses a store that does not hold the configured dataset. Nothing at runtime
-switches it, and no browser control or API route can switch a running deployment to another
-dataset or out of Demo Mode. The server's clock starts just after the store's newest audit
-event. A reset is deterministic: a fresh Null Meridian store by this build always has audit head
+Both resets run the same guarded reset (`app.store.reset.reset_synthetic_store`) and the
+same seed (`app.demo.null_meridian.world.create_null_meridian_store`). The dataset is chosen
+when the store is seeded (`OGWA_DEMO_DATASET` in Demo Mode, `--dataset` for the developer
+reset). Nothing at runtime switches it, and no browser control or API route can switch a
+running deployment between demo and production. A reset is deterministic: a fresh Null
+Meridian store by this build always has audit head
 `sha256:e8793f89dbff9c124d9c3b00fe0ea81d2ab5f07c1dc9bb05c8fce128d682eb41` (a test pins it),
-however it was made.
+whichever command made it.

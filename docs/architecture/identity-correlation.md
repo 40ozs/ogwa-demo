@@ -1,12 +1,12 @@
 # Identity correlation (Okta group ↔ AD group)
 
-Implemented in `app/correlation/` and tested against a synthetic forest only (D22). Nothing
-here contacts an Okta tenant, a directory, or an AAP job, and nothing here can write to any
-of them.
+Status: P06. Implemented in `app/correlation/` and tested against a synthetic forest only
+(D22). No Okta tenant, directory, or AAP job was contacted, and nothing here can write to
+any of them.
 
 Related: [domain-model.md](domain-model.md#mapping-confidence),
 [ad-integration.md](ad-integration.md), [okta-integration.md](okta-integration.md),
-[persistence.md](persistence.md), [../security/safety-invariants.md](../security/safety-invariants.md#identity-correlation-invariants).
+[persistence.md](persistence.md), [../security/safety-invariants.md](../security/safety-invariants.md#identity-correlation-invariants-p06).
 
 ## Purpose and limits
 
@@ -24,7 +24,7 @@ authorize anything:
 | Module | What it does |
 | --- | --- |
 | `model.py` | Inputs (`OktaGroupIdentity`, `CorrelationConfig`, `DirectorySource`, `ConfiguredMapping`), AD lookups (`ADIdentity`, `ADIdentityLookup`), outputs (`CorrelationResult`, `CorrelationOutcome`, `DriftFinding`) |
-| `directory.py` | `ADIdentityDirectory` port; `ReportBackedDirectory` over the AD report contract; `BoundedLookups` (cap and cache per correlation) |
+| `directory.py` | `ADIdentityDirectory` port; `ReportBackedDirectory` over the P05 worker contract; `BoundedLookups` (cap and cache per correlation) |
 | `engine.py` | `correlate()`: claims, cross-checks, drift, outcome |
 | `evidence.py` | `mapping_evidence()`: the `IdentityMapping` record the lifecycle reads |
 | `review.py` | `MappingReviewService` (inspect, search, select, approve, reject) and the registries |
@@ -37,23 +37,21 @@ CorrelationConfig ──┼──► correlate() ──► CorrelationResult ─
 review history ─────┘        │                   │
                              ▼                   └──► MappingReviewService ──► mapping_reviews (append-only)
                   BoundedLookups ──► ADIdentityDirectory
-                                       ├─ StoreSyntheticDirectory ──► the store's synthetic AD evidence (the demo)
-                                       └─ ReportBackedDirectory ──► AD report contract (no live transport in this build)
+                                       └─ ReportBackedDirectory ──► P05 worker (via read-only AAP job; not built yet)
 ```
 
 ## Inputs
 
 ### Okta side
 
-`OktaGroupIdentity.from_record()` takes a normalized `OktaGroupRecord`
-(`app/integrations/okta/`). For an
+`OktaGroupIdentity.from_record()` takes a normalized P04 `OktaGroupRecord`. For an
 `APP_GROUP` it keeps the source app id, `objectSid`, `windowsDomainQualifiedName`, `dn`, and
 `samAccountName`. **The decoded objectGUID is dropped** while
 `OBJECT_GUID_DECODING_VERIFIED` is `False` (D23, D30); constructing an identity that carries
 one raises. `complete` records whether the Okta observation was COMPLETE.
 
 Stored Okta group evidence keeps the `objectSid` as `directory_object_sid_unverified`
-(migration 0008), with the observation's own provenance and
+(migration 0008, owner decision before P09), with the observation's own provenance and
 freshness. It is passed to the engine as the directory-source claim, which D37 governs: it
 may corroborate an exact mapping established by a configured pairing or a reviewed
 selection; on its own it gives `UNVERIFIED_IDENTIFIER` / `UNVERIFIED_STABLE_ID`, and a
@@ -83,29 +81,28 @@ mismatch with the other claims is a `CONFLICT`. The stored evidence has no DN.
 - Unknown keys, duplicate sources, duplicate Okta groups, non-canonical GUIDs, and limits
   outside 1–16 lookups or 1–25 candidates are refused.
 
-Where this configuration lives, and who reviews it, is an open owner decision (see
-[Not covered yet](#not-covered-yet)).
+Where this configuration lives, and who reviews it, is an owner decision (see the P06
+report).
 
 ### AD side
 
 Correlation never queries AD. It calls an `ADIdentityDirectory`:
 `lookup(by, value, domain) -> ADIdentityLookup`, one exact-match lookup.
 
-`ReportBackedDirectory` implements it over the AD report contract (`app/integrations/ad/`):
-each lookup is one `ADReadRequest` with **every membership section switched off**, so a
-report only resolves identity, and `maxAmbiguousCandidates` set from `maxCandidates`. The report's
+`ReportBackedDirectory` implements it over the P05 contract: each lookup is one
+`ADReadRequest` with **every membership section switched off**, so the worker only
+resolves identity, and `maxAmbiguousCandidates` set from `maxCandidates`. The report's
 request echo must match the lookup; any contract error, transport failure, or mismatched
-echo becomes a `FAILED` lookup, never an answer. This build includes no live transport:
-tests feed it the synthetic golden reports in `tests/fixtures/ad/`. The demo uses
-`StoreSyntheticDirectory` (`app/demo/synthetic_directory.py`) over the store's synthetic AD
-evidence instead.
+echo becomes a `FAILED` lookup, never an answer. In production the transport will be the
+approved read-only AAP job, which does not exist yet; P06 feeds it the golden worker
+reports only.
 
 `BoundedLookups` wraps the directory for one correlation: identical lookups are answered
 once, and once `maxLookups` have been sent every further lookup is `FAILED` without
 reaching the directory.
 
-**Completeness is stricter than the report contract's.** A report marks a lookup `Resolved`
-for one objectGUID or SID hit even when another domain was unreachable, because those identifiers
+**Completeness is stricter than the worker's.** The worker reports `Resolved` for one
+objectGUID or SID hit even when another domain was unreachable, because those identifiers
 are forest-unique. For correlation a lookup is decision-grade (`complete`) only if it was
 answered, every domain in scope was searched, and the candidate list was not truncated.
 Stable-id lookups are scoped to one domain whenever the domain is known, so this costs
@@ -118,16 +115,15 @@ Correlation collects **claims** about the counterpart, strongest first:
 | Priority | Claim | Lookup(s) | Method if it wins | Confidence |
 | --- | --- | --- | --- | --- |
 | 1 | `configured`: the configuration names an objectGUID | objectGUID in its domain (forest if none) | `CONFIGURED` | `EXACT_CONFIGURED_MAPPING` |
-| 2 | `directory-source`: imported by a configured AD integration, carries `objectSid`, metadata consistent | objectSid in the integration's domain | `DIRECTORY_SOURCE_SID` | `EXACT_STABLE_ID` — **not a basis while unverified (D37)**; see below |
+| 2 | `directory-source`: imported by a configured AD integration, carries `objectSid`, metadata consistent | objectSid in the integration's domain | `DIRECTORY_SOURCE_SID` | `EXACT_STABLE_ID` — **not a basis until P11 (D37)**; see below |
 | 2′ | as above with objectGUID | objectGUID | `DIRECTORY_SOURCE_GUID` | `EXACT_STABLE_ID` — **unreachable until D30 is satisfied** |
 | 3 | `approved-review`: a human approved an exact pairing earlier | objectGUID in its recorded domain, cross-checked against its SID | the approval's method; `OPERATOR_SELECTED` gives `EXACT_CONFIGURED_MAPPING` citing `ogwa-mapping-registry:<review id>` | as stored |
 
 Every claim is resolved by stable identifier only. **All claims must name the same AD
 object.** The strongest one only decides the reported method.
 
-**Owner decision D37.** While `DIRECTORY_SOURCE_SID_VERIFIED` is `False` (it stays so
-until the mechanism is validated against a known AD-backed Okta group, which needs a live
-tenant and directory), a directory-source SID claim,
+**Owner decision D37.** While `DIRECTORY_SOURCE_SID_VERIFIED` is `False` (until P11
+validates the mechanism against a known AD-backed Okta group), a directory-source SID claim,
 or an earlier approval recorded by that method, may *corroborate* an exact mapping but is
 never its *basis*. The strongest remaining claim decides the method. If no other claim
 exists, the result is `UNVERIFIED_IDENTIFIER` with confidence `UNVERIFIED_STABLE_ID`
@@ -136,9 +132,9 @@ D56 rules out calling it "name only": the object was identified by a stable iden
 whose mechanism is unverified, which is neither a name match nor exact. It cannot be
 approved directly, and the classifier reports it as `MAPPING_UNVERIFIED_IDENTIFIER`
 (`MAPPING_REQUIRED`). A rejection records method `DIRECTORY_SOURCE_SID`. The route to an exact
-mapping is then an operator selection approved by a different operator (D38). The tests of
-the directory-source-exact path run with the gate patched on, the state after that
-validation. Separate tests pin the gated default.
+mapping is then an operator selection approved by a different operator (D38). The P06
+tests of the directory-source-exact path now run with the gate patched on, which is the
+post-P11 state. Separate tests pin the gated default.
 
 A GUID claim is checked like this:
 
@@ -185,7 +181,7 @@ excluded and listed in `previously_rejected`.
 | --- | --- | --- |
 | `RESOLVED` | One AD object; every claim agrees; every lookup and the Okta observation complete; no blocking drift | yes |
 | `REVIEW_REQUIRED` | One AD object by name only | no |
-| `UNVERIFIED_IDENTIFIER` | One AD object by a directory-source objectSid whose mechanism is unverified (D37, D56) | no |
+| `UNVERIFIED_IDENTIFIER` | One AD object by a directory-source objectSid whose mechanism is not verified until P11 (D37, D56) | no |
 | `AMBIGUOUS` | Several possible AD objects | no |
 | `NOT_FOUND` | No counterpart; every domain in scope searched | no |
 | `STALE` | A configured, verified, or Okta-reported identity no longer holds (`MAPPING_UNRESOLVABLE`, `AD_SID_MISMATCH`, `IDENTITY_REASSIGNED`, `AD_GROUP_CHANGED_DOMAIN`) | no |
@@ -271,7 +267,7 @@ does not name reaches only the name search, so it stays review-required (D78); n
 verification gate is changed for the demo (D77).
 
 `required_ad_object_guids` lists the AD objects the mapping references. Their `ADGroup`
-evidence must be recorded from a **full** AD report (`ad_evidence`, `app/integrations/ad/`) before the
+evidence must be recorded from a **full** read-only AD read (P05 `ad_evidence`) before the
 mapping can be stored; the store's foreign keys enforce it. Correlation never fabricates
 an `ADGroup` record from an identity-only lookup, because such a record would look less
 protected than the group may be.
@@ -279,13 +275,13 @@ protected than the group may be.
 ## Operator review (service contract)
 
 `MappingReviewService(directory, config, registry, clock)`. It is reached through the API's
-`/mappings/{groupId}/…` routes. The operator UI shows mapping evidence and review history
+`/mappings/{groupId}/…` routes. The operator UI (P09) shows mapping evidence and review history
 read-only; it offers no mapping review action (see [ui.md](ui.md)).
 
 | Call | Who | Rules | Records |
 | --- | --- | --- | --- |
 | `inspect(okta)` | anyone | re-runs correlation; returns result, history, `allowed_actions`, `approvable_guid` | nothing |
-| `search(okta, operator, by, value, domain)` | human | one bounded exact-match lookup (`objectGUID`, `objectSid`, `distinguishedName`, `samAccountName`, `name`); no wildcards reach the directory | nothing |
+| `search(okta, operator, by, value, domain)` | human | one bounded exact-match lookup (`objectGUID`, `objectSid`, `distinguishedName`, `samAccountName`, `name`); no wildcards reach the worker | nothing |
 | `select(okta, operator, search, object_guid, reason)` | human | the GUID must be in the search result; the search must be ≤ 30 minutes old; the object is re-verified by objectGUID in its own domain, and its SID must be unchanged | `PROPOSED`, `OPERATOR_SELECTED` |
 | `approve(okta, operator, object_guid, expected_fingerprint, reason)` | human | fingerprint must match; either the correlation is `RESOLVED` to that object (new approval, or re-acknowledgement of drift), or it is the pending selection, re-verified, contradicting no other claim, and approved by a **different** human | `APPROVED` |
 | `reject(okta, operator, object_guid, expected_fingerprint, reason)` | human | fingerprint must match; the object must be on screen (target, candidate, approval, or pending selection) | `REJECTED` |
@@ -316,10 +312,11 @@ there.
 
 ## Not covered yet
 
-- A live transport for `ReportBackedDirectory` and any live lookup (D18): this build includes
-  no AD reader and no AAP client.
+- Real transport for `ReportBackedDirectory` (the read-only AAP job, P05 §7) and any live
+  lookup (P11, D18).
 - Okta-side verification that `profile.objectSid` equals AD's `objectSid` for a known
-  group. Gated by `DIRECTORY_SOURCE_SID_VERIFIED` (D37); verifying it needs a live tenant
-  and directory, on the same known group as D30.
+  group. Gated by `DIRECTORY_SOURCE_SID_VERIFIED` (D37) until P11 verifies it on the same
+  known group as D30.
 - Trusts and other forests: only the configured forest is searched.
 - Where the configuration lives and who reviews it.
+- A dedicated audit action for mapping reviews (needs an audit-table migration).

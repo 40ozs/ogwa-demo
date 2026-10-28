@@ -1,4 +1,4 @@
-"""Migration 0010: the REMEDIATION_DRY_RUN_RECORDED audit action.
+"""Migration 0010 (P10): the REMEDIATION_DRY_RUN_RECORDED audit action.
 
 The audit table is rebuilt to extend its action list. Every row, digest, index, and guard
 must survive byte for byte, and an anchored head must still verify.

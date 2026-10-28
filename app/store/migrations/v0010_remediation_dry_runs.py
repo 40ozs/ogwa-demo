@@ -1,4 +1,4 @@
-"""0010 — a dedicated audit action for remediation dry runs.
+"""0010 — a dedicated audit action for remediation dry runs (P10).
 
 A remediation dry run that passes every gate is recorded in the hash-chained audit trail as
 ``REMEDIATION_DRY_RUN_RECORDED``: who asked for which operation on which one target, under

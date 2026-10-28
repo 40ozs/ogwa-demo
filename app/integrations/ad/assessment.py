@@ -172,7 +172,8 @@ class ADProtectionPolicy:
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, Any]) -> "ADProtectionPolicy":
-        """Build from a protection-policy mapping. Unknown keys are refused."""
+        """Build from configuration such as ``config/ad-protection.json`` (see
+        docs/operations/ad-read-only.md). Unknown keys are refused."""
         keys = {"governedDomains", "protectedObjectGuids", "protectedSids", "protectedNames"}
         if not isinstance(data, Mapping) or set(data) - keys or "governedDomains" not in data:
             raise ContractError(f"AD protection policy must have governedDomains and only these keys: {sorted(keys)}")

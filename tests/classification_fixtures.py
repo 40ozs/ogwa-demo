@@ -1,4 +1,4 @@
-"""Synthetic classification fixtures. Every name, id, SID, and GUID here is invented.
+"""Synthetic P07 fixtures. Every name, id, SID, and GUID here is invented.
 
 ``world()`` is one synthetic Okta group G (AD-sourced) assigned to one synthetic
 application A, mapped exactly to synthetic AD group X, with every required dependency kind

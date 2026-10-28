@@ -1,18 +1,19 @@
-"""A synthetic AD identity directory for the local demo (owner decision).
+"""A synthetic AD identity directory for the local demo (owner decision after P08).
 
 ``StoreSyntheticDirectory`` answers the correlation engine's exact-match identity lookups
-from the AD group evidence already recorded in a SYNTHETIC store, with the AD report
-contract's resolution rules: the narrowest scope, a SID's own domain for a SID lookup, and AMBIGUOUS
+from the AD group evidence already recorded in a SYNTHETIC store, with the P05 worker's
+resolution rules: the narrowest scope, a SID's own domain for a SID lookup, and AMBIGUOUS
 for more than one match. It reads the store and nothing else: no directory, network, or
 process is touched. It refuses to exist anywhere but a SYNTHETIC store in
-``LOCAL_SYNTHETIC`` mode. This build has no AD adapter or reader.
+``LOCAL_SYNTHETIC`` mode. There is no production AD adapter; that remains the AAP worker
+boundary, which does not exist yet.
 
 ``SyntheticMappingGateway`` gives the operator API what mapping review needs: the Okta
 identity of a stored group and a ``MappingReviewService`` over this directory and the
 store's own review registry.
 
 ``correlate_stored_group`` is how the demo's identity-mapping evidence is made (owner
-decision): the correlation engine runs over this directory with
+decision after the P08 addendum): the correlation engine runs over this directory with
 the synthetic correlation configuration, and the lifecycle reads exactly what the engine
 proved. The configuration (``config/correlation.synthetic.json``) is the demo's reviewed
 mapping configuration: it names each exact pairing by objectGUID and objectSid, and the
@@ -54,10 +55,13 @@ MAX_SYNTHETIC_GROUPS = 10_000
 SYNTHETIC_CORRELATION_PATH = Path(__file__).resolve().parents[2] / "config" / "correlation.synthetic.json"
 SYNTHETIC_CORRELATION_FORMAT = "ogwa-synthetic-correlation/1"
 SYNTHETIC_DOMAIN_SUFFIX = ".synthetic.example"
-# The fictional Null Meridian company's AD domain (app.demo.null_meridian). It is named, not
-# matched by suffix: nothing else under that name is ever accepted as synthetic.
+# The fictional demo companies' AD domains (app.demo.null_meridian, app.demo.genesee_press). They are
+# named, not matched by suffix: nothing else under those names is ever accepted as synthetic.
 NULL_MERIDIAN_AD_DOMAIN = "corp.nullmeridian.info"
-_CONFIGURATION_REF_PREFIXES = ("config/correlation.synthetic.json#", "config/correlation.null-meridian.json#")
+GENESEE_PRESS_AD_DOMAIN = "corp.geneseepress.example"
+NAMED_AD_DOMAINS = (NULL_MERIDIAN_AD_DOMAIN, GENESEE_PRESS_AD_DOMAIN)
+_CONFIGURATION_REF_PREFIXES = ("config/correlation.synthetic.json#", "config/correlation.null-meridian.json#",
+                               "config/correlation.genesee-press.json#")
 _SYNTHETIC_GROUP_RE = re.compile(r"^00gSYNTH[A-Za-z0-9]{1,40}$")
 _SYNTHETIC_APP_RE = re.compile(r"^0oaSYNTH[A-Za-z0-9]{1,40}$")
 
@@ -86,13 +90,13 @@ def load_synthetic_correlation_config(path: Path = SYNTHETIC_CORRELATION_PATH) -
     for source in config.directory_sources:
         if not _SYNTHETIC_APP_RE.match(source.okta_app_id) or not is_synthetic_domain(source.domain):
             raise ConfigError("every synthetic directory source must be a 0oaSYNTH integration of a "
-                              f"*{SYNTHETIC_DOMAIN_SUFFIX} or the {NULL_MERIDIAN_AD_DOMAIN} domain")
+                              f"*{SYNTHETIC_DOMAIN_SUFFIX} or a named demo domain ({', '.join(NAMED_AD_DOMAINS)})")
     for mapping in config.configured_mappings:
         if not _SYNTHETIC_GROUP_RE.match(mapping.okta_group_id):
             raise ConfigError("every configured synthetic mapping must name a 00gSYNTH Okta group")
         if mapping.domain is None or not is_synthetic_domain(mapping.domain):
             raise ConfigError(f"configured synthetic mapping {mapping.okta_group_id} must be scoped to a "
-                              f"*{SYNTHETIC_DOMAIN_SUFFIX} or the {NULL_MERIDIAN_AD_DOMAIN} domain")
+                              f"*{SYNTHETIC_DOMAIN_SUFFIX} or a named demo domain ({', '.join(NAMED_AD_DOMAINS)})")
         if mapping.ad_sid is None:
             raise ConfigError(f"configured synthetic mapping {mapping.okta_group_id} must name the objectSid as "
                               "well as the objectGUID")
@@ -103,7 +107,7 @@ def load_synthetic_correlation_config(path: Path = SYNTHETIC_CORRELATION_PATH) -
 
 
 def is_synthetic_domain(domain: str) -> bool:
-    return domain.endswith(SYNTHETIC_DOMAIN_SUFFIX) or domain == NULL_MERIDIAN_AD_DOMAIN
+    return domain.endswith(SYNTHETIC_DOMAIN_SUFFIX) or domain in NAMED_AD_DOMAINS
 
 
 def _cn(dn: str) -> str:
@@ -188,7 +192,7 @@ def okta_group_identity(group: OktaGroup) -> OktaGroupIdentity:
     The stored ``directory_external_id`` is Okta's own rendering of the AD objectGUID.
     Its decoding is unverified (D23, D30), so it is never passed on as
     ``directory_object_guid``. Okta's objectSid (0008) is passed on as the directory-source
-    claim; the engine treats it as unverified (D37), so it can corroborate a
+    claim; the engine treats it as unverified until P11 (D37), so it can corroborate a
     configured or reviewed pairing but never make one exact. The store holds no DN for
     Okta groups.
     """

@@ -1,4 +1,4 @@
-"""Synthetic remediation drills through the operator API.
+"""OGWA-DEMO-03: synthetic remediation drills through the operator API.
 
 A drill runs the governed remediation path first (every gate, the allowlist, the synthetic
 adapter), then a dry run or a scripted synthetic execution against an in-memory provider

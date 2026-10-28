@@ -1,4 +1,4 @@
-"""Migration 0008 (owner decision): Okta's directory objectSid as unverified source metadata.
+"""Migration 0008 (owner decision before P09): Okta's directory objectSid as unverified source metadata.
 
 The synthetic world is seeded with the build held at schema 7 (no Okta SIDs, which only 0008
 can hold) and then upgraded. Every existing row must keep its values, the chain must

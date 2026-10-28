@@ -1,4 +1,4 @@
-"""At the operator API: the AD quarantine, hold, revalidation, and deletion stages, over a
+"""P10B at the operator API: the AD quarantine, hold, revalidation, and deletion stages, over a
 seeded synthetic world in LOCAL_SYNTHETIC (D152). Nothing is executed anywhere (D153).
 
 One candidate (S01) walks the whole path through the API, each step by the principal the

@@ -146,7 +146,9 @@ class HostedDemo:
                  expected: Mapping[str, Any] | None = None, logger: logging.Logger | None = None) -> None:
         self.log = logger or logging.getLogger("ogwa.hosted")
         self.settings = load_settings(environment)
-        dataset = resolve_dataset(self.settings.demo_dataset)
+        if not self.settings.is_demo:
+            raise ConfigError("the hosted demo runs only with OGWA_RUNTIME_MODE=demo")
+        dataset = resolve_dataset(self.settings.demo_dataset or "")
         self.clock = DemoClock()
         expected = expected or {}
         opened = open_demo_image(self.settings, dataset, load_image, clock=self.clock,
@@ -271,7 +273,7 @@ class HostedDemo:
 
 def _settings_key(settings: Settings) -> dict[str, str]:
     return {"runtime_mode": settings.runtime_mode.value, "execution_mode": settings.mode.value,
-            "demo_dataset": settings.demo_dataset, "log_level": settings.log_level}
+            "demo_dataset": settings.demo_dataset or "", "log_level": settings.log_level}
 
 
 def manifest_json(hosted_identity: StoreIdentity, schema: str, environment: Mapping[str, str]) -> str:

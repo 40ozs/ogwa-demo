@@ -1,11 +1,11 @@
-"""Evidence quality and the control decision it allows.
+"""OGWA-DEMO-01: evidence quality and the control decision it allows.
 
 The invariant under test: missing, failed, partial, stale, ambiguous, or conflicting required
 evidence never becomes permission to act. ``ELIGIBLE_FOR_HUMAN_APPROVAL`` (still not an
 approval) needs the classifier's every retirement condition, no conflict, every required
 source decision-grade, and the real lifecycle guard accepting a named human's approval.
 
-Synthetic data only: the classification fixtures, and the Null Meridian and classic
+Synthetic data only: the P07 classification fixtures, and the Null Meridian and classic
 synthetic worlds through the real API.
 """
 
@@ -273,7 +273,7 @@ class ConflictTests(unittest.TestCase):
         self.assertEqual([c.code for c in run(reverse)[0].conflicts], ["AD_MEMBERSHIP_DISAGREES"])
         consistent = replace(reverse, ad_group=replace(b.ad_group, member_count=2))
         a, _ = run(consistent)
-        self.assertEqual(a.conflicts, (), "the AD report converter's own shape is never a conflict")
+        self.assertEqual(a.conflicts, (), "the P05 converter's own shape is never a conflict")
         self.assertIs(a.decision, Decision.NO_ACTION_BLOCKED)
         # An unread member count conflicts with nothing, and is not decision-grade either.
         unknown = replace(b, ad_group=replace(b.ad_group, member_count=None))

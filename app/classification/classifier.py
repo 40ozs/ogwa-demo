@@ -1,4 +1,4 @@
-"""Classify one Okta group / application relationship from its evidence.
+"""Classify one Okta group / application relationship from its evidence (P07).
 
 ``classify`` is a pure function of the evidence bundle, the subject, the policy, and the
 time. It reads nothing, writes nothing, and contacts nothing. It collects every reason it
@@ -70,7 +70,7 @@ LIFECYCLE_DIVERSIONS: dict[Classification, LifecycleState | None] = {
     C.NESTED_DEPENDENCY: LifecycleState.DEPENDENCY_BLOCKED,
     C.SHARED_OKTA_ASSIGNMENT: LifecycleState.DEPENDENCY_BLOCKED,
     C.STALE_EVIDENCE: LifecycleState.STALE_EVIDENCE,
-    # Incomplete is not stale (owner decision): its own state since migration 0009.
+    # Incomplete is not stale (owner decision after P09): its own state since migration 0009.
     C.EVIDENCE_INCOMPLETE: LifecycleState.EVIDENCE_INCOMPLETE,
     C.ACTIVE: None,
     C.LOW_USAGE_REVIEW: None,
@@ -493,7 +493,7 @@ def _membership(out: _Collector, bundle: EvidenceBundle, ad) -> None:
         # True only if a counting check found no blocking finding other than ``allowed`` codes.
         return d is not None and _counts(d) and all(f.code in allowed for f in d.blocking_findings)
 
-    # Emptiness needs a known zero member count (``member_count or 0`` would read unknown as zero).
+    # Emptiness needs a known zero member count (OGWA-DEMO-01: ``member_count or 0`` read unknown as zero).
     no_direct = none_except(members, {FindingCode.AD_PRIMARY_GROUP_REFERENCES}) and ad.member_count == 0
     no_primary = none_except(members, {FindingCode.AD_DIRECT_MEMBERS})
     no_nested = none_except(nesting, {FindingCode.AD_PARENT_GROUP})

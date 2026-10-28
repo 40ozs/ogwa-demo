@@ -86,7 +86,10 @@ def _build(worker: Path, out: Path, budget: int) -> int:
     var.mkdir(parents=True, exist_ok=True)
     store_path = var / STORE_NAME
     settings = load_settings({**environment, "OGWA_DATABASE_URL": f"sqlite:///{store_path.as_posix()}"})
-    dataset = resolve_dataset(settings.demo_dataset)
+    if not settings.is_demo:
+        print("Refused: the Worker's vars must select OGWA_RUNTIME_MODE=demo.", file=sys.stderr)
+        return 2
+    dataset = resolve_dataset(settings.demo_dataset or "")
     reset = reset_demo_store(settings, dataset, confirmed=True, allowed_root=var)
     image = store_path.read_bytes()
     hosted = HostedDemo(lambda: image, environment, expected={"audit_head": reset.audit_head})

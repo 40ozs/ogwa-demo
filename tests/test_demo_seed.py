@@ -28,7 +28,6 @@ from app.domain.execution import JobStatus
 from app.domain.ids import IdKind
 from app.domain.lifecycle import LifecycleState
 from app.domain.model import EXACT_CONFIDENCES, ADGroup, DependencyCoverage
-from app.runtime import __main__ as runtime_cli
 from app.store import __main__ as cli
 from app.store import reset as reset_module
 from app.store.environment import DatabaseEnvironment
@@ -68,7 +67,7 @@ class SeededWorldTests(unittest.TestCase):
     def test_every_required_condition_is_expressed(self):
         covered = {c for s in self.summary.scenarios for c in s.conditions}
         self.assertEqual(covered, set(Condition))
-        self.assertEqual(len(Condition), 16)  # the original list, and two AD-stage conditions
+        self.assertEqual(len(Condition), 16)  # the P03 list, and two P10B AD-stage conditions
 
     def test_each_scenario_reaches_its_expected_state(self):
         for key, state in EXPECTED_FINAL_STATES.items():
@@ -130,7 +129,7 @@ class SeededWorldTests(unittest.TestCase):
         return self.store.evidence_bundle(self.store.load_candidate(self.by_key[key].candidate_id)).mapping
 
     def test_mapping_variants(self):
-        # Every mapping is what the correlation engine proved (owner decision).
+        # Every mapping is what the correlation engine proved (owner decision after the P08 addendum).
         for key in ("S01", "S07"):
             with self.subTest(scenario=key):
                 exact = self.mapping_of(key)
@@ -281,8 +280,6 @@ class ResetTests(unittest.TestCase):
 
 
 class StoreCliTests(unittest.TestCase):
-    """``python -m app.store`` inspects; ``python -m app.runtime reset-demo`` is the one reset."""
-
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name) / "var"
@@ -291,37 +288,35 @@ class StoreCliTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def run_cli(self, *args, url=None, module=cli):
+    def run_cli(self, *args, url=None, mode="LOCAL_SYNTHETIC"):
         env = {k: v for k, v in os.environ.items() if not k.upper().startswith("OGWA_")}
-        env["OGWA_DEMO_DATASET"] = "classic"
+        env["OGWA_EXECUTION_MODE"] = mode
         env["OGWA_DATABASE_URL"] = url or f"sqlite:///{(self.root / 'demo.sqlite3').as_posix()}"
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(reset_module, "DEFAULT_ALLOWED_ROOT", self.root), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = module.main(list(args))
+            code = cli.main(list(args))
         return code, out.getvalue(), err.getvalue()
 
     def test_reset_demo_requires_confirmation(self):
-        code, _, err = self.run_cli("reset-demo", module=runtime_cli)
+        code, _, err = self.run_cli("reset-demo")
         self.assertEqual(code, 2)
         self.assertIn("confirmation", err)
 
     def test_reset_demo_refuses_outside_var(self):
         url = f"sqlite:///{(Path(self.tmp.name) / 'outside.sqlite3').as_posix()}"
-        code, _, err = self.run_cli("reset-demo", "--confirm-synthetic-reset", url=url, module=runtime_cli)
+        code, _, err = self.run_cli("reset-demo", "--confirm-synthetic-reset", url=url)
         self.assertEqual(code, 2)
         self.assertIn("outside the allowed root", err)
 
-    def test_the_store_cli_cannot_create_reset_or_upgrade_a_store(self):
-        for command in ("reset-demo", "init", "upgrade"):
-            with self.subTest(command=command), self.assertRaises(SystemExit) as caught, \
-                    contextlib.redirect_stderr(io.StringIO()):
-                cli.main([command])
-            self.assertEqual(caught.exception.code, 2)
+    def test_reset_demo_refuses_in_read_only_production_mode(self):
+        code, _, err = self.run_cli("reset-demo", "--confirm-synthetic-reset", mode="READ_ONLY_PRODUCTION")
+        self.assertEqual(code, 2)
+        self.assertIn("LOCAL_SYNTHETIC", err)
 
     def test_reset_status_and_verify(self):
-        # The classic 16-scenario world, by name; the default is Null Meridian (tests/test_null_meridian_seed.py).
-        code, out, _ = self.run_cli("reset-demo", "--confirm-synthetic-reset", module=runtime_cli)
+        # The classic 16-scenario world, by name; the CLI's default is Null Meridian (tests/test_null_meridian_seed.py).
+        code, out, _ = self.run_cli("reset-demo", "--confirm-synthetic-reset", "--dataset", "classic")
         self.assertEqual(code, 0, out)
         self.assertIn("S14", out)
         head = out.strip().splitlines()[-1].split()[-1]
@@ -338,6 +333,12 @@ class StoreCliTests(unittest.TestCase):
         code, _, err = self.run_cli("status", url="postgresql://db.synthetic.example/ogwa")
         self.assertEqual(code, 2)
         self.assertIn("PostgreSQL", err)
+
+    def test_init_production_is_refused_in_synthetic_mode(self):
+        code, _, err = self.run_cli("init", "--environment", "PRODUCTION")
+        self.assertEqual(code, 2)
+        self.assertIn("cannot be used in LOCAL_SYNTHETIC", err)
+        self.assertFalse((self.root / "demo.sqlite3").exists())
 
 
 class SeedClockTests(unittest.TestCase):

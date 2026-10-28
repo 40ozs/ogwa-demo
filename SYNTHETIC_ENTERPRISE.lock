@@ -1,0 +1,1 @@
+{"contract_version":"0.2.0","dataset":"synthetic-enterprise-world@2.1.0","manifest_sha256":"689d4e62dc8f592703830783fd3f0e6519f2e531098c5e07d126080ba559273f","projection":"ogwa@0.3.1","repository":"40ozs/synthetic-enterprise","commit":"ce7c0c7d9fbc82c67e596dde95cf5e2432acf450","snapshot":"standard-baseline","vendored":["manifest.json","projections/ogwa/"]}

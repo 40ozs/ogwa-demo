@@ -1,4 +1,4 @@
-"""Runs the policy-version UI tests (tests/ui/policy.test.mjs) under Node's built-in runner.
+"""Runs the policy-version UI tests (tests/ui/policy.test.mjs) under Node's built-in runner (OGWA-DEMO-02).
 
 The fixtures are what the real API returns over a freshly seeded Null Meridian store: every
 candidate's detail (with its decision explanation), NM-C08's decision and approval history (judged

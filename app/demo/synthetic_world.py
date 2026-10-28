@@ -3,13 +3,14 @@
 The fictional company "Synthetic Widgets Ltd" has an Okta org, two AD domains
 (``corp.synthetic.example`` and ``emea.synthetic.example``, under the reserved
 ``.example`` TLD), and sixteen scenarios. Together they express every condition the
-lifecycle has to handle (see ``Condition``). S15 and S16 reach the AD quarantine and
+lifecycle has to handle (see ``Condition``). S15 and S16 (P10B) reach the AD quarantine and
 deletion stages through the same public API: a quarantine observed and its hold running,
 and a deletion proposed after that hold and awaiting an independent approval. Every write goes through the public
 ``Store`` API, so seeding exercises the same validation, lifecycle guards, and audit
 trail as real use.
 
-Identity mappings are never written as already-exact evidence (owner decision). Each one is what the correlation engine proves over the synthetic AD
+Identity mappings are never written as already-exact evidence (owner decision after the
+P08 addendum). Each one is what the correlation engine proves over the synthetic AD
 directory (the AD group evidence seeded so far) with the synthetic correlation
 configuration, ``config/correlation.synthetic.json``; see
 ``app.demo.synthetic_directory.correlate_stored_group``. A scenario only states the
@@ -91,7 +92,7 @@ QUARANTINE_OU_NAME = "OGWA-Quarantine"  # config/quarantine-ous.synthetic.json
 
 
 class Condition(StrEnum):
-    """The conditions the demo world must express (the requirement list, in order)."""
+    """The conditions the demo world must express (P03 requirement list, in order)."""
 
     INACTIVE_APP_EMPTY_UNSHARED_GROUP = "inactive app + empty unshared group"
     ACTIVE_LOW_USE_APP = "active low-use app"
@@ -107,7 +108,7 @@ class Condition(StrEnum):
     DEPENDENCY_COVERAGE_PARTIAL_OR_UNKNOWN = "dependency coverage partial/unknown"
     API_TIMEOUT_OR_RATE_LIMIT = "API timeout/rate-limit condition"
     AAP_DRY_RUN_FAILURE = "AAP dry-run job failure"
-    # The AD quarantine and deletion stages.
+    # P10B: the AD quarantine and deletion stages.
     QUARANTINED_IN_HOLD = "AD group quarantined, post-quarantine hold running"
     DELETION_PROPOSED = "deletion proposed after the hold, awaiting an independent approval"
 
@@ -169,7 +170,7 @@ class _World:
         self.store = store
         self.namespace = namespace
         self.policy = policy
-        # The policy reference decisions record. None (the classic world): decisions
+        # The policy reference decisions record (OGWA-DEMO-02). None (the classic world): decisions
         # record none, and the classic trail is unchanged.
         self.policy_ref = None
         self.ad_source_id = ad_source_id

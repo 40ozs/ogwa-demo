@@ -207,7 +207,7 @@ class CandidateRecordTests(unittest.TestCase):
             {"state": S.BLOCKED, "blocked_from": S.REJECTED},
             {"state": S.HOLD, "hold_until": None},
             {"state": S.RETIRED, "hold_until": None},
-            # The AD stages' records.
+            # The AD stages' records (P10B).
             {"state": S.QUARANTINE_APPROVED, "hold_until": T0, "okta_unassign_approver": REVIEWER},
             {"state": S.REVALIDATION_REQUIRED, "hold_until": T0, "okta_unassign_approver": REVIEWER,
              "quarantine_approver": SECOND_REVIEWER},
@@ -500,7 +500,7 @@ class HoldPeriodTests(RefusalAssertions):
 
 
 # The AD quarantine and deletion stages (REVALIDATION_REQUIRED -> ... -> DELETION_DRY_RUN),
-# and the legacy single AD stage, are tested in tests/test_lifecycle_ad_stages.py.
+# and the legacy single AD stage, are tested in tests/test_lifecycle_ad_stages.py (P10B).
 
 
 # --- DELETION_DRY_RUN -> RETIRED -----------------------------------------------------

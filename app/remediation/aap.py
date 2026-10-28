@@ -1,8 +1,7 @@
-"""AAP job templates as OGWA sees them: template metadata, and its safety class.
+"""AAP job templates as OGWA sees them: metadata from read-only discovery, and its safety class.
 
-OGWA never launches an AAP job, and this build has no AAP client: the plan-only AAP adapter
-is reachable only from an allowlist that names it, which the demo refuses. This module
-classifies template metadata:
+OGWA never launches an AAP job in this build. Discovery (``app.integrations.aap``) reads
+template metadata with GET requests only, and this module classifies it:
 
 - ``KNOWN_READ_ONLY``: a job template in check mode whose job type cannot be changed at
   launch, that takes no extra variables, SCM branch, inventory, or credential at launch, and

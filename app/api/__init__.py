@@ -1,4 +1,4 @@
-"""OGWA operator API. See docs/architecture/api.md and docs/security/authorization.md.
+"""OGWA operator API (P08). See docs/architecture/api.md and docs/security/authorization.md.
 
 A WSGI application over the store, the lifecycle, the classifier, and the mapping-review
 service. Standard library only (D4, D5). It serves only in ``LOCAL_SYNTHETIC`` with the

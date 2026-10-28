@@ -1,11 +1,12 @@
-"""Building and serving the API over a SYNTHETIC store (D50).
+"""Building and serving the API for local synthetic use (D50).
 
 Mapping review runs against the synthetic AD directory over the store's own recorded AD
-evidence. This build has no AD, Okta, or AAP adapter.
+evidence (owner decision after P08). No production AD adapter exists.
 
-The server binds 127.0.0.1 by default. The only other choice is 0.0.0.0, for a container
-whose port is published to the host's loopback (compose.yaml). ``wsgiref`` is
-single-threaded, which also keeps the store's one SQLite connection on one thread.
+The server binds 127.0.0.1 only; there is no option to bind anything else. ``wsgiref`` is
+single-threaded, which also keeps the store's one SQLite connection on one thread. A
+production deployment needs a reviewed WSGI server, TLS, and a real identity adapter;
+none of those exist in this build.
 """
 
 import logging
@@ -32,7 +33,6 @@ SYNTHETIC_IDP_PATH = REPO_ROOT / "config" / "synthetic-idp.json"
 SYNTHETIC_ROLE_BINDINGS_PATH = REPO_ROOT / "config" / "role-bindings.synthetic.json"
 SYNTHETIC_REMEDIATION_ALLOWLIST_PATH = REPO_ROOT / "config" / "remediation-allowlist.synthetic.json"
 LOOPBACK_HOST = "127.0.0.1"
-BIND_HOSTS = (LOOPBACK_HOST, "0.0.0.0")
 
 
 def local_origins(port: int) -> tuple[str, ...]:
@@ -52,7 +52,7 @@ def build_local_api(store: Store, *, clock: Callable[[], datetime], port: int | 
     evidence. Both refuse anything but LOCAL_SYNTHETIC with a SYNTHETIC store.
 
     Remediation dry runs use ``remediation_allowlist`` if one is given, otherwise
-    config/remediation-allowlist.synthetic.json. The AD stages use ``quarantine_ous`` if
+    config/remediation-allowlist.synthetic.json (P10). The AD stages use ``quarantine_ous`` if
     one is given, otherwise config/quarantine-ous.synthetic.json (D136).
 
     ``routes`` replaces the route table; the demo runtime passes the same routes with its
@@ -95,10 +95,8 @@ class _QuietHandler(WSGIRequestHandler):
         return
 
 
-def make_local_server(app: Callable, port: int, host: str = LOOPBACK_HOST) -> WSGIServer:
-    """Serve ``app`` (the API, or the UI and API together, ``app.ui.server.OgwaWebApp``) on ``host``."""
+def make_local_server(app: Callable, port: int) -> WSGIServer:
+    """Serve ``app`` (the API, or the UI and API together, ``app.ui.server.OgwaWebApp``) on loopback."""
     if not (port == 0 or 1024 <= port <= 65535):
         raise ValueError("port must be 0 or 1024-65535")
-    if host not in BIND_HOSTS:
-        raise ValueError(f"host must be one of {', '.join(BIND_HOSTS)}")
-    return make_server(host, port, app, handler_class=_QuietHandler)
+    return make_server(LOOPBACK_HOST, port, app, handler_class=_QuietHandler)

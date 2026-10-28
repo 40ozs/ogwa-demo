@@ -1,4 +1,4 @@
-"""Human-readable names for the ids the UI shows: ``GET /identities``.
+"""Human-readable names for the ids the UI shows (OGWA-UI-IA-01): ``GET /identities``.
 
 The stable identifier is the identity and the name is only its presentation:
 

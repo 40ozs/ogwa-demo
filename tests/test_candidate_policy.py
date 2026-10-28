@@ -1,6 +1,6 @@
-"""Policy configuration, auditable versions, finding codes, and AD evidence end to end.
+"""P07 policy configuration, auditable versions, finding codes, and AD evidence end to end.
 
-Synthetic only. The AD reports are the golden AD fixtures in tests/fixtures/ad.
+Synthetic only. The AD reports are the P05 golden fixtures in tests/fixtures/ad.
 """
 
 import json
@@ -280,7 +280,7 @@ class FindingCodeTests(unittest.TestCase):
         f = DependencyFinding("synthetic", True, "ref")
         d = DependencyEvidence(id=fixed_id(IdKind.DEPENDENCY_EVIDENCE, 1), subject_id=AD_ID, kind=K.AD_ACL_REFERENCE,
                                findings=(f,), provenance=prov(T0))
-        # The original material formula, unchanged for findings without a code.
+        # The P03 material formula, unchanged for findings without a code.
         p03 = stable_digest({"kind": "DEPENDENCY", "id": d.id, "material": {
             "subject_id": AD_ID, "kind": K.AD_ACL_REFERENCE, "findings": [["synthetic", True, "ref"]]}})
         self.assertEqual(d.digest, p03)
@@ -318,7 +318,7 @@ class FindingCodeTests(unittest.TestCase):
 
 
 class GoldenADReportTests(unittest.TestCase):
-    """Golden AD reports, through ad_evidence, into the classifier."""
+    """P05 golden worker reports, through ad_evidence, into the classifier."""
 
     def _classify(self, name, source=EvidenceSource.SYNTHETIC):
         r = report(name)
@@ -395,7 +395,7 @@ class TemplateAndFloorTests(unittest.TestCase):
     """D32/D34/D35: the git template is policy v1; floors and ceilings live in code."""
 
     TEMPLATE = Path(__file__).resolve().parents[1] / "config" / "candidate-policy.template.json"
-    # D35: v1 is the original defaults, unchanged. A different digest means a default changed,
+    # D35: v1 is the P07 defaults, unchanged. A different digest means a default changed,
     # which needs an owner decision and a new policy version, never a silent edit.
     V1_DIGEST = "sha256:911a0f0afdd9ea8e6713c5c0a280a885c5be6b47545a1d8a3288d86932ae7307"
 

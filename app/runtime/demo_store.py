@@ -1,17 +1,19 @@
 """Demo persistence: open, validate, and reset the demo store.
 
-The demo store is its own SQLite file (``var/ogwa-demo.sqlite3`` by default). It holds
-exactly one synthetic dataset, written by that dataset's own seed through the dataset
-registry (``app.demo.datasets``, reached through ``app.runtime.datasets``).
+The demo store is its own SQLite file (``var/ogwa-demo.sqlite3`` by default), never the
+production default store (``app.core.config`` refuses that path in demo). It holds exactly
+one synthetic dataset, written by that dataset's own seed through the dataset registry
+(``app.demo.datasets``, reached through ``app.runtime.datasets``).
 
 **Opening** (``open_demo_store``) refuses unless:
 
-1. the file exists: a missing demo store is a startup failure, never a new empty store;
-2. it is an OGWA store marked ``SYNTHETIC`` (read read-only first);
-3. the whole store passes ``verify_integrity`` (migrations, audit chain, evidence digests,
+1. the runtime mode is ``demo`` (positively confirmed, not inferred);
+2. the file exists: a missing demo store is a startup failure, never a new empty store;
+3. it is an OGWA store marked ``SYNTHETIC`` (read read-only first);
+4. the whole store passes ``verify_integrity`` (migrations, audit chain, evidence digests,
    candidate histories, mapping reviews, policy versions, and the synthetic directory
    snapshot's digest, migration 0012);
-4. every piece of dataset identity evidence agrees with the configured dataset
+5. every piece of dataset identity evidence agrees with the configured dataset
    (``validate_demo_store``):
 
    - exactly one ``SYNTHETIC_SEED_LOADED`` audit event, naming the dataset's seed namespace
@@ -23,11 +25,12 @@ registry (``app.demo.datasets``, reached through ``app.runtime.datasets``).
      dataset, and the seed event names the same directory dataset and digest.
 
 **Reset** (``reset_demo_store``) is the Demo Mode guard around the one guarded reset,
-``app.store.reset.reset_synthetic_store``: it requires an existing file to be marked
-``SYNTHETIC`` (any other marker is refused), then lets the guarded reset run the dataset's own
-seed into a new file, validates that file as ``open_demo_store`` would (pinning the audit head
-the seed reported), and only then has it replace the old one. A store with any other marker is
-never opened for writing or deleted.
+``app.store.reset.reset_synthetic_store``: it refuses unless the runtime mode is ``demo``
+and the store is not the production default, requires an existing file to be marked
+``SYNTHETIC`` (a DEVELOPMENT store is refused here, though the developer reset accepts it),
+then lets the guarded reset delete the file and run the dataset's own seed, and finally
+validates the result as ``open_demo_store`` would, pinning the audit head the seed reported.
+A production store (marked ``PRODUCTION``) is never opened for writing or deleted.
 """
 
 import sqlite3
@@ -38,7 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import Settings
-from app.core.database_url import DatabaseTarget
+from app.core.database_url import DatabaseTarget, parse_database_url
 from app.core.errors import OgwaSafetyError
 from app.core.modes import ExecutionMode
 from app.demo.datasets import dataset_of
@@ -74,6 +77,15 @@ class DemoResetResult:
     audit_head: str
     report: DemoStoreReport
     summary: Any = None  # the seed's own SeedSummary: namespace, scenarios, audit head
+
+
+def _require_demo(settings: Settings, action: str) -> None:
+    if not settings.is_demo:
+        raise ResetRefused(f"{action} runs only with OGWA_RUNTIME_MODE=demo, not {settings.runtime_mode.value}")
+    if settings.mode is not ExecutionMode.LOCAL_SYNTHETIC:  # pragma: no cover - load_settings refuses this
+        raise ResetRefused(f"{action} runs only in LOCAL_SYNTHETIC mode")
+    if settings.database.path is None or settings.database.path == parse_database_url(None).path:
+        raise ResetRefused(f"{action} refuses the production default store")
 
 
 def validate_demo_store(store: Store, dataset: DemoDataset, *,
@@ -120,10 +132,11 @@ def validate_demo_store(store: Store, dataset: DemoDataset, *,
 
 def open_demo_store(settings: Settings, dataset: DemoDataset, *, clock: Callable[[], datetime],
                     expected_audit_head: str | None = None) -> tuple[Store, DemoStoreReport]:
+    _require_demo(settings, "the demo store")
     path = settings.database.path
     if path is None or not path.is_file():
         raise DemoPersistenceUnavailable(f"no demo store at {path}; create it with "
-                                         "python -m app.runtime reset-demo --confirm-synthetic-reset")
+                                         "OGWA_RUNTIME_MODE=demo python -m app.runtime reset-demo --confirm-synthetic-reset")
     _require_synthetic_marker(settings.database)
     store = Store.open(settings.database, mode=ExecutionMode.LOCAL_SYNTHETIC, clock=clock)
     try:
@@ -138,9 +151,10 @@ def open_demo_image(settings: Settings, dataset: DemoDataset, load: Callable[[],
     """``open_demo_store`` for the bytes of a demo store file, opened in memory and read-only.
 
     For a host with no persistent filesystem (docs/deployment/cloudflare-demo.md). The same
-    checks apply: a SYNTHETIC marker and ``validate_demo_store``. ``load``
+    checks apply: the demo runtime, a SYNTHETIC marker, and ``validate_demo_store``. ``load``
     returns the bytes; nothing keeps them once SQLite holds its copy, so a host with little
     memory never holds the store twice while it is validated."""
+    _require_demo(settings, "the demo store")
     try:
         conn = connect_image(load())
     except (StoreError, sqlite3.Error) as exc:
@@ -181,6 +195,7 @@ def _check_synthetic_marker(conn: sqlite3.Connection) -> None:
 def reset_demo_store(settings: Settings, dataset: DemoDataset, *, confirmed: bool,
                      allowed_root: Path = DEFAULT_ALLOWED_ROOT, clock=None) -> DemoResetResult:
     """Delete the demo store and re-create it from the dataset's own deterministic seed."""
+    _require_demo(settings, "the demo reset")
     target = settings.database
     existed = check_reset_allowed(target, mode=settings.mode, allowed_root=allowed_root, confirmed=confirmed)
     if existed:
@@ -188,19 +203,14 @@ def reset_demo_store(settings: Settings, dataset: DemoDataset, *, confirmed: boo
             _require_synthetic_marker(target)
         except DemoPersistenceUnavailable as exc:
             raise ResetRefused(f"the demo reset refuses this file: {exc}") from None
-    report = None
-
-    def verify(seeded: DatabaseTarget, summary) -> None:
-        nonlocal report
-        if summary.namespace != dataset.seed_namespace:
-            raise DemoPersistenceUnavailable(f"the {dataset.key} seed reported namespace {summary.namespace!r}, "
-                                             f"not {dataset.seed_namespace!r}")
-        # Validation only reads; it never draws on the caller's (seed) clock.
-        with Store.open(seeded, mode=ExecutionMode.LOCAL_SYNTHETIC, clock=utc_now) as store:
-            report = validate_demo_store(store, dataset, expected_audit_head=summary.audit_head)
-
     # The one guarded reset: it re-applies check_reset_allowed, then seeds through the registry.
     result = reset_synthetic_store(target, mode=settings.mode, confirmed=confirmed, allowed_root=allowed_root,
-                                   clock=clock, dataset=dataset.key, verify=verify)
+                                   clock=clock, dataset=dataset.key)
+    if result.summary.namespace != dataset.seed_namespace:
+        raise DemoPersistenceUnavailable(f"the {dataset.key} seed reported namespace {result.summary.namespace!r}, "
+                                         f"not {dataset.seed_namespace!r}")
+    # Validation only reads; it never draws on the caller's (seed) clock.
+    with Store.open(target, mode=ExecutionMode.LOCAL_SYNTHETIC, clock=utc_now) as store:
+        report = validate_demo_store(store, dataset, expected_audit_head=result.summary.audit_head)
     return DemoResetResult(result.path, result.replaced_existing, dataset.key, result.summary.audit_head, report,
                            result.summary)

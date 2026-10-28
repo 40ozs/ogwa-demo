@@ -1,4 +1,4 @@
-"""Store-backed listings are filtered, sorted, and paged in one query, so a sorted
+"""OGWA-UI-IA-02: store-backed listings are filtered, sorted, and paged in one query, so a sorted
 page loads only its own records, on the demo worlds and on a synthetic tenant ten times larger.
 
 The expected order is computed here from the served items and the names ``GET /identities``
@@ -199,7 +199,7 @@ class LargeTenantTests(Contract, unittest.TestCase):
 
 class AuditTrailOrderTests(unittest.TestCase):
     """The audit trail stays in its chain's sequence order: no other sort, and no gap or repeat
-    between pages (the one deliberate exception to sortable listings)."""
+    between pages (OGWA-UI-IA-02 keeps this as the one deliberate exception)."""
 
     def test_sequence_order_is_continuous_across_pages(self):
         world = World(dataset="null-meridian")

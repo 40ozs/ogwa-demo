@@ -1,0 +1,15 @@
+{
+  "requestSchema": "ogwa.ad.group-read-request/v1",
+  "reportSchema": "ogwa.ad.group-report/v1",
+  "workerName": "OGWA.ADReader",
+  "workerVersion": "0.1.0",
+  "lookupKinds": ["objectGUID", "objectSid", "distinguishedName", "samAccountName", "name"],
+  "limits": {
+    "maxDirectMembers": { "default": 1000, "ceiling": 5000 },
+    "maxNestedGroups": { "default": 100, "ceiling": 500 },
+    "maxNestingDepth": { "default": 10, "ceiling": 20 },
+    "maxPrimaryGroupReferences": { "default": 50, "ceiling": 1000 },
+    "maxParentGroups": { "default": 200, "ceiling": 1000 },
+    "maxAmbiguousCandidates": { "default": 10, "ceiling": 25 }
+  }
+}

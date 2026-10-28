@@ -1,7 +1,7 @@
 [project]
 name = "ogwa"
 version = "0.1.0"
-description = "Identity and group lifecycle governance (OGWA): a demo over synthetic data."
+description = "Identity and group lifecycle governance (OGWA)."
 requires-python = ">=3.11"
-# Standard library only. The reasons are in docs/architecture/overview.md.
+# P01 is standard-library only. Framework selection is recorded in docs/architecture/overview.md.
 dependencies = []

@@ -1,0 +1,75 @@
+{"canonical_id":"ou_1G73KWJNAHH2","founded_on":null,"legacy_department_id":null,"name":"Application Security","parent_canonical_id":"ou_J8YSG8NXX67P","unit_type":"team"}
+{"canonical_id":"ou_1K1KEM9SSN3M","founded_on":null,"legacy_department_id":null,"name":"APAC","parent_canonical_id":"ou_BPARKCKAFXY8","unit_type":"team"}
+{"canonical_id":"ou_21HEYVQCD1MK","founded_on":null,"legacy_department_id":null,"name":"North America East","parent_canonical_id":"ou_BPARKCKAFXY8","unit_type":"team"}
+{"canonical_id":"ou_2C07QMKTB0GT","founded_on":null,"legacy_department_id":null,"name":"Demand Generation","parent_canonical_id":"ou_MPKN3E61J1R7","unit_type":"team"}
+{"canonical_id":"ou_3KBJVX46MN51","founded_on":null,"legacy_department_id":null,"name":"Enterprise","parent_canonical_id":"ou_BPARKCKAFXY8","unit_type":"team"}
+{"canonical_id":"ou_3N07DRRJCZ12","founded_on":null,"legacy_department_id":null,"name":"Growth","parent_canonical_id":"ou_DYVEQRW36S79","unit_type":"team"}
+{"canonical_id":"ou_3N2N53S6DEWG","founded_on":null,"legacy_department_id":null,"name":"Brand","parent_canonical_id":"ou_MPKN3E61J1R7","unit_type":"team"}
+{"canonical_id":"ou_4BY1H5SY8D4C","founded_on":null,"legacy_department_id":null,"name":"Network","parent_canonical_id":"ou_V9E9644J6TPM","unit_type":"team"}
+{"canonical_id":"ou_589EY0H20KVV","founded_on":null,"legacy_department_id":null,"name":"Payments","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_5B5SBBQGQQGA","founded_on":"2016-10-01","legacy_department_id":"dept_a366c82c59825417bc53654832117c9f","name":"Executive","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_5DP1NX55QH8F","founded_on":null,"legacy_department_id":null,"name":"Recruiting","parent_canonical_id":"ou_71ZG2HYDVYWM","unit_type":"team"}
+{"canonical_id":"ou_5QP7B2G1ETG4","founded_on":null,"legacy_department_id":null,"name":"Product Design","parent_canonical_id":"ou_9YJ5N7PCDMXJ","unit_type":"team"}
+{"canonical_id":"ou_5R99X6ZNEC5B","founded_on":null,"legacy_department_id":null,"name":"Account Management","parent_canonical_id":"ou_Y31AKN2BW949","unit_type":"team"}
+{"canonical_id":"ou_608WNBV62MS9","founded_on":null,"legacy_department_id":null,"name":"Content","parent_canonical_id":"ou_MPKN3E61J1R7","unit_type":"team"}
+{"canonical_id":"ou_6ZDBVHBS6CPN","founded_on":null,"legacy_department_id":null,"name":"People Operations","parent_canonical_id":"ou_71ZG2HYDVYWM","unit_type":"team"}
+{"canonical_id":"ou_71ZG2HYDVYWM","founded_on":"2017-01-09","legacy_department_id":"dept_8b976af0a89754d7a3c108e804c46eac","name":"People / HR","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_82HYVP1VZ6QB","founded_on":null,"legacy_department_id":null,"name":"Financial Planning and Analysis","parent_canonical_id":"ou_N3ZXB2F1FZ4N","unit_type":"team"}
+{"canonical_id":"ou_8AAVRERH9AP3","founded_on":null,"legacy_department_id":null,"name":"Customer Success Operations","parent_canonical_id":"ou_Y31AKN2BW949","unit_type":"team"}
+{"canonical_id":"ou_8B74CBDWB2N1","founded_on":null,"legacy_department_id":null,"name":"Workplace","parent_canonical_id":"ou_R5C19WWMAX9Z","unit_type":"team"}
+{"canonical_id":"ou_8DC0ERKN0Y7B","founded_on":null,"legacy_department_id":null,"name":"Platform Product","parent_canonical_id":"ou_DYVEQRW36S79","unit_type":"team"}
+{"canonical_id":"ou_8E1XGBSE4SDB","founded_on":null,"legacy_department_id":null,"name":"Sales Development","parent_canonical_id":"ou_BPARKCKAFXY8","unit_type":"team"}
+{"canonical_id":"ou_8WAHXP6GRWJD","founded_on":null,"legacy_department_id":null,"name":"Commercial","parent_canonical_id":"ou_YV7A4PETBJ9R","unit_type":"team"}
+{"canonical_id":"ou_9C5RN8981W64","founded_on":"2016-10-01","legacy_department_id":"dept_5b188405ac915a45a2e81cb82f788b67","name":"Engineering","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_9N6VS11Q53W2","founded_on":null,"legacy_department_id":null,"name":"Support Tier 1","parent_canonical_id":"ou_Y31AKN2BW949","unit_type":"team"}
+{"canonical_id":"ou_9YJ5N7PCDMXJ","founded_on":"2018-04-02","legacy_department_id":"dept_89a2c13d13275c6599f742bc3d0a861c","name":"Design","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_A023SKVSF6SP","founded_on":null,"legacy_department_id":null,"name":"Total Rewards","parent_canonical_id":"ou_71ZG2HYDVYWM","unit_type":"team"}
+{"canonical_id":"ou_AP3PEEMHZZPH","founded_on":null,"legacy_department_id":null,"name":"Corporate","parent_canonical_id":"ou_YV7A4PETBJ9R","unit_type":"team"}
+{"canonical_id":"ou_BMF8W72CEE4B","founded_on":null,"legacy_department_id":null,"name":"Data Platform","parent_canonical_id":"ou_XCMKGJFDA029","unit_type":"team"}
+{"canonical_id":"ou_BPARKCKAFXY8","founded_on":"2016-10-01","legacy_department_id":"dept_db09be8c2c5255d39bb3cf4fe77ddb50","name":"Sales","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_C11F5NCEC3M6","founded_on":null,"legacy_department_id":null,"name":"Identity","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_CDAC44YA4JG8","founded_on":null,"legacy_department_id":null,"name":"Tax and Treasury","parent_canonical_id":"ou_N3ZXB2F1FZ4N","unit_type":"team"}
+{"canonical_id":"ou_DDKGH86CXKAD","founded_on":null,"legacy_department_id":null,"name":"Developer Experience","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_DFCDXWDSA3XW","founded_on":null,"legacy_department_id":null,"name":"Machine Learning","parent_canonical_id":"ou_XCMKGJFDA029","unit_type":"team"}
+{"canonical_id":"ou_DNDWEWT4ZVHA","founded_on":null,"legacy_department_id":null,"name":"Procurement","parent_canonical_id":"ou_R5C19WWMAX9Z","unit_type":"team"}
+{"canonical_id":"ou_DYVEQRW36S79","founded_on":"2016-10-01","legacy_department_id":"dept_5c508cbea73e57da99797fb1f69060d6","name":"Product","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_E6MVR2HY438V","founded_on":null,"legacy_department_id":null,"name":"Web","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_ER4CFRAP44V4","founded_on":null,"legacy_department_id":null,"name":"Product Operations","parent_canonical_id":"ou_DYVEQRW36S79","unit_type":"team"}
+{"canonical_id":"ou_EXD189KNEG6Q","founded_on":null,"legacy_department_id":null,"name":"Platform","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_EYMN45K6B3CG","founded_on":null,"legacy_department_id":null,"name":"Site Reliability","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_FXKM5CQT2HX8","founded_on":null,"legacy_department_id":null,"name":"Endpoint","parent_canonical_id":"ou_V9E9644J6TPM","unit_type":"team"}
+{"canonical_id":"ou_GA9ECZR1FGQP","founded_on":null,"legacy_department_id":null,"name":"EMEA","parent_canonical_id":"ou_BPARKCKAFXY8","unit_type":"team"}
+{"canonical_id":"ou_GMF56GA0HG7W","founded_on":null,"legacy_department_id":null,"name":"Quality","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_HFV6TW1WQWTZ","founded_on":null,"legacy_department_id":null,"name":"Support Tier 2","parent_canonical_id":"ou_Y31AKN2BW949","unit_type":"team"}
+{"canonical_id":"ou_HPRQ00ZFJPG3","founded_on":null,"legacy_department_id":null,"name":"Facilities","parent_canonical_id":"ou_R5C19WWMAX9Z","unit_type":"team"}
+{"canonical_id":"ou_J8J6R7635QMJ","founded_on":null,"legacy_department_id":null,"name":"Infrastructure","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_J8YSG8NXX67P","founded_on":"2020-01-15","legacy_department_id":"dept_02dd20b1a43c55608eb594ac4c367482","name":"Security","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_JSRXY1GAYGS2","founded_on":null,"legacy_department_id":null,"name":"Events","parent_canonical_id":"ou_MPKN3E61J1R7","unit_type":"team"}
+{"canonical_id":"ou_KRJ8CKMR0P1E","founded_on":null,"legacy_department_id":null,"name":"Helpdesk","parent_canonical_id":"ou_V9E9644J6TPM","unit_type":"team"}
+{"canonical_id":"ou_MFPABTA84EH5","founded_on":null,"legacy_department_id":null,"name":"Onboarding","parent_canonical_id":"ou_Y31AKN2BW949","unit_type":"team"}
+{"canonical_id":"ou_MPKN3E61J1R7","founded_on":"2016-10-01","legacy_department_id":"dept_29d82e4c6ae65579be842b6ae6e553ed","name":"Marketing","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_N3ZXB2F1FZ4N","founded_on":"2016-10-01","legacy_department_id":"dept_f80718b57ee957d9b8072702e3819e96","name":"Finance","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_NYEN83TKYHT7","founded_on":null,"legacy_department_id":null,"name":"Learning and Development","parent_canonical_id":"ou_71ZG2HYDVYWM","unit_type":"team"}
+{"canonical_id":"ou_P6K0PZXTYJS6","founded_on":null,"legacy_department_id":null,"name":"Corporate Systems","parent_canonical_id":"ou_V9E9644J6TPM","unit_type":"team"}
+{"canonical_id":"ou_PF1D44YTS5Q3","founded_on":null,"legacy_department_id":null,"name":"Product Marketing","parent_canonical_id":"ou_MPKN3E61J1R7","unit_type":"team"}
+{"canonical_id":"ou_PF34CH044QAD","founded_on":null,"legacy_department_id":null,"name":"Sales Operations","parent_canonical_id":"ou_BPARKCKAFXY8","unit_type":"team"}
+{"canonical_id":"ou_PN5H4J4RE3AM","founded_on":null,"legacy_department_id":null,"name":"Core Product","parent_canonical_id":"ou_DYVEQRW36S79","unit_type":"team"}
+{"canonical_id":"ou_PPME6R13QX04","founded_on":null,"legacy_department_id":null,"name":"Governance, Risk and Compliance","parent_canonical_id":"ou_J8YSG8NXX67P","unit_type":"team"}
+{"canonical_id":"ou_Q50S0T9KDWSB","founded_on":null,"legacy_department_id":null,"name":"Payroll","parent_canonical_id":"ou_N3ZXB2F1FZ4N","unit_type":"team"}
+{"canonical_id":"ou_R2NAR0QTN7KD","founded_on":null,"legacy_department_id":null,"name":"Security Operations","parent_canonical_id":"ou_J8YSG8NXX67P","unit_type":"team"}
+{"canonical_id":"ou_R5C19WWMAX9Z","founded_on":"2016-10-01","legacy_department_id":"dept_7ede425f7b0253edbf44d204282d8813","name":"Operations","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_RZ3N3Y35TPPF","founded_on":null,"legacy_department_id":null,"name":"Analytics","parent_canonical_id":"ou_XCMKGJFDA029","unit_type":"team"}
+{"canonical_id":"ou_SS2JBGG6Z7DF","founded_on":null,"legacy_department_id":null,"name":"Privacy","parent_canonical_id":"ou_YV7A4PETBJ9R","unit_type":"team"}
+{"canonical_id":"ou_TD7K6XQJ6D5N","founded_on":null,"legacy_department_id":null,"name":"Accounting","parent_canonical_id":"ou_N3ZXB2F1FZ4N","unit_type":"team"}
+{"canonical_id":"ou_TRA9MZ7208RW","founded_on":null,"legacy_department_id":null,"name":"API","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_V9E9644J6TPM","founded_on":"2016-10-01","legacy_department_id":"dept_c39217efca0b51c0bd69e8cb763cb3c9","name":"Information Technology","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_VHWS02YV70WC","founded_on":null,"legacy_department_id":null,"name":"Identity and Access","parent_canonical_id":"ou_V9E9644J6TPM","unit_type":"team"}
+{"canonical_id":"ou_WS15HRQHP1RK","founded_on":null,"legacy_department_id":null,"name":"Brand Design","parent_canonical_id":"ou_9YJ5N7PCDMXJ","unit_type":"team"}
+{"canonical_id":"ou_X5AXXA2F42G8","founded_on":null,"legacy_department_id":null,"name":"Data Governance","parent_canonical_id":"ou_XCMKGJFDA029","unit_type":"team"}
+{"canonical_id":"ou_XCMKGJFDA029","founded_on":"2019-11-01","legacy_department_id":"dept_54f92abc03d75609bf4699bc7fc27684","name":"Data","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_XGBYHCV91DA0","founded_on":null,"legacy_department_id":null,"name":"Research","parent_canonical_id":"ou_9YJ5N7PCDMXJ","unit_type":"team"}
+{"canonical_id":"ou_XNRMRHJVF7AR","founded_on":null,"legacy_department_id":null,"name":"Mobile","parent_canonical_id":"ou_9C5RN8981W64","unit_type":"team"}
+{"canonical_id":"ou_Y31AKN2BW949","founded_on":"2017-03-01","legacy_department_id":"dept_1fbb966a9d21510fae84fc195047981b","name":"Customer Success","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_Y66RBS0B1KVK","founded_on":null,"legacy_department_id":null,"name":"Business Operations","parent_canonical_id":"ou_R5C19WWMAX9Z","unit_type":"team"}
+{"canonical_id":"ou_YV7A4PETBJ9R","founded_on":"2018-02-01","legacy_department_id":"dept_c012b62728bf5b72bd95b4f8b1cfef6f","name":"Legal","parent_canonical_id":null,"unit_type":"department"}
+{"canonical_id":"ou_ZFRVX1FBMPVB","founded_on":null,"legacy_department_id":null,"name":"North America West","parent_canonical_id":"ou_BPARKCKAFXY8","unit_type":"team"}

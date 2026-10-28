@@ -241,8 +241,8 @@ def governance_findings(ctx: Context) -> Response:
 
 
 def demo_scenarios(ctx: Context) -> Response:
-    """The portfolio scenarios and, for a dataset that has one, its guided reviewer walkthrough,
-    each part's candidate key resolved to its candidate id from the scenarios."""
+    """The portfolio scenarios and, for a dataset that has one, its guided reviewer walkthrough
+    (OGWA-DEMO-04), each part's candidate key resolved to its candidate id from the scenarios."""
     items = ctx.api.directory.scenarios()
     return ok({"items": items, "walkthrough": _walkthrough(ctx, items)})
 
@@ -260,7 +260,7 @@ def _walkthrough(ctx: Context, items: list[dict[str, Any]]) -> dict[str, Any] | 
 
 
 def identities(ctx: Context) -> Response:
-    """Names and canonical pages for up to 50 stable ids (app/api/resolve.py)."""
+    """Names and canonical pages for up to 50 stable ids (OGWA-UI-IA-01; app/api/resolve.py)."""
     refs = list(dict.fromkeys(r for r in ctx.request.query.get("ids", "").split(",") if r))
     if len(refs) > MAX_IDS:
         raise ApiError(400, "MALFORMED_REQUEST", f"ids must list at most {MAX_IDS} comma-separated ids.")
@@ -359,7 +359,7 @@ def candidate_dependencies(ctx: Context) -> Response:
 
 
 def _judged_by(ctx: Context, refs: dict, ref: str) -> dict[str, Any] | None:
-    """The policy a decision or approval recorded, as recorded; None if it recorded none."""
+    """The policy a decision or approval recorded (OGWA-DEMO-02), as recorded; None if it recorded none."""
     return policy_ref_json(refs.get(ref), demo_releases(ctx.api.store))
 
 
@@ -528,7 +528,7 @@ def post_execute(ctx: Context) -> Response:
     raise AssertionError("unreachable")  # pragma: no cover - execute() always refuses in this build
 
 
-# --- remediation dry runs --------------------------------------------------------
+# --- remediation dry runs (P10) --------------------------------------------------------
 
 # Each operation's target is one object with exactly one field: the OGWA id of the one thing
 # it would change. A list, a second field, or any other identifier is refused.
@@ -575,7 +575,7 @@ def candidate_remediation_dry_runs(ctx: Context) -> Response:
                "executionAvailable": False})
 
 
-# --- synthetic remediation drills -----------------------------------------
+# --- synthetic remediation drills (OGWA-DEMO-03) -----------------------------------------
 
 # A drill names its mode and, to execute, one scenario from the server's closed catalog. It
 # cannot carry an execution mode, a dry-run flag, a fault, an adapter, or a template.
@@ -744,11 +744,11 @@ ROUTES: tuple[Route, ...] = (
     _r("POST", "/candidates/{candidateId}/execution-jobs", post_execution_job, "permission",
        {P.EXECUTION_PLAN_DRY_RUN}, governed="candidateId"),
     _r("POST", "/execution-jobs/{jobId}/execute", post_execute, "permission", EXECUTE_ROUTE, governed="jobId"),
-    # One operation on one explicit target of one candidate, dry run only.
+    # P10: one operation on one explicit target of one candidate, dry run only.
     _r("GET", "/candidates/{candidateId}/remediation-dry-runs", candidate_remediation_dry_runs, "permission", READ),
     _r("POST", "/candidates/{candidateId}/remediation-dry-runs", post_remediation_dry_run, "permission",
        {P.EXECUTION_PLAN_DRY_RUN}, governed="candidateId"),
-    # A synthetic drill against an in-memory provider fixture. It records
+    # OGWA-DEMO-03: a synthetic drill against an in-memory provider fixture. It records
     # nothing and changes no governed state, so it is not a governed route (D64, D72).
     _r("GET", "/remediation-drill-scenarios", remediation_drill_scenarios, "permission", READ),
     _r("POST", "/candidates/{candidateId}/remediation-drills", post_remediation_drill, "permission",

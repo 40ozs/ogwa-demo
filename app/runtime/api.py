@@ -1,9 +1,9 @@
 """The demo runtime's API and UI: the real OGWA application over the demo store.
 
-Nothing here is a demo-only view or service. The demo serves the application's own
-``OgwaApi``, read model, lifecycle and remediation services, correlation engine, and
-operator UI, built by ``app.api.local.build_local_api`` with the synthetic providers that
-``app.runtime.providers.select_providers`` chose. This module adds only:
+Nothing here is a demo-only view or service. The demo serves the same ``OgwaApi``, read
+model, lifecycle and remediation services, correlation engine, and operator UI as the
+standard runtime, built by ``app.api.local.build_local_api`` with the providers that
+``app.runtime.providers.select_providers`` chose for ``demo``. This module adds only:
 
 - **the mutation policy for demo** (``DEMO_MUTATION_POLICY``): every POST route is
   classified before the API is built, and an unclassified one stops the build, so a route
@@ -18,11 +18,11 @@ operator UI, built by ``app.api.local.build_local_api`` with the synthetic provi
   docs/deployment/cloudflare-demo.md) every POST that would record something answers
   ``DEMO_READ_ONLY`` (403), to any visitor. Only the ``NON_PERSISTING`` routes stay open:
   sign-out, mapping inspection, AD search, and the synthetic drill, which record nothing.
-- **the public demo is anonymous**: a read-only demo has no sign-in. ``GET /session``
-  gives a visitor without a session a new one for the synthetic,
+- **the public demo is anonymous** (OGWA-DEMO-HOSTED-ANON-01): a read-only demo has no
+  sign-in. ``GET /session`` gives a visitor without a session a new one for the synthetic,
   anonymous ``VISITOR_SUBJECT`` (the VIEWER role, from the role bindings), and ``POST /session``
   answers ``PUBLIC_DEMO_NO_SIGN_IN``, so no visitor can choose a principal. The visitor may
-  run the synthetic drill on the walkthrough's ``publicDrill`` candidate only (NM-C11): for
+  run the synthetic drill on the walkthrough's ``publicDrill`` candidate only (GP-C11): for
   that one request, on that one candidate, it holds the executor's role; never in its session.
 
 Mutation classes (docs/demo-mode.md):
@@ -76,7 +76,7 @@ DEMO_MUTATION_POLICY: dict[str, str] = {
     "/mappings/{groupId}/rejections": LOCAL,
     "/candidates/{candidateId}/execution-jobs": SIMULATED,
     "/candidates/{candidateId}/remediation-dry-runs": SIMULATED,
-    # Changes only an in-memory provider fixture, and records nothing.
+    # OGWA-DEMO-03: changes only an in-memory provider fixture, and records nothing.
     "/candidates/{candidateId}/remediation-drills": SIMULATED,
     "/execution-jobs/{jobId}/execute": BLOCKED,
 }
@@ -97,7 +97,7 @@ VISITOR_METHOD = "anonymous-public-demo"
 NO_SIGN_IN_MESSAGE = ("This public demo has no sign-in: every visitor is the same anonymous, read-only synthetic "
                       "viewer. Run OGWA locally to sign in as its synthetic principals.")
 DRILL_SCOPE_MESSAGE = ("In this public demo, the synthetic drill runs only on the walkthrough's controlled-remediation "
-                       "candidate (NM-C11). Nothing was run.")
+                       "candidate (GP-C11; NM-C11 in the legacy Null Meridian dataset). Nothing was run.")
 
 
 @dataclass(frozen=True)
@@ -229,7 +229,7 @@ def visitor_claims(api, now: datetime) -> PrincipalClaims:
 
 
 def public_drill_candidates(api) -> frozenset[str]:
-    """The candidates a public visitor may drill: the walkthrough parts marked ``publicDrill`` (NM-C11)."""
+    """The candidates a public visitor may drill: the walkthrough parts marked ``publicDrill`` (GP-C11)."""
     from app.demo.datasets import dataset_of
 
     guide = dataset_of(api.store).walkthrough(public=True)
@@ -306,7 +306,9 @@ def build_demo_application(settings: Settings, *, clock: Callable[[], datetime],
     ``assets``: the UI files for ``OgwaWebApp``, when a host serves them some other way."""
     from app.ui.server import OgwaWebApp
 
-    dataset = dataset or resolve_dataset(settings.demo_dataset)
+    if not settings.is_demo:
+        raise ConfigError("the demo application is built only with OGWA_RUNTIME_MODE=demo")
+    dataset = dataset or resolve_dataset(settings.demo_dataset or "")
     if opened is None:
         store, report = open_demo_store(settings, dataset, clock=store_clock or clock)
     else:
@@ -314,13 +316,14 @@ def build_demo_application(settings: Settings, *, clock: Callable[[], datetime],
         if report.dataset != dataset.key:
             raise ConfigError(f"the opened demo store holds {report.dataset!r}, not the configured {dataset.key!r}")
     try:
-        providers = select_providers(store=store, dataset=dataset, clock=clock)
+        providers = select_providers(settings, store=store, dataset=dataset, clock=clock)
         profile = RuntimeProfile(settings.runtime_mode.value, providers.data_source, dataset.metadata,
                                  public=store.read_only)
         from app.api.routes import ROUTES
 
         api = build_local_api(store, clock=clock, port=port, mapping_gateway=providers.ad_directory, logger=logger,
                               remediation_allowlist=providers.remediation_allowlist,
+                              remediation_templates=providers.remediation_templates,
                               routes=demo_routes(ROUTES, profile, read_only=store.read_only))
         web_app = RuntimeHeader(OgwaWebApp(api, assets), settings.runtime_mode.value)
     except BaseException:

@@ -1,4 +1,4 @@
-// Pure presentation rules shared by the views: employee status words, sorting
+// Pure presentation rules shared by the views (OGWA-UI-IA-01): employee status words, sorting
 // and paging arithmetic, tab keys, hash addresses, and how a resolved identity is shown.
 // No DOM here; tests/ui/present.test.mjs covers it under Node.
 

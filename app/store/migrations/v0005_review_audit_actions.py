@@ -1,6 +1,6 @@
 """0005 — dedicated audit actions for mapping and policy reviews; policy reviewer roles.
 
-Owner decisions:
+Owner decisions after P07:
 
 - D41: mapping reviews and policy reviews get their own audit actions
   (``MAPPING_REVIEW_RECORDED``, ``POLICY_REVIEW_RECORDED``) instead of ``APPROVAL_RECORDED``

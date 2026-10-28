@@ -1,7 +1,7 @@
-"""Owner decisions on the AD stages, at the operator API over a seeded synthetic world.
+"""Owner decisions after P10 (D121-D134), at the operator API over a seeded synthetic world.
 
 - D128-D130: one AD approval never authorizes both quarantine and deletion; deletion is a
-  separate governed stage. The AD stages model it (tests/test_lifecycle_ad_stages.py and
+  separate governed stage. P10B modelled that stage (tests/test_lifecycle_ad_stages.py and
   tests/test_p10b_ad_stages_api.py); here, the quarantine approval still never authorizes a
   deletion, and the legacy single AD stage can be neither approved, planned, nor recorded.
 - D131, D132: membership evidence must be complete and show no member for every
@@ -32,7 +32,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures" / "remediation"
 
 
 class DeletionStageTests(unittest.TestCase):
-    """D128-D130, as the AD stages enforce them (D147, D148)."""
+    """D128-D130, as P10B enforces them (D147, D148)."""
 
     def setUp(self):
         self.world = World()

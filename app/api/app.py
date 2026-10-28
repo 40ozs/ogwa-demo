@@ -250,7 +250,7 @@ class OgwaApi:
         return response, principal
 
     def _chain_refusal(self, route: Route, request: Request, principal: Principal, error: ApiError) -> None:
-        """Record a refused governed request in the audit chain (owner decision).
+        """Record a refused governed request in the audit chain (owner decision after P08).
 
         Reached only after authentication, CSRF, the route's static permission, and body
         validation passed, so the request was a valid attempt. If recording fails, the

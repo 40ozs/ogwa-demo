@@ -1,4 +1,4 @@
-"""The policy lane and the remediation lane, integrated.
+"""OGWA-DEMO-04: the policy lane (OGWA-DEMO-02) and the remediation lane (OGWA-DEMO-03), integrated.
 
 Proves, over the real seed, store, API, and drill:
 
@@ -333,7 +333,7 @@ class SeedChronologyTests(unittest.TestCase):
                             for p in problems))
 
     def test_the_naive_merge_order_is_refused_by_the_seed(self):
-        """Recording the drill's snapshot day before the later policy release (the naive merge) fails."""
+        """OGWA-DEMO-03's snapshot day before OGWA-DEMO-02's later release (the naive merge) fails."""
         from app.demo.null_meridian.dataset import build_dataset
         from app.demo.null_meridian.world import NullMeridianWorld
         from app.demo.synthetic_world import SeedClock

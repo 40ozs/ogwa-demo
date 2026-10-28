@@ -144,7 +144,7 @@ a { color: var(--link); text-underline-offset: 0.15em; }
 }
 .safety-strip { margin: 0.5rem 0; color: var(--muted); font-size: 0.92rem; }
 
-/* --- layout: a docked side navigation beside the page ------------------
+/* --- layout: a docked side navigation beside the page (OGWA-UI-IA-01) ------------------
    Expanded: icon and label. Collapsed: icon only, the label as a tooltip on hover and focus
    (and still the link's accessible name). Below 48rem it becomes a menu above the page. */
 
@@ -319,7 +319,7 @@ textarea { min-height: 5rem; resize: vertical; }
 .pager-status { color: var(--muted); font-variant-numeric: tabular-nums; }
 button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.6; }
 
-/* --- tabs, sortable headers, identities, access paths ------------------- */
+/* --- tabs, sortable headers, identities, access paths (OGWA-UI-IA-01) ------------------- */
 
 .tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 1rem 0 0; border-bottom: 2px solid var(--border); }
 .tabs [role="tab"] {
@@ -349,7 +349,7 @@ thead th[aria-sort] .sort-indicator { color: inherit; }
 td:has(.chain) { min-width: 16rem; }
 .chain > li + li::before { content: "›"; content: "›" / ""; color: var(--muted); margin-right: 0.4rem; }
 
-/* --- dashboard ------------------------------------------------------- */
+/* --- dashboard (OGWA-UI-IA-01) ------------------------------------------------------- */
 
 .kpis { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.75rem;
   grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
@@ -415,7 +415,7 @@ button, .nav-list a { transition: background-color 120ms ease, border-color 120m
   #primary-nav, .actions-panel, .skip-link { display: none; }
 }
 
-/* --- synthetic remediation drill ------------------------------------------
+/* --- synthetic remediation drill (OGWA-DEMO-03) ------------------------------------------
    State labels are sentences, so they wrap (a badge does not), and the page keeps no
    sideways scroll at phone width. Tone is also spelled out in the label's words. */
 
@@ -431,7 +431,7 @@ button, .nav-list a { transition: background-color 120ms ease, border-color 120m
 .drill-step-head { margin: 0 0 0.2rem; }
 .drill-outcome h3:focus-visible { outline: 3px solid var(--focus); }
 .drill-outcome .mono { overflow-wrap: anywhere; }
-/* The mode banner (DRY RUN / SYNTHETIC EXECUTION) sits above the outcome, heavier
+/* OGWA-DEMO-04: the mode banner (DRY RUN / SYNTHETIC EXECUTION) sits above the outcome, heavier
    than it, so the boundary between planning, synthetic execution, and a real change is unmissable. */
 .drill-mode-banner { border-width: 3px; }
 .drill-mode-banner .drill-mode { font-size: 1.25rem; letter-spacing: 0.04em; overflow-wrap: anywhere; }

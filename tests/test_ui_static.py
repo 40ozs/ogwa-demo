@@ -69,7 +69,7 @@ class NoMutationSurfaceTests(unittest.TestCase):
     def test_the_ui_writes_to_exactly_six_paths(self):
         api = ALL_JS["js/api.js"]
         block = re.search(r"WRITE_PATHS = Object\.freeze\(\[(.*?)\]\)", api, re.S).group(1)
-        # The synthetic remediation drill records nothing: it changes
+        # OGWA-DEMO-03 added the synthetic remediation drill, which records nothing: it changes
         # only an in-memory provider fixture the server discards (NON_PERSISTING in demo).
         self.assertEqual(re.findall(r'"([^"]+)"', block), [
             "/session", "/session/logout", "/candidates/{candidateId}/transitions",
@@ -102,7 +102,7 @@ class NoMutationSurfaceTests(unittest.TestCase):
         block = re.search(r"UI_TRANSITIONS = Object\.freeze\(\{(.*?)\}\)", assess, re.S).group(1)
         self.assertEqual(dict(re.findall(r"(\w+): \"(\w+)\"", block)), {
             "BLOCKED": "hold", "EXCLUDED": "exclude", "REJECTED": "reject", "REVALIDATION_REQUIRED": "revalidate",
-            # Revalidation after the post-quarantine hold, the deletion proposal, and the AD
+            # P10B: revalidation after the post-quarantine hold, the deletion proposal, and the AD
             # stages' dry-run records. The legacy RETIREMENT_DRY_RUN is never offered (D148).
             "DELETION_REVALIDATION_REQUIRED": "revalidate", "DELETION_PROPOSED": "proposeDeletion",
             "OKTA_UNASSIGN_DRY_RUN": "recordDryRun", "QUARANTINE_DRY_RUN": "recordDryRun",
@@ -113,7 +113,7 @@ class NoMutationSurfaceTests(unittest.TestCase):
         self.assertIn("Approval alone does not mutate production.", candidate)
 
     def test_the_approval_limit_is_never_written_into_the_browser(self):
-        # Owner decision: the UI derives the limit from the server's policy field.
+        # Owner decision after P09: the UI derives the limit from the server's policy field.
         for name, text in ALL_JS.items():
             with self.subTest(file=name):
                 self.assertIsNone(re.search(r"\b(168|336|7 \* 24|14 \* 24)\b", text))

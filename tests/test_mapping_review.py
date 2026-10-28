@@ -1,4 +1,4 @@
-"""Mapping review: the registry record, the operator service contract, and store persistence.
+"""P06 mapping review: the registry record, the operator service contract, and store persistence.
 
 Synthetic only (D22). The service is exercised against the synthetic forest; the store
 tests use in-memory SYNTHETIC stores.
@@ -487,7 +487,7 @@ class MigrationContentTests(unittest.TestCase):
             statements_for(v0003_mapping_registry, "postgresql")
 
 
-# --- owner decision D37: directory-source SID is not exact while unverified -------------------------
+# --- owner decision D37: directory-source SID is not exact before P11 -------------------------
 
 
 class DirectorySourceSidGateServiceTests(ServiceCase):

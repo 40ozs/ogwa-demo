@@ -26,11 +26,11 @@ from app.integrations.okta.models import (
 
 OKTA_ID_RE = re.compile(r"^[A-Za-z0-9]{1,64}$")
 
-# Decisions D23 and D30: Okta-derived AD objectGUID decoding stays unverified until a known
-# AD-backed Okta group is shown to decode to exactly the objectGUID that AD independently
-# reports for that group (this build has no live connection to show it). While False, the
-# decoded value never reaches domain evidence, so no identity mapping can rest on it.
-# Changing this is a reviewed source change; tests pin it.
+# Decisions D23 and D30: Okta-derived AD objectGUID decoding stays unverified until P11
+# proves that a known AD-backed Okta group decodes to exactly the objectGUID that AD
+# independently reports for that group. While False, the decoded value never reaches
+# domain evidence, so no identity mapping can rest on it. Changing this needs that P11
+# proof recorded in a run report; tests pin it.
 OBJECT_GUID_DECODING_VERIFIED = False
 _SID_RE = re.compile(r"^S-1-\d+(-\d+)+$")
 _MAX_TEXT = 1000

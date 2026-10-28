@@ -2,7 +2,7 @@
 // evidenceAssessment; app/classification/assessment.py). Pure functions, no DOM:
 // tests/ui/evidence.test.mjs.
 //
-// Rules this module keeps:
+// Rules this module keeps (OGWA-DEMO-01):
 // - It never judges evidence. Every state, conflict, and decision comes from the server;
 //   this module only words them and groups them by the six questions a reviewer asks.
 // - The evidence states stay distinct: "not collected", "source unavailable", "partial",

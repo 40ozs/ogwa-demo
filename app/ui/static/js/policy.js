@@ -1,4 +1,4 @@
-// Plain-language reading of which policy produced a decision: the policy reference a
+// Plain-language reading of which policy produced a decision (OGWA-DEMO-02): the policy reference a
 // decision recorded, and the server's decision explanation (GET /candidates/{id} →
 // decisionExplanation; app/classification/explanation.py). Pure functions, no DOM:
 // tests/ui/policy.test.mjs.

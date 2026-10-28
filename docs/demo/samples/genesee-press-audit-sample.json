@@ -1,0 +1,3323 @@
+{
+  "auditHeadAtEnd": {
+    "digest": "sha256:fa09c195b179e8141ba7e14be9121b1ad6e58055288b02fa9f9df27dcf2b510c",
+    "sequence": 1618,
+    "source": "GET /api/v1/audit-events?limit=1 -> items[0] (sequence, digest)"
+  },
+  "dataset": {
+    "asOf": "2026-10-01T12:00:00+00:00",
+    "auditHeadAfterSeed": {
+      "digest": "sha256:f11f0a99ec5aff7e40b9aeda7dc2a8e60df29bc273a745060b8d480ed1d4b39f",
+      "sequence": 1616,
+      "source": "GET /api/v1/audit-events?limit=1 -> items[0] (sequence, digest)"
+    },
+    "key": "genesee-press",
+    "seed": "genesee-press-v1"
+  },
+  "format": "ogwa-audit-sample/v1",
+  "generatedBy": "python -m app.demo.genesee_press.audit_sample --write docs/demo/samples/genesee-press-audit-sample.json",
+  "notes": [
+    "Synthetic and sanitized: every identity, group, application, policy, approval, provider state, and audit event below belongs to the fictional company Genesee Press, the core of the shared synthetic world (synthetic-enterprise), as OGWA's vendored projection states it. 'geneseepress.example' is a reserved domain name; OGWA never resolves or contacts it.",
+    "Generated, not hand-written: every object is a verbatim subtree of the API response named by its 'source', from a fresh in-memory demo seed with a deterministic synthetic clock and deterministic request ids. No session cookie, CSRF token, credential, or secret is recorded.",
+    "Persisted vs not: the policy versions, decisions, approvals, refusals, and the governed dry-run record are audit events in the store's hash chain (each with its sequence, digest, and previous digest). A synthetic execution drill records nothing: its result exists only in the API response, and the audit head is unchanged by it ('auditHead' before and after).",
+    "Synthetic execution means the change was submitted to an in-memory synthetic provider fixture, discarded after the response. No external provider or persistent environment was modified."
+  ],
+  "policy": {
+    "inForce": {
+      "approvalMaxValidHours": 168,
+      "label": "RECORDED POLICY VERSION 2",
+      "name": "GP-LIFECYCLE-004 v1.2.0",
+      "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+      "policyId": "GP-LIFECYCLE-004",
+      "recorded": true,
+      "release": {
+        "changes": [
+          "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+        ],
+        "effectiveFrom": "2026-09-28T09:00:00Z",
+        "name": "GP-LIFECYCLE-004 v1.2.0",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+        "supersedes": "1.1.0",
+        "synthetic": true,
+        "title": "Genesee Press group lifecycle: retire unused application groups",
+        "version": "1.2.0"
+      },
+      "source": "RECORDED_VERSION",
+      "version": "1.2.0",
+      "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+      "versionSequence": 1
+    },
+    "source": "GET /api/v1/policy -> inForce, versions",
+    "versions": [
+      {
+        "approvedBy": {
+          "id": "synthetic.security.reviewer",
+          "kind": "HUMAN"
+        },
+        "approverRole": "SECURITY_IAM",
+        "decidedAt": "2026-04-01T09:00:00+00:00",
+        "id": "pver_8da806043e33da92673301f35c8f0d72",
+        "policyDigest": "sha256:c2a5d863e8ec922abf069eeafda4e173b478991e0a19484e94aca010c55d7416",
+        "proposedBy": {
+          "id": "synthetic.policy.author",
+          "kind": "HUMAN"
+        },
+        "proposerRole": "IDENTITY_AUTOMATION",
+        "reason": "GP-LIFECYCLE-004 v1.1.0: First version of GP-LIFECYCLE-004 recorded in OGWA.",
+        "release": {
+          "changes": [
+            "First version of GP-LIFECYCLE-004 recorded in OGWA."
+          ],
+          "effectiveFrom": "2026-04-01T09:00:00Z",
+          "name": "GP-LIFECYCLE-004 v1.1.0",
+          "policyDigest": "sha256:c2a5d863e8ec922abf069eeafda4e173b478991e0a19484e94aca010c55d7416",
+          "policyId": "GP-LIFECYCLE-004",
+          "releaseDigest": "sha256:bbe1f52a1024e1c7d3b4f8042b17064cd0757dbf87bacbd48c0bd5f977e736ec",
+          "supersedes": null,
+          "synthetic": true,
+          "title": "Genesee Press group lifecycle: retire unused application groups",
+          "version": "1.1.0"
+        },
+        "sequence": 0,
+        "supersedes": null
+      },
+      {
+        "approvedBy": {
+          "id": "synthetic.security.reviewer",
+          "kind": "HUMAN"
+        },
+        "approverRole": "SECURITY_IAM",
+        "decidedAt": "2026-09-28T09:00:00+00:00",
+        "id": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "proposedBy": {
+          "id": "synthetic.policy.author",
+          "kind": "HUMAN"
+        },
+        "proposerRole": "IDENTITY_AUTOMATION",
+        "reason": "GP-LIFECYCLE-004 v1.2.0: Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week.",
+        "release": {
+          "changes": [
+            "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+          ],
+          "effectiveFrom": "2026-09-28T09:00:00Z",
+          "name": "GP-LIFECYCLE-004 v1.2.0",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+          "supersedes": "1.1.0",
+          "synthetic": true,
+          "title": "Genesee Press group lifecycle: retire unused application groups",
+          "version": "1.2.0"
+        },
+        "sequence": 1,
+        "supersedes": "pver_8da806043e33da92673301f35c8f0d72"
+      }
+    ]
+  },
+  "scenarioA": {
+    "approvalAttempt": {
+      "response": {
+        "error": {
+          "auditEventId": "aud_9015eee9ec87068c3d91a3b4df9fc4ee",
+          "code": "EVIDENCE_RULES_NOT_MET",
+          "message": "The lifecycle would refuse this step, so it cannot be authorized.",
+          "problems": [
+            "OKTA_GROUP ogrp_4d3cedd26f445d97a0f78cf30429ddbe: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+            "IDENTITY_MAPPING map_6432bb7a5abfc0693ec1f0f2be04d1a1: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+            "AD_GROUP adg_0152c81a252d50fa931d846a26183e12: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+            "OKTA_APPLICATION oapp_f1c473f452075e21b888882dd480ac43: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+            "ASSIGNMENT asgn_a3b7241fd9215638a23b02f4f6615a70: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+            "USAGE use_f94043c3206d6eb72880105bb9287304: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+            "mapping confidence UNVERIFIED_STABLE_ID is not exact; this step requires an exact mapping"
+          ],
+          "requestId": "req_71bb7c12602e861bca0f434b0baa3491"
+        }
+      },
+      "source": "POST /api/v1/candidates/cand_84e4cc230b2902408ed9cbdcc23475c3/approvals (as synthetic.securityiam.one)",
+      "status": 409
+    },
+    "approvalsAfter": {
+      "candidateId": "cand_84e4cc230b2902408ed9cbdcc23475c3",
+      "items": [],
+      "source": "GET /api/v1/candidates/cand_84e4cc230b2902408ed9cbdcc23475c3/approvals"
+    },
+    "auditChain": {
+      "events": [
+        {
+          "action": "CANDIDATE_CREATED",
+          "actor": {
+            "id": "collector/synthetic",
+            "kind": "SYSTEM"
+          },
+          "afterRef": "candidate:cand_84e4cc230b2902408ed9cbdcc23475c3@DISCOVERED#e0",
+          "beforeRef": null,
+          "correlationId": "req_ec7ca675e6546613556c7335b2adec8f",
+          "details": {
+            "assignment_ids": "asgn_a3b7241fd9215638a23b02f4f6615a70",
+            "okta_group_id": "ogrp_4d3cedd26f445d97a0f78cf30429ddbe",
+            "reason_codes": "ZERO_GROUP_USAGE_90D"
+          },
+          "digest": "sha256:2246960cd702fdad3c96e0abcd52f7eb6db1f3e8d6d17fa00411c1b16cb2ec9e",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_c71e530023329f218ec9b6bd6e1ed17a",
+          "occurredAt": "2026-10-01T14:18:22+00:00",
+          "previousDigest": "sha256:b9a5c38023102b332ed08249dc975a4ef3afd355632dc74e446d8ffdb2c62081",
+          "result": "SUCCEEDED",
+          "sequence": 1566,
+          "subjectId": "cand_84e4cc230b2902408ed9cbdcc23475c3"
+        },
+        {
+          "action": "TRANSITION_APPLIED",
+          "actor": {
+            "id": "collector/synthetic",
+            "kind": "SYSTEM"
+          },
+          "afterRef": "decision:dec_73a4e2ac8daa671284866b22867bed45",
+          "beforeRef": "candidate:cand_84e4cc230b2902408ed9cbdcc23475c3@DISCOVERED#e0",
+          "correlationId": "req_fb3b3bac205d72708be76c61d27ca73f",
+          "details": {
+            "decision_id": "dec_73a4e2ac8daa671284866b22867bed45",
+            "evidence_fingerprint": "sha256:b14c153bb771d09eb1929e6de8686c4b8f553ecf0da4438e8985679e26624ac3",
+            "from": "DISCOVERED",
+            "policy_digest": "sha256:c2a5d863e8ec922abf069eeafda4e173b478991e0a19484e94aca010c55d7416",
+            "policy_id": "GP-LIFECYCLE-004",
+            "policy_release": "1.1.0",
+            "policy_release_digest": "sha256:bbe1f52a1024e1c7d3b4f8042b17064cd0757dbf87bacbd48c0bd5f977e736ec",
+            "policy_sequence": "0",
+            "policy_source": "RECORDED_VERSION",
+            "policy_version_id": "pver_8da806043e33da92673301f35c8f0d72",
+            "reason": "synthetic scenario step",
+            "to": "CANDIDATE"
+          },
+          "digest": "sha256:01612b01fc0446317719b5d56e158ee5d6d58ae8ad9a12a2a43099e527450e7d",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_807ae1555d6290926464082e440718cf",
+          "occurredAt": "2026-10-01T14:18:25+00:00",
+          "previousDigest": "sha256:2246960cd702fdad3c96e0abcd52f7eb6db1f3e8d6d17fa00411c1b16cb2ec9e",
+          "result": "SUCCEEDED",
+          "sequence": 1567,
+          "subjectId": "cand_84e4cc230b2902408ed9cbdcc23475c3"
+        },
+        {
+          "action": "TRANSITION_APPLIED",
+          "actor": {
+            "id": "collector/synthetic",
+            "kind": "SYSTEM"
+          },
+          "afterRef": "decision:dec_cb287dab921c47dc128c79f36a793391",
+          "beforeRef": "candidate:cand_84e4cc230b2902408ed9cbdcc23475c3@CANDIDATE#e0",
+          "correlationId": "req_1805dac0f2ad01d1f173f2aa00c32b13",
+          "details": {
+            "decision_id": "dec_cb287dab921c47dc128c79f36a793391",
+            "evidence_fingerprint": "sha256:b14c153bb771d09eb1929e6de8686c4b8f553ecf0da4438e8985679e26624ac3",
+            "from": "CANDIDATE",
+            "policy_digest": "sha256:c2a5d863e8ec922abf069eeafda4e173b478991e0a19484e94aca010c55d7416",
+            "policy_id": "GP-LIFECYCLE-004",
+            "policy_release": "1.1.0",
+            "policy_release_digest": "sha256:bbe1f52a1024e1c7d3b4f8042b17064cd0757dbf87bacbd48c0bd5f977e736ec",
+            "policy_sequence": "0",
+            "policy_source": "RECORDED_VERSION",
+            "policy_version_id": "pver_8da806043e33da92673301f35c8f0d72",
+            "reason": "synthetic scenario step",
+            "to": "NEEDS_REVIEW"
+          },
+          "digest": "sha256:c3a19b04fcdebe14bdd97cefe904963f6340ee50de6644fb780603b47525e3e2",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_13c3081e08b2cb2267c6871a32d462fe",
+          "occurredAt": "2026-10-01T14:18:28+00:00",
+          "previousDigest": "sha256:01612b01fc0446317719b5d56e158ee5d6d58ae8ad9a12a2a43099e527450e7d",
+          "result": "SUCCEEDED",
+          "sequence": 1568,
+          "subjectId": "cand_84e4cc230b2902408ed9cbdcc23475c3"
+        },
+        {
+          "action": "GOVERNED_REQUEST_REFUSED",
+          "actor": {
+            "id": "synthetic.securityiam.one",
+            "kind": "HUMAN"
+          },
+          "afterRef": null,
+          "beforeRef": null,
+          "correlationId": "req_71bb7c12602e861bca0f434b0baa3491",
+          "details": {
+            "code": "EVIDENCE_RULES_NOT_MET",
+            "message": "The lifecycle would refuse this step, so it cannot be authorized.",
+            "problems": "OKTA_GROUP ogrp_4d3cedd26f445d97a0f78cf30429ddbe: evidence is stale for APPROVAL (older than 7 days, 0:00:00) | IDENTITY_MAPPING map_6432bb7a5abfc0693ec1f0f2be04d1a1: evidence is stale for APPROVAL (older than 7 days, 0:00:00) | AD_GROUP adg_0152c81a252d50fa931d846a26183e12: evidence is stale for APPROVAL (older than 7 days, 0:00:00) | OKTA_APPLICATION oapp_f1c473f452075e21b888882dd480ac43: evidence is stale for APPROVAL (older than 7 days, 0:00:00) | ASSIGNMENT asgn_a3b7241fd9215638a23b02f4f6615a70: evidence is stale for APPROVAL (older than 7 days, 0:00:00) | USAGE use_f94043c3206d6eb72880105bb9287304: evidence is stale for APPROVAL (older than 7 days, 0:00:00) | mapping confidence UNVERIFIED_STABLE_ID is not exact; this step requires an exact mapping",
+            "request.decision": "APPROVE",
+            "request.stage": "OKTA_UNASSIGN",
+            "route": "POST /api/v1/candidates/{candidateId}/approvals"
+          },
+          "digest": "sha256:c3d80108817ffdde12c30cbed62f3524468c544bfa130f16a76dc69a7c430839",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_9015eee9ec87068c3d91a3b4df9fc4ee",
+          "occurredAt": "2026-10-01T14:20:55+00:00",
+          "previousDigest": "sha256:f11f0a99ec5aff7e40b9aeda7dc2a8e60df29bc273a745060b8d480ed1d4b39f",
+          "result": "REFUSED",
+          "sequence": 1617,
+          "subjectId": "cand_84e4cc230b2902408ed9cbdcc23475c3"
+        }
+      ],
+      "otherEventCounts": {},
+      "source": "GET /api/v1/candidates/cand_84e4cc230b2902408ed9cbdcc23475c3/audit-events, oldest first, the decision chain's actions (CANDIDATE_CREATED, TRANSITION_APPLIED, TRANSITION_REFUSED, APPROVAL_RECORDED, REMEDIATION_DRY_RUN_RECORDED, GOVERNED_REQUEST_REFUSED); every event is part of the store's one hash chain"
+    },
+    "candidateId": "cand_84e4cc230b2902408ed9cbdcc23475c3",
+    "candidateKey": "GP-C10",
+    "decisionExplanation": {
+      "conditionCounts": {
+        "NOT_APPLICABLE": 0,
+        "NOT_PROVEN": 5,
+        "NOT_SATISFIED": 1,
+        "SATISFIED": 6
+      },
+      "conditions": [
+        {
+          "applicationId": null,
+          "detail": "imported through a configured AD integration",
+          "evidence": [
+            "okta-group"
+          ],
+          "key": "AD_SOURCED_GROUP",
+          "label": "Imported from the configured AD integration",
+          "rule": "The Okta group was imported through an AD integration this policy names (1 configured). None configured means no group qualifies (fail closed).",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "a directory-source objectSid resolves to one AD group, but the mechanism is not verified until P11 (D37, D56); not exact",
+          "evidence": [
+            "mapping",
+            "ad-group"
+          ],
+          "key": "EXACT_MAPPING",
+          "label": "AD counterpart established exactly",
+          "rule": "The Okta group maps to exactly one AD group by a stable identifier or a reviewed selection. Name-only and unverified-identifier matches never count (D37, D39).",
+          "status": "NOT_PROVEN"
+        },
+        {
+          "applicationId": null,
+          "detail": "Not judged: the classifier reads this only after EXACT_MAPPING is proven, and it is not. Nothing is assumed either way.",
+          "evidence": [
+            "ad-group"
+          ],
+          "key": "NOT_PROTECTED",
+          "label": "Not a protected group",
+          "rule": "No built-in, AD (adminCount, protection from accidental deletion), or configured protection applies (0 identifiers configured as protected).",
+          "status": "NOT_PROVEN"
+        },
+        {
+          "applicationId": null,
+          "detail": "Not judged: the classifier reads this only after EXACT_MAPPING is proven, and it is not. Nothing is assumed either way.",
+          "evidence": [
+            "ad-group",
+            "dependency:AD_GROUP_MEMBERS",
+            "dependency:AD_NESTED_MEMBERSHIP"
+          ],
+          "key": "AD_GROUP_EMPTY",
+          "label": "AD group has no members",
+          "rule": "Complete reads find no direct members, no primaryGroupID references, and no principals through member groups. An unknown member count is never zero.",
+          "status": "NOT_PROVEN"
+        },
+        {
+          "applicationId": null,
+          "detail": "Not judged: the classifier reads this only after EXACT_MAPPING is proven, and it is not. Nothing is assumed either way.",
+          "evidence": [
+            "dependency:AD_NESTED_MEMBERSHIP"
+          ],
+          "key": "AD_NO_PARENT_GROUPS",
+          "label": "Not nested in another AD group",
+          "rule": "A complete nesting read finds the AD group in no other group.",
+          "status": "NOT_PROVEN"
+        },
+        {
+          "applicationId": null,
+          "detail": "a complete check found no other application assignment",
+          "evidence": [
+            "dependency:OKTA_OTHER_APP_ASSIGNMENT"
+          ],
+          "key": "SINGLE_OKTA_ASSIGNMENT",
+          "label": "No other application assignment",
+          "rule": "A complete Okta check finds the group assigned to no other application.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "coverage PARTIAL; not covered: AD_NESTED_MEMBERSHIP, AD_ACL_REFERENCE, GPO_REFERENCE, AAP_REFERENCE, APPLICATION_CONFIGURATION. AD deletion stays prohibited",
+          "evidence": [
+            "dependency:AAP_REFERENCE",
+            "dependency:AD_ACL_REFERENCE",
+            "dependency:AD_GROUP_MEMBERS",
+            "dependency:AD_NESTED_MEMBERSHIP",
+            "dependency:APPLICATION_CONFIGURATION",
+            "dependency:GPO_REFERENCE",
+            "dependency:OKTA_OTHER_APP_ASSIGNMENT",
+            "dependency:OKTA_POLICY_REFERENCE"
+          ],
+          "key": "DEPENDENCY_COVERAGE_COMPLETE",
+          "label": "Every required dependency checked, none blocking",
+          "rule": "Complete checks by a counting source for all 8 required kinds (AAP_REFERENCE, AD_ACL_REFERENCE, AD_GROUP_MEMBERS, AD_NESTED_MEMBERSHIP, APPLICATION_CONFIGURATION, GPO_REFERENCE, OKTA_OTHER_APP_ASSIGNMENT, OKTA_POLICY_REFERENCE), and no blocking finding. Anything less keeps AD deletion prohibited.",
+          "status": "NOT_PROVEN"
+        },
+        {
+          "applicationId": null,
+          "detail": "every record is complete and observed within 30 days",
+          "evidence": [
+            "okta-group",
+            "application:oapp_f1c473f452075e21b888882dd480ac43",
+            "assignment:oapp_f1c473f452075e21b888882dd480ac43",
+            "usage:oapp_f1c473f452075e21b888882dd480ac43",
+            "mapping",
+            "ad-group"
+          ],
+          "key": "EVIDENCE_CURRENT",
+          "label": "Core records complete and current",
+          "rule": "The Okta group, application, assignment, usage, identity mapping, and AD group records are complete reads observed within the review window (720 h) and not dated in the future. Dependency checks are judged by coverage, above.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": "oapp_f1c473f452075e21b888882dd480ac43",
+          "detail": "the group is assigned to the application",
+          "evidence": [
+            "assignment:oapp_f1c473f452075e21b888882dd480ac43"
+          ],
+          "key": "ASSIGNMENT_PRESENT",
+          "label": "Assigned to the application (Knowledge Base)",
+          "rule": "The group's assignment to the application is observed: it is what the proposal removes.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": "oapp_f1c473f452075e21b888882dd480ac43",
+          "detail": "0 sign-in(s), retirement threshold 0",
+          "evidence": [
+            "usage:oapp_f1c473f452075e21b888882dd480ac43"
+          ],
+          "key": "USAGE_WITHIN_RETIREMENT_THRESHOLD",
+          "label": "No sign-in through the group (Knowledge Base)",
+          "rule": "At most 0 sign-in(s) in the usage window.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": "oapp_f1c473f452075e21b888882dd480ac43",
+          "detail": "90-day window covers the 90-day retirement window",
+          "evidence": [
+            "usage:oapp_f1c473f452075e21b888882dd480ac43"
+          ],
+          "key": "USAGE_WINDOW_COVERS_RETIREMENT",
+          "label": "Usage window long enough (Knowledge Base)",
+          "rule": "The usage window covers at least 90 days. A shorter complete window (at least 30 days) is a review signal only (D27).",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "6 record(s) are stale for APPROVAL (older than 7 days): re-collect them before this step; mapping confidence UNVERIFIED_STABLE_ID is not exact; this step requires an exact mapping",
+          "evidence": [
+            "okta-group",
+            "assignment:oapp_f1c473f452075e21b888882dd480ac43",
+            "usage:oapp_f1c473f452075e21b888882dd480ac43",
+            "mapping",
+            "ad-group"
+          ],
+          "key": "NEXT_STEP_RULES",
+          "label": "Okta unassignment approval accepted by the lifecycle rules",
+          "rule": "Every record the step reads observed within the approval window (168 h), the mapping exact, the approval given by a different named person and valid at most 168 h; the lifecycle guard decides.",
+          "status": "NOT_SATISFIED"
+        }
+      ],
+      "decision": {
+        "code": "CONFLICTING_EVIDENCE",
+        "label": "No action: sources disagree"
+      },
+      "isApproval": false,
+      "manualReview": {
+        "because": [
+          {
+            "decision": "CONFLICTING_EVIDENCE",
+            "detail": "The AD group object lists 2 member value(s) (read 2026-09-24 14:00 UTC), but the membership read found none (read 2026-09-24 16:00 UTC). Either membership changed between the reads or one read is wrong; OGWA does not choose a side.",
+            "itemKeys": [
+              "ad-group",
+              "dependency:AD_GROUP_MEMBERS"
+            ],
+            "label": "No action: sources disagree"
+          },
+          {
+            "decision": "AMBIGUOUS_IDENTITY",
+            "detail": "Probable: Okta's directory objectSid resolves to one AD group, but that mechanism is not verified (D37, D56). It corroborates; it cannot establish the mapping.",
+            "itemKeys": [
+              "mapping"
+            ],
+            "label": "No action: identity not established"
+          },
+          {
+            "decision": "BLOCKED_ON_REQUIRED_SOURCE",
+            "detail": "Could not be read: AD nesting (parents and member groups)",
+            "itemKeys": [
+              "dependency:AD_NESTED_MEMBERSHIP"
+            ],
+            "label": "No action: a required source could not be read"
+          },
+          {
+            "decision": "INSUFFICIENT_EVIDENCE",
+            "detail": "AAP references: not collected; AD ACL references: partial; Application-side configuration: not collected; GPO references: not collected",
+            "itemKeys": [
+              "dependency:AAP_REFERENCE",
+              "dependency:AD_ACL_REFERENCE",
+              "dependency:APPLICATION_CONFIGURATION",
+              "dependency:GPO_REFERENCE"
+            ],
+            "label": "No action: insufficient evidence"
+          }
+        ],
+        "forcedByEvidence": true
+      },
+      "policy": {
+        "name": "GP-LIFECYCLE-004 v1.2.0",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "recorded": true,
+        "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+        "source": "RECORDED_VERSION",
+        "version": "1.2.0",
+        "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "versionSequence": 1
+      },
+      "source": "GET /api/v1/candidates/cand_84e4cc230b2902408ed9cbdcc23475c3 -> decisionExplanation",
+      "whatWouldChange": [
+        "Resolve the conflict: The AD group object lists 2 member value(s) (read 2026-09-24 14:00 UTC), but the membership read found none (read 2026-09-24 16:00 UTC). Either membership changed between the reads or one read is wrong; OGWA does not choose a side. Re-read both sources.",
+        "Establish the AD counterpart exactly: an operator selects the AD object by stable identifier and a different operator approves it (D38).",
+        "Collect AAP references: no observation is recorded.",
+        "Complete AD ACL references: the last read was partial and proves nothing absent.",
+        "Re-run AD nesting (parents and member groups): the last read failed; until a complete read is recorded nothing is assumed.",
+        "Collect application-side configuration: no observation is recorded.",
+        "Collect GPO references: no observation is recorded.",
+        "Lifecycle (Okta unassignment): 6 record(s) are stale for APPROVAL (older than 7 days): re-collect them before this step",
+        "Lifecycle (Okta unassignment): mapping confidence UNVERIFIED_STABLE_ID is not exact; this step requires an exact mapping"
+      ]
+    },
+    "drillAttemptWithAnotherCandidatesApproval": {
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "No such approval for this candidate.",
+          "requestId": "req_8d0308afd94424c659e9b42c05a51854"
+        }
+      },
+      "source": "POST /api/v1/candidates/cand_84e4cc230b2902408ed9cbdcc23475c3/remediation-drills (as synthetic.executor.one, citing GP-C11's approval)",
+      "status": 404
+    },
+    "evidenceAssessment": {
+      "assessedAt": "2026-10-01T14:20:53+00:00",
+      "candidateId": "cand_84e4cc230b2902408ed9cbdcc23475c3",
+      "classification": "MAPPING_REQUIRED",
+      "conflicts": [
+        {
+          "code": "AD_MEMBERSHIP_DISAGREES",
+          "itemKeys": [
+            "ad-group",
+            "dependency:AD_GROUP_MEMBERS"
+          ],
+          "summary": "The AD group object lists 2 member value(s) (read 2026-09-24 14:00 UTC), but the membership read found none (read 2026-09-24 16:00 UTC). Either membership changed between the reads or one read is wrong; OGWA does not choose a side.",
+          "title": "AD membership reads disagree"
+        }
+      ],
+      "constraints": [
+        {
+          "decision": "CONFLICTING_EVIDENCE",
+          "detail": "The AD group object lists 2 member value(s) (read 2026-09-24 14:00 UTC), but the membership read found none (read 2026-09-24 16:00 UTC). Either membership changed between the reads or one read is wrong; OGWA does not choose a side.",
+          "itemKeys": [
+            "ad-group",
+            "dependency:AD_GROUP_MEMBERS"
+          ],
+          "label": "No action: sources disagree"
+        },
+        {
+          "decision": "AMBIGUOUS_IDENTITY",
+          "detail": "Probable: Okta's directory objectSid resolves to one AD group, but that mechanism is not verified (D37, D56). It corroborates; it cannot establish the mapping.",
+          "itemKeys": [
+            "mapping"
+          ],
+          "label": "No action: identity not established"
+        },
+        {
+          "decision": "BLOCKED_ON_REQUIRED_SOURCE",
+          "detail": "Could not be read: AD nesting (parents and member groups)",
+          "itemKeys": [
+            "dependency:AD_NESTED_MEMBERSHIP"
+          ],
+          "label": "No action: a required source could not be read"
+        },
+        {
+          "decision": "INSUFFICIENT_EVIDENCE",
+          "detail": "AAP references: not collected; AD ACL references: partial; Application-side configuration: not collected; GPO references: not collected",
+          "itemKeys": [
+            "dependency:AAP_REFERENCE",
+            "dependency:AD_ACL_REFERENCE",
+            "dependency:APPLICATION_CONFIGURATION",
+            "dependency:GPO_REFERENCE"
+          ],
+          "label": "No action: insufficient evidence"
+        },
+        {
+          "decision": "LIFECYCLE_RULES_NOT_MET",
+          "detail": "Okta unassignment: 6 record(s) are stale for APPROVAL (older than 7 days): re-collect them before this step; mapping confidence UNVERIFIED_STABLE_ID is not exact; this step requires an exact mapping",
+          "itemKeys": [],
+          "label": "No action: the lifecycle would refuse the next step"
+        }
+      ],
+      "decision": {
+        "autoRemediationEligible": false,
+        "code": "CONFLICTING_EVIDENCE",
+        "eligibleForHumanApproval": false,
+        "label": "No action: sources disagree"
+      },
+      "evidenceFingerprint": "sha256:b14c153bb771d09eb1929e6de8686c4b8f553ecf0da4438e8985679e26624ac3",
+      "identity": {
+        "candidateCount": 0,
+        "confidence": "UNVERIFIED_STABLE_ID",
+        "decisionGrade": false,
+        "detail": "Probable: Okta's directory objectSid resolves to one AD group, but that mechanism is not verified (D37, D56). It corroborates; it cannot establish the mapping.",
+        "matchedAttributes": [
+          "objectSid",
+          "samAccountName"
+        ],
+        "state": "PROBABLE"
+      },
+      "isApproval": false,
+      "issue": {
+        "adGroup": "KB-Admins",
+        "applications": [
+          "Knowledge Base"
+        ],
+        "candidateReasons": [
+          "ZERO_GROUP_USAGE_90D"
+        ],
+        "oktaGroup": "KB-Admins",
+        "steps": [
+          "Okta unassignment",
+          "AD quarantine",
+          "AD deletion"
+        ],
+        "summary": "Remove the Okta group KB-Admins's assignment to Knowledge Base; afterwards, quarantine and then delete the AD group KB-Admins, each step separately approved by a different person."
+      },
+      "items": [
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "okta-group",
+          "kind": "okta-group",
+          "label": "Okta group",
+          "neededFor": [
+            "OKTA_UNASSIGN",
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "KB-Admins (APP_GROUP, imported from directory 0oaSYNTHGPADDIR)",
+          "observedAt": "2026-09-24T12:00:00+00:00",
+          "reasons": [
+            "AD_SOURCED_GROUP"
+          ],
+          "recordId": "ogrp_4d3cedd26f445d97a0f78cf30429ddbe",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "CONFIRMED",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "application:oapp_f1c473f452075e21b888882dd480ac43",
+          "kind": "application",
+          "label": "Okta application: Knowledge Base",
+          "neededFor": [],
+          "observation": "ACTIVE in Okta",
+          "observedAt": "2026-09-24T12:00:00+00:00",
+          "reasons": [],
+          "recordId": "oapp_f1c473f452075e21b888882dd480ac43",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "UNKNOWN",
+          "state": "CONFIRMED",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "assignment:oapp_f1c473f452075e21b888882dd480ac43",
+          "kind": "assignment",
+          "label": "Okta assignment to the application",
+          "neededFor": [
+            "OKTA_UNASSIGN",
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "Assigned (the access the proposal would remove exists)",
+          "observedAt": "2026-09-24T12:00:00+00:00",
+          "reasons": [
+            "ASSIGNMENT_PRESENT"
+          ],
+          "recordId": "asgn_a3b7241fd9215638a23b02f4f6615a70",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "CONFIRMED",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "usage:oapp_f1c473f452075e21b888882dd480ac43",
+          "kind": "usage",
+          "label": "Sign-in usage (group-attributed)",
+          "neededFor": [
+            "OKTA_UNASSIGN"
+          ],
+          "observation": "0 sign-in(s) by 0 user(s) in 90 days (group-attributed)",
+          "observedAt": "2026-09-24T16:00:00+00:00",
+          "reasons": [
+            "NO_OBSERVED_USAGE",
+            "USAGE_WITHIN_RETIREMENT_THRESHOLD",
+            "USAGE_WINDOW_COVERS_RETIREMENT"
+          ],
+          "recordId": "use_3306e9e08dffd1a223756158223ad24a",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "AMBIGUOUS",
+          "conflicts": [],
+          "decisionGrade": false,
+          "freshness": "CURRENT",
+          "key": "mapping",
+          "kind": "mapping",
+          "label": "Identity mapping (Okta group to AD group)",
+          "neededFor": [
+            "OKTA_UNASSIGN",
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "Probable: Okta's directory objectSid resolves to one AD group, but that mechanism is not verified (D37, D56). It corroborates; it cannot establish the mapping.",
+          "observedAt": "2026-09-24T12:00:00+00:00",
+          "reasons": [
+            "MAPPING_UNVERIFIED_IDENTIFIER"
+          ],
+          "recordId": "map_6432bb7a5abfc0693ec1f0f2be04d1a1",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "UNKNOWN",
+          "state": "AMBIGUOUS",
+          "system": "OGWA correlation"
+        },
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [
+            "AD_MEMBERSHIP_DISAGREES"
+          ],
+          "decisionGrade": false,
+          "freshness": "CURRENT",
+          "key": "ad-group",
+          "kind": "ad-group",
+          "label": "AD group in evidence (not proven to be the counterpart)",
+          "neededFor": [
+            "OKTA_UNASSIGN",
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "KB-Admins exists; 2 member value(s); no protection marker",
+          "observedAt": "2026-09-24T14:00:00+00:00",
+          "reasons": [],
+          "recordId": "adg_0152c81a252d50fa931d846a26183e12",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "DISAGREES",
+          "state": "CONFLICTING",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "NOT_COLLECTED",
+          "conflicts": [],
+          "decisionGrade": false,
+          "freshness": "NOT_ASSESSED",
+          "key": "dependency:AAP_REFERENCE",
+          "kind": "dependency",
+          "label": "AAP references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "Never checked: unchecked is not clear",
+          "observedAt": null,
+          "reasons": [],
+          "recordId": null,
+          "required": true,
+          "resultStatus": null,
+          "source": null,
+          "stance": "UNKNOWN",
+          "state": "NOT_COLLECTED",
+          "system": "Active Directory"
+        },
+        {
+          "baseState": "PARTIAL",
+          "conflicts": [],
+          "decisionGrade": false,
+          "freshness": "NOT_ASSESSED",
+          "key": "dependency:AD_ACL_REFERENCE",
+          "kind": "dependency",
+          "label": "AD ACL references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding in an incomplete (PARTIAL) read: proves nothing absent",
+          "observedAt": "2026-09-24T16:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_47f4980730f697c82dc31ff8c0ceecf7",
+          "required": true,
+          "resultStatus": "PARTIAL",
+          "source": "SYNTHETIC",
+          "stance": "UNKNOWN",
+          "state": "PARTIAL",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [
+            "AD_MEMBERSHIP_DISAGREES"
+          ],
+          "decisionGrade": false,
+          "freshness": "CURRENT",
+          "key": "dependency:AD_GROUP_MEMBERS",
+          "kind": "dependency",
+          "label": "AD members and primaryGroupID references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-09-24T16:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_f7cb167981746f45a2916d5c49761bea",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "CONFLICTING",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "SOURCE_UNAVAILABLE",
+          "conflicts": [],
+          "decisionGrade": false,
+          "freshness": "NOT_ASSESSED",
+          "key": "dependency:AD_NESTED_MEMBERSHIP",
+          "kind": "dependency",
+          "label": "AD nesting (parents and member groups)",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding in an incomplete (FAILED) read: proves nothing absent",
+          "observedAt": "2026-09-24T16:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_d0ee678b2716c872050318e286a3aed2",
+          "required": true,
+          "resultStatus": "FAILED",
+          "source": "SYNTHETIC",
+          "stance": "UNKNOWN",
+          "state": "SOURCE_UNAVAILABLE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "NOT_COLLECTED",
+          "conflicts": [],
+          "decisionGrade": false,
+          "freshness": "NOT_ASSESSED",
+          "key": "dependency:APPLICATION_CONFIGURATION",
+          "kind": "dependency",
+          "label": "Application-side configuration",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "Never checked: unchecked is not clear",
+          "observedAt": null,
+          "reasons": [],
+          "recordId": null,
+          "required": true,
+          "resultStatus": null,
+          "source": null,
+          "stance": "UNKNOWN",
+          "state": "NOT_COLLECTED",
+          "system": "Active Directory"
+        },
+        {
+          "baseState": "NOT_COLLECTED",
+          "conflicts": [],
+          "decisionGrade": false,
+          "freshness": "NOT_ASSESSED",
+          "key": "dependency:GPO_REFERENCE",
+          "kind": "dependency",
+          "label": "GPO references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "Never checked: unchecked is not clear",
+          "observedAt": null,
+          "reasons": [],
+          "recordId": null,
+          "required": true,
+          "resultStatus": null,
+          "source": null,
+          "stance": "UNKNOWN",
+          "state": "NOT_COLLECTED",
+          "system": "Active Directory"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:OKTA_OTHER_APP_ASSIGNMENT",
+          "kind": "dependency",
+          "label": "Other Okta application assignments",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-09-24T16:00:00+00:00",
+          "reasons": [
+            "SINGLE_OKTA_ASSIGNMENT"
+          ],
+          "recordId": "dep_81fd76d8c48fdfcb1874120a4b4a6921",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:OKTA_POLICY_REFERENCE",
+          "kind": "dependency",
+          "label": "Okta policy and group-rule references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-09-24T16:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_035c40e6c50bf4ee0bc0199e0d58f4e8",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        }
+      ],
+      "lifecycleState": "NEEDS_REVIEW",
+      "needed": [
+        "Resolve the conflict: The AD group object lists 2 member value(s) (read 2026-09-24 14:00 UTC), but the membership read found none (read 2026-09-24 16:00 UTC). Either membership changed between the reads or one read is wrong; OGWA does not choose a side. Re-read both sources.",
+        "Establish the AD counterpart exactly: an operator selects the AD object by stable identifier and a different operator approves it (D38).",
+        "Collect AAP references: no observation is recorded.",
+        "Complete AD ACL references: the last read was partial and proves nothing absent.",
+        "Re-run AD nesting (parents and member groups): the last read failed; until a complete read is recorded nothing is assumed.",
+        "Collect application-side configuration: no observation is recorded.",
+        "Collect GPO references: no observation is recorded.",
+        "Lifecycle (Okta unassignment): 6 record(s) are stale for APPROVAL (older than 7 days): re-collect them before this step",
+        "Lifecycle (Okta unassignment): mapping confidence UNVERIFIED_STABLE_ID is not exact; this step requires an exact mapping"
+      ],
+      "notes": [
+        "An assessment is evidence for review, never an approval. OGWA plans dry runs only (D8); no automated remediation exists, so nothing here is eligible for automatic action."
+      ],
+      "pendingStep": {
+        "accepts": false,
+        "evaluated": true,
+        "label": "Okta unassignment",
+        "open": true,
+        "problems": [
+          "OKTA_GROUP ogrp_4d3cedd26f445d97a0f78cf30429ddbe: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+          "IDENTITY_MAPPING map_6432bb7a5abfc0693ec1f0f2be04d1a1: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+          "AD_GROUP adg_0152c81a252d50fa931d846a26183e12: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+          "OKTA_APPLICATION oapp_f1c473f452075e21b888882dd480ac43: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+          "ASSIGNMENT asgn_a3b7241fd9215638a23b02f4f6615a70: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+          "USAGE use_f94043c3206d6eb72880105bb9287304: evidence is stale for APPROVAL (older than 7 days, 0:00:00)",
+          "mapping confidence UNVERIFIED_STABLE_ID is not exact; this step requires an exact mapping"
+        ],
+        "stage": "OKTA_UNASSIGN"
+      },
+      "policy": {
+        "name": "GP-LIFECYCLE-004 v1.2.0",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "recorded": true,
+        "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+        "source": "RECORDED_VERSION",
+        "version": "1.2.0",
+        "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "versionSequence": 1
+      },
+      "source": "GET /api/v1/candidates/cand_84e4cc230b2902408ed9cbdcc23475c3 -> evidenceAssessment",
+      "stateCounts": {
+        "AMBIGUOUS": 1,
+        "CONFIRMED": 3,
+        "CONFLICTING": 2,
+        "NOT_COLLECTED": 3,
+        "NOT_COUNTED_SOURCE": 0,
+        "PARTIAL": 1,
+        "REPORTS_NONE": 3,
+        "SOURCE_UNAVAILABLE": 1
+      }
+    }
+  },
+  "scenarioB": {
+    "approvals": {
+      "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+      "items": [
+        {
+          "candidateEpoch": 0,
+          "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+          "decidedAt": "2026-10-01T07:00:00+00:00",
+          "decision": "APPROVE",
+          "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+          "expired": false,
+          "expiresAt": "2026-10-08T07:00:00+00:00",
+          "id": "apr_056064d644040cc5e1c63e7208301432",
+          "operator": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "source": "RECORDED_VERSION",
+            "version": "1.2.0",
+            "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "versionSequence": 1
+          },
+          "reason": "synthetic review of GP-C11-okta complete",
+          "stage": "OKTA_UNASSIGN"
+        }
+      ],
+      "source": "GET /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b/approvals"
+    },
+    "auditChain": {
+      "events": [
+        {
+          "action": "CANDIDATE_CREATED",
+          "actor": {
+            "id": "collector/synthetic",
+            "kind": "SYSTEM"
+          },
+          "afterRef": "candidate:cand_797cf35a5dd5a884f18293d1cc5cd11b@DISCOVERED#e0",
+          "beforeRef": null,
+          "correlationId": "req_4d3636b3f619294521e4012e507009ea",
+          "details": {
+            "assignment_ids": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e",
+            "okta_group_id": "ogrp_1d6e75b5a3485d23a591d2add395dd63",
+            "reason_codes": "EMPTY_GROUP_ASSIGNED,ZERO_GROUP_USAGE_90D"
+          },
+          "digest": "sha256:44cdfab428d113a227dbdb8e6f09b8e392cad3e3737ad8d9e20c9243553b06b4",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_322fc87efa1c502aec0d90ada894552e",
+          "occurredAt": "2026-10-01T14:18:57+00:00",
+          "previousDigest": "sha256:f52593d2a24afadf9ce6388eed1576bc32d736918ac9e16be13fca947c837c72",
+          "result": "SUCCEEDED",
+          "sequence": 1578,
+          "subjectId": "cand_797cf35a5dd5a884f18293d1cc5cd11b"
+        },
+        {
+          "action": "TRANSITION_APPLIED",
+          "actor": {
+            "id": "collector/synthetic",
+            "kind": "SYSTEM"
+          },
+          "afterRef": "decision:dec_e525c658d71c1ca6be1ee5803dcfd75f",
+          "beforeRef": "candidate:cand_797cf35a5dd5a884f18293d1cc5cd11b@DISCOVERED#e0",
+          "correlationId": "req_7bb0098bd6780214b8f2c4f97fc2dd09",
+          "details": {
+            "decision_id": "dec_e525c658d71c1ca6be1ee5803dcfd75f",
+            "evidence_fingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+            "from": "DISCOVERED",
+            "policy_digest": "sha256:c2a5d863e8ec922abf069eeafda4e173b478991e0a19484e94aca010c55d7416",
+            "policy_id": "GP-LIFECYCLE-004",
+            "policy_release": "1.1.0",
+            "policy_release_digest": "sha256:bbe1f52a1024e1c7d3b4f8042b17064cd0757dbf87bacbd48c0bd5f977e736ec",
+            "policy_sequence": "0",
+            "policy_source": "RECORDED_VERSION",
+            "policy_version_id": "pver_8da806043e33da92673301f35c8f0d72",
+            "reason": "synthetic scenario step",
+            "to": "CANDIDATE"
+          },
+          "digest": "sha256:17b368e2db0b4e7570d824ee03fbae63e1c9342cecca343c4d23b1282478aef3",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_e0154c73f2cbf809c823aa867e60b7df",
+          "occurredAt": "2026-10-01T14:19:00+00:00",
+          "previousDigest": "sha256:44cdfab428d113a227dbdb8e6f09b8e392cad3e3737ad8d9e20c9243553b06b4",
+          "result": "SUCCEEDED",
+          "sequence": 1579,
+          "subjectId": "cand_797cf35a5dd5a884f18293d1cc5cd11b"
+        },
+        {
+          "action": "TRANSITION_APPLIED",
+          "actor": {
+            "id": "collector/synthetic",
+            "kind": "SYSTEM"
+          },
+          "afterRef": "decision:dec_b734934dbbeb0d294e0aed38aef5dedc",
+          "beforeRef": "candidate:cand_797cf35a5dd5a884f18293d1cc5cd11b@CANDIDATE#e0",
+          "correlationId": "req_c1888f75df65df946acaa74b6e2a006f",
+          "details": {
+            "decision_id": "dec_b734934dbbeb0d294e0aed38aef5dedc",
+            "evidence_fingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+            "from": "CANDIDATE",
+            "policy_digest": "sha256:c2a5d863e8ec922abf069eeafda4e173b478991e0a19484e94aca010c55d7416",
+            "policy_id": "GP-LIFECYCLE-004",
+            "policy_release": "1.1.0",
+            "policy_release_digest": "sha256:bbe1f52a1024e1c7d3b4f8042b17064cd0757dbf87bacbd48c0bd5f977e736ec",
+            "policy_sequence": "0",
+            "policy_source": "RECORDED_VERSION",
+            "policy_version_id": "pver_8da806043e33da92673301f35c8f0d72",
+            "reason": "synthetic scenario step",
+            "to": "NEEDS_REVIEW"
+          },
+          "digest": "sha256:d28d66605d6c31dfe60575372ba8f30babb765aefd7b281a7ae573f6d228b846",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_40b4c0d4aec2c89eee0bf96025bc20e2",
+          "occurredAt": "2026-10-01T14:19:03+00:00",
+          "previousDigest": "sha256:17b368e2db0b4e7570d824ee03fbae63e1c9342cecca343c4d23b1282478aef3",
+          "result": "SUCCEEDED",
+          "sequence": 1580,
+          "subjectId": "cand_797cf35a5dd5a884f18293d1cc5cd11b"
+        },
+        {
+          "action": "APPROVAL_RECORDED",
+          "actor": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "afterRef": "approval:apr_056064d644040cc5e1c63e7208301432",
+          "beforeRef": null,
+          "correlationId": "req_c41f9af998f29aad564a8152b30ec2f2",
+          "details": {
+            "approval_id": "apr_056064d644040cc5e1c63e7208301432",
+            "candidate_epoch": "0",
+            "decision": "APPROVE",
+            "evidence_fingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+            "expires_at": "2026-10-08T07:00:00.000000Z",
+            "policy_digest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policy_id": "GP-LIFECYCLE-004",
+            "policy_release": "1.2.0",
+            "policy_release_digest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "policy_sequence": "1",
+            "policy_source": "RECORDED_VERSION",
+            "policy_version_id": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "stage": "OKTA_UNASSIGN"
+          },
+          "digest": "sha256:981aa41c8a4c87a0482b34ed7775d11c89fd11cb71da7e7084661fd0c83baaa6",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_b04ab408b4e028964479cf6a55127386",
+          "occurredAt": "2026-10-01T14:20:09+00:00",
+          "previousDigest": "sha256:a5c4a45decb7d54951fc52fef29f883f5093e4a5be1a13b126ea9e59be1e47ff",
+          "result": "SUCCEEDED",
+          "sequence": 1602,
+          "subjectId": "cand_797cf35a5dd5a884f18293d1cc5cd11b"
+        },
+        {
+          "action": "TRANSITION_APPLIED",
+          "actor": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "afterRef": "decision:dec_25771dcd20d0f4e213b236114c8bb3a2",
+          "beforeRef": "candidate:cand_797cf35a5dd5a884f18293d1cc5cd11b@NEEDS_REVIEW#e0",
+          "correlationId": "req_c6d7c0fced921c420ed19438e2f4f3fe",
+          "details": {
+            "decision_id": "dec_25771dcd20d0f4e213b236114c8bb3a2",
+            "evidence_fingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+            "from": "NEEDS_REVIEW",
+            "policy_digest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policy_id": "GP-LIFECYCLE-004",
+            "policy_release": "1.2.0",
+            "policy_release_digest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "policy_sequence": "1",
+            "policy_source": "RECORDED_VERSION",
+            "policy_version_id": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "reason": "synthetic reviewer approved the Okta unassignment on re-collected evidence",
+            "to": "APPROVED"
+          },
+          "digest": "sha256:581019970ce519fb237c9726b2cfeda4e5d2d5a566b53aba0d4f09c0e69bfb87",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_7bbd96c3c3c812a70f2dc88bbea89e56",
+          "occurredAt": "2026-10-01T14:20:12+00:00",
+          "previousDigest": "sha256:981aa41c8a4c87a0482b34ed7775d11c89fd11cb71da7e7084661fd0c83baaa6",
+          "result": "SUCCEEDED",
+          "sequence": 1603,
+          "subjectId": "cand_797cf35a5dd5a884f18293d1cc5cd11b"
+        },
+        {
+          "action": "REMEDIATION_DRY_RUN_RECORDED",
+          "actor": {
+            "id": "synthetic.executor.one",
+            "kind": "HUMAN"
+          },
+          "afterRef": "remediation:OKTA_GROUP_UNASSIGN:SIMULATED",
+          "beforeRef": "approval:apr_056064d644040cc5e1c63e7208301432",
+          "correlationId": "req_1b3aa5d2f7193f12ffad23343a3239d4",
+          "details": {
+            "adapter": "SYNTHETIC",
+            "approval_id": "apr_056064d644040cc5e1c63e7208301432",
+            "evidence_fingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+            "executed": "false",
+            "gates_passed": "10/10",
+            "operation": "OKTA_GROUP_UNASSIGN",
+            "outcome": "SIMULATED",
+            "planned_changes": "Remove the assignment of Okta group 00gSYNTHGP0113 (OKTA-AdAnalytics-Users) to application 0oaSYNTHGP064 (Ad Analytics).",
+            "policy_digest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policy_id": "GP-LIFECYCLE-004",
+            "policy_release": "1.2.0",
+            "policy_release_digest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "policy_sequence": "1",
+            "policy_source": "RECORDED_VERSION",
+            "policy_version_id": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "production_mutation": "false",
+            "target_id": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e",
+            "target_identity": "sha256:778e6a5790ae74973482e47ec7abd53cb5c702fe597642d6acaa7636468f73e1",
+            "target_kind": "OKTA_ASSIGNMENT"
+          },
+          "digest": "sha256:fa09c195b179e8141ba7e14be9121b1ad6e58055288b02fa9f9df27dcf2b510c",
+          "executionMode": "LOCAL_SYNTHETIC",
+          "id": "aud_f13c409b0bda26b403a4d1d14b10a05b",
+          "occurredAt": "2026-10-01T14:21:02+00:00",
+          "previousDigest": "sha256:c3d80108817ffdde12c30cbed62f3524468c544bfa130f16a76dc69a7c430839",
+          "result": "SUCCEEDED",
+          "sequence": 1618,
+          "subjectId": "cand_797cf35a5dd5a884f18293d1cc5cd11b"
+        }
+      ],
+      "otherEventCounts": {},
+      "source": "GET /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b/audit-events, oldest first, the decision chain's actions (CANDIDATE_CREATED, TRANSITION_APPLIED, TRANSITION_REFUSED, APPROVAL_RECORDED, REMEDIATION_DRY_RUN_RECORDED, GOVERNED_REQUEST_REFUSED); every event is part of the store's one hash chain"
+    },
+    "auditHeadAfterDrills": {
+      "digest": "sha256:c3d80108817ffdde12c30cbed62f3524468c544bfa130f16a76dc69a7c430839",
+      "sequence": 1617,
+      "source": "GET /api/v1/audit-events?limit=1 -> items[0] (sequence, digest)"
+    },
+    "auditHeadBeforeDrills": {
+      "digest": "sha256:c3d80108817ffdde12c30cbed62f3524468c544bfa130f16a76dc69a7c430839",
+      "sequence": 1617,
+      "source": "GET /api/v1/audit-events?limit=1 -> items[0] (sequence, digest)"
+    },
+    "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+    "candidateKey": "GP-C11",
+    "decisionExplanation": {
+      "conditionCounts": {
+        "NOT_APPLICABLE": 1,
+        "NOT_PROVEN": 0,
+        "NOT_SATISFIED": 0,
+        "SATISFIED": 11
+      },
+      "conditions": [
+        {
+          "applicationId": null,
+          "detail": "imported through a configured AD integration",
+          "evidence": [
+            "okta-group"
+          ],
+          "key": "AD_SOURCED_GROUP",
+          "label": "Imported from the configured AD integration",
+          "rule": "The Okta group was imported through an AD integration this policy names (1 configured). None configured means no group qualifies (fail closed).",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "EXACT_CONFIGURED_MAPPING on objectGUID, objectSid",
+          "evidence": [
+            "mapping",
+            "ad-group"
+          ],
+          "key": "EXACT_MAPPING",
+          "label": "AD counterpart established exactly",
+          "rule": "The Okta group maps to exactly one AD group by a stable identifier or a reviewed selection. Name-only and unverified-identifier matches never count (D37, D39).",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "no built-in, configured, or AD protection applies",
+          "evidence": [
+            "ad-group"
+          ],
+          "key": "NOT_PROTECTED",
+          "label": "Not a protected group",
+          "rule": "No built-in, AD (adminCount, protection from accidental deletion), or configured protection applies (0 identifiers configured as protected).",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "no direct members, no primaryGroupID references, no principals through member groups (ogwa-ad-empty/v1)",
+          "evidence": [
+            "dependency:AD_GROUP_MEMBERS",
+            "ad-group",
+            "dependency:AD_NESTED_MEMBERSHIP"
+          ],
+          "key": "AD_GROUP_EMPTY",
+          "label": "AD group has no members",
+          "rule": "Complete reads find no direct members, no primaryGroupID references, and no principals through member groups. An unknown member count is never zero.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "the AD group is not a member of any other group",
+          "evidence": [
+            "dependency:AD_NESTED_MEMBERSHIP"
+          ],
+          "key": "AD_NO_PARENT_GROUPS",
+          "label": "Not nested in another AD group",
+          "rule": "A complete nesting read finds the AD group in no other group.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "a complete check found no other application assignment",
+          "evidence": [
+            "dependency:OKTA_OTHER_APP_ASSIGNMENT"
+          ],
+          "key": "SINGLE_OKTA_ASSIGNMENT",
+          "label": "No other application assignment",
+          "rule": "A complete Okta check finds the group assigned to no other application.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "every required dependency kind was checked completely",
+          "evidence": [
+            "dependency:AAP_REFERENCE",
+            "dependency:AD_ACL_REFERENCE",
+            "dependency:AD_GROUP_MEMBERS",
+            "dependency:AD_NESTED_MEMBERSHIP",
+            "dependency:APPLICATION_CONFIGURATION",
+            "dependency:GPO_REFERENCE",
+            "dependency:OKTA_OTHER_APP_ASSIGNMENT",
+            "dependency:OKTA_POLICY_REFERENCE"
+          ],
+          "key": "DEPENDENCY_COVERAGE_COMPLETE",
+          "label": "Every required dependency checked, none blocking",
+          "rule": "Complete checks by a counting source for all 8 required kinds (AAP_REFERENCE, AD_ACL_REFERENCE, AD_GROUP_MEMBERS, AD_NESTED_MEMBERSHIP, APPLICATION_CONFIGURATION, GPO_REFERENCE, OKTA_OTHER_APP_ASSIGNMENT, OKTA_POLICY_REFERENCE), and no blocking finding. Anything less keeps AD deletion prohibited.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "every record is complete and observed within 30 days",
+          "evidence": [
+            "okta-group",
+            "application:oapp_7b3c85661b6b5de589c5350831e6e31d",
+            "assignment:oapp_7b3c85661b6b5de589c5350831e6e31d",
+            "usage:oapp_7b3c85661b6b5de589c5350831e6e31d",
+            "mapping",
+            "ad-group"
+          ],
+          "key": "EVIDENCE_CURRENT",
+          "label": "Core records complete and current",
+          "rule": "The Okta group, application, assignment, usage, identity mapping, and AD group records are complete reads observed within the review window (720 h) and not dated in the future. Dependency checks are judged by coverage, above.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "detail": "the group is assigned to the application",
+          "evidence": [
+            "assignment:oapp_7b3c85661b6b5de589c5350831e6e31d"
+          ],
+          "key": "ASSIGNMENT_PRESENT",
+          "label": "Assigned to the application (Ad Analytics)",
+          "rule": "The group's assignment to the application is observed: it is what the proposal removes.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "detail": "0 sign-in(s), retirement threshold 0",
+          "evidence": [
+            "usage:oapp_7b3c85661b6b5de589c5350831e6e31d"
+          ],
+          "key": "USAGE_WITHIN_RETIREMENT_THRESHOLD",
+          "label": "No sign-in through the group (Ad Analytics)",
+          "rule": "At most 0 sign-in(s) in the usage window.",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "detail": "90-day window covers the 90-day retirement window",
+          "evidence": [
+            "usage:oapp_7b3c85661b6b5de589c5350831e6e31d"
+          ],
+          "key": "USAGE_WINDOW_COVERS_RETIREMENT",
+          "label": "Usage window long enough (Ad Analytics)",
+          "rule": "The usage window covers at least 90 days. A shorter complete window (at least 30 days) is a review signal only (D27).",
+          "status": "SATISFIED"
+        },
+        {
+          "applicationId": null,
+          "detail": "No approval is open in APPROVED; the next one is the Okta unassignment.",
+          "evidence": [
+            "okta-group",
+            "assignment:oapp_7b3c85661b6b5de589c5350831e6e31d",
+            "usage:oapp_7b3c85661b6b5de589c5350831e6e31d",
+            "mapping",
+            "ad-group"
+          ],
+          "key": "NEXT_STEP_RULES",
+          "label": "Okta unassignment approval accepted by the lifecycle rules",
+          "rule": "Every record the step reads observed within the approval window (168 h), the mapping exact, the approval given by a different named person and valid at most 168 h; the lifecycle guard decides.",
+          "status": "NOT_APPLICABLE"
+        }
+      ],
+      "decision": {
+        "code": "NO_APPROVAL_OPEN",
+        "label": "No action: no approval is open in this state"
+      },
+      "isApproval": false,
+      "manualReview": {
+        "because": [],
+        "forcedByEvidence": false
+      },
+      "policy": {
+        "name": "GP-LIFECYCLE-004 v1.2.0",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "recorded": true,
+        "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+        "source": "RECORDED_VERSION",
+        "version": "1.2.0",
+        "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "versionSequence": 1
+      },
+      "source": "GET /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b -> decisionExplanation",
+      "whatWouldChange": [
+        "Not an evidence question. No approval is open in APPROVED; the next approval the candidate faces is the Okta unassignment."
+      ]
+    },
+    "decisions": {
+      "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+      "items": [
+        {
+          "actor": {
+            "id": "collector/synthetic",
+            "kind": "SYSTEM"
+          },
+          "approvalId": null,
+          "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+          "decidedAt": "2026-09-24T17:00:00+00:00",
+          "epoch": 0,
+          "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+          "executionJobId": null,
+          "from": "DISCOVERED",
+          "id": "dec_e525c658d71c1ca6be1ee5803dcfd75f",
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.1.0",
+            "policyDigest": "sha256:c2a5d863e8ec922abf069eeafda4e173b478991e0a19484e94aca010c55d7416",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:bbe1f52a1024e1c7d3b4f8042b17064cd0757dbf87bacbd48c0bd5f977e736ec",
+            "source": "RECORDED_VERSION",
+            "version": "1.1.0",
+            "versionId": "pver_8da806043e33da92673301f35c8f0d72",
+            "versionSequence": 0
+          },
+          "reason": "synthetic scenario step",
+          "to": "CANDIDATE"
+        },
+        {
+          "actor": {
+            "id": "collector/synthetic",
+            "kind": "SYSTEM"
+          },
+          "approvalId": null,
+          "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+          "decidedAt": "2026-09-24T18:00:00+00:00",
+          "epoch": 0,
+          "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+          "executionJobId": null,
+          "from": "CANDIDATE",
+          "id": "dec_b734934dbbeb0d294e0aed38aef5dedc",
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.1.0",
+            "policyDigest": "sha256:c2a5d863e8ec922abf069eeafda4e173b478991e0a19484e94aca010c55d7416",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:bbe1f52a1024e1c7d3b4f8042b17064cd0757dbf87bacbd48c0bd5f977e736ec",
+            "source": "RECORDED_VERSION",
+            "version": "1.1.0",
+            "versionId": "pver_8da806043e33da92673301f35c8f0d72",
+            "versionSequence": 0
+          },
+          "reason": "synthetic scenario step",
+          "to": "NEEDS_REVIEW"
+        },
+        {
+          "actor": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "approvalId": "apr_056064d644040cc5e1c63e7208301432",
+          "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+          "decidedAt": "2026-10-01T07:05:00+00:00",
+          "epoch": 0,
+          "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+          "executionJobId": null,
+          "from": "NEEDS_REVIEW",
+          "id": "dec_25771dcd20d0f4e213b236114c8bb3a2",
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "source": "RECORDED_VERSION",
+            "version": "1.2.0",
+            "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "versionSequence": 1
+          },
+          "reason": "synthetic reviewer approved the Okta unassignment on re-collected evidence",
+          "to": "APPROVED"
+        }
+      ],
+      "source": "GET /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b/decisions"
+    },
+    "dryRun": {
+      "authorization": {
+        "approval": {
+          "auditDigest": "sha256:981aa41c8a4c87a0482b34ed7775d11c89fd11cb71da7e7084661fd0c83baaa6",
+          "auditEventId": "aud_b04ab408b4e028964479cf6a55127386",
+          "auditSequence": 1602,
+          "binding": "IN_FORCE",
+          "candidateEpoch": 0,
+          "decidedAt": "2026-10-01T07:00:00+00:00",
+          "decision": "APPROVE",
+          "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+          "expiresAt": "2026-10-08T07:00:00+00:00",
+          "id": "apr_056064d644040cc5e1c63e7208301432",
+          "operator": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "source": "RECORDED_VERSION",
+            "version": "1.2.0",
+            "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "versionSequence": 1
+          },
+          "stage": "OKTA_UNASSIGN"
+        },
+        "authorized": true,
+        "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+        "decision": {
+          "actor": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "approvalId": "apr_056064d644040cc5e1c63e7208301432",
+          "auditDigest": "sha256:581019970ce519fb237c9726b2cfeda4e5d2d5a566b53aba0d4f09c0e69bfb87",
+          "auditEventId": "aud_7bbd96c3c3c812a70f2dc88bbea89e56",
+          "auditSequence": 1603,
+          "binding": "IN_FORCE",
+          "decidedAt": "2026-10-01T07:05:00+00:00",
+          "from": "NEEDS_REVIEW",
+          "id": "dec_25771dcd20d0f4e213b236114c8bb3a2",
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "source": "RECORDED_VERSION",
+            "version": "1.2.0",
+            "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "versionSequence": 1
+          },
+          "to": "APPROVED"
+        },
+        "policyInForce": {
+          "approvalMaxValidHours": 168,
+          "label": "RECORDED POLICY VERSION 2",
+          "name": "GP-LIFECYCLE-004 v1.2.0",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "recorded": true,
+          "release": {
+            "changes": [
+              "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+            ],
+            "effectiveFrom": "2026-09-28T09:00:00Z",
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "supersedes": "1.1.0",
+            "synthetic": true,
+            "title": "Genesee Press group lifecycle: retire unused application groups",
+            "version": "1.2.0"
+          },
+          "source": "RECORDED_VERSION",
+          "version": "1.2.0",
+          "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+          "versionSequence": 1
+        },
+        "problems": [],
+        "rule": "A remediation rests only on an approval, and the decision that applied it, judged by the policy version in force. Each record shows the policy it recorded when it was made, never the policy in force now."
+      },
+      "chain": {
+        "approvalAuditSequence": 1602,
+        "approvalId": "apr_056064d644040cc5e1c63e7208301432",
+        "attempts": [],
+        "authorized": true,
+        "decisionAuditSequence": 1603,
+        "decisionId": "dec_25771dcd20d0f4e213b236114c8bb3a2",
+        "executionMode": "DRY_RUN",
+        "finalLabel": "DRY RUN — NO STATE CHANGED",
+        "finalState": "DRY_RUN",
+        "operationId": "rop_42b4a5685218f2eaf7277da25af0c702",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "policySequence": 1,
+        "policyVersion": "1.2.0",
+        "policyVersionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "postActionVerification": "NOT_REACHED",
+        "recorded": false,
+        "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+        "scenario": null,
+        "submissions": 0,
+        "succeeded": false
+      },
+      "drill": {
+        "attempts": [],
+        "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+        "externalSystemsContacted": false,
+        "finalLabel": "DRY RUN — NO STATE CHANGED",
+        "finalState": "DRY_RUN",
+        "gates": [
+          {
+            "gate": "EXECUTION_MODE_PERMITS_DRY_RUN",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "SINGLE_EXPLICIT_TARGET",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "EXACT_VERIFIED_MAPPING",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "FRESH_EVIDENCE",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "NOT_PROTECTED",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "VALID_APPROVAL",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "APPROVAL_FINGERPRINT_MATCHES",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "NO_DEPENDENCY_BLOCKER",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "SEPARATION_OF_DUTIES",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "LIFECYCLE_RULES",
+            "passed": true,
+            "problems": []
+          }
+        ],
+        "governedOutcome": "SIMULATED",
+        "lifecycleChanged": false,
+        "maxSubmissions": 2,
+        "mode": "DRY_RUN",
+        "modeBanner": {
+          "detail": "Planned against a synthetic provider fixture and not submitted. Nothing changed, not even inside the fixture; no external provider or persistent environment was contacted or modified.",
+          "headline": "DRY RUN — NO STATE CHANGED"
+        },
+        "notice": "Synthetic drill: run against an in-memory provider fixture built from this candidate's recorded synthetic evidence, then discarded. Nothing was recorded; the demo store, the lifecycle, Okta, Active Directory, and AAP are unchanged.",
+        "operation": "OKTA_GROUP_UNASSIGN",
+        "operationId": "rop_42b4a5685218f2eaf7277da25af0c702",
+        "plannedChanges": [
+          {
+            "action": "unassign_group_from_application",
+            "details": {
+              "after.present": "false",
+              "before.present": "true",
+              "okta_app_id": "0oaSYNTHGP064",
+              "okta_group_id": "00gSYNTHGP0113",
+              "other_assignments_of_candidate": "0"
+            },
+            "summary": "Remove the assignment of Okta group 00gSYNTHGP0113 (OKTA-AdAnalytics-Users) to application 0oaSYNTHGP064 (Ad Analytics).",
+            "system": "okta",
+            "targetId": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+          }
+        ],
+        "plannedTransition": {
+          "after": {
+            "present": false
+          },
+          "before": {
+            "present": true
+          },
+          "operationId": "rop_42b4a5685218f2eaf7277da25af0c702",
+          "summary": "Remove the assignment of Okta group 00gSYNTHGP0113 (OKTA-AdAnalytics-Users) to application 0oaSYNTHGP064 (Ad Analytics).",
+          "targetKey": "okta-assignment:asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+        },
+        "postActionVerification": {
+          "differences": [],
+          "observation": null,
+          "reason": null,
+          "result": "NOT_REACHED"
+        },
+        "productionMutation": false,
+        "provider": {
+          "digestAfter": "sha256:a6e282033c9aef40b65cc0ffc5bb01c1a73e730653e98f10a363fcac4c4b7871",
+          "digestBefore": "sha256:a6e282033c9aef40b65cc0ffc5bb01c1a73e730653e98f10a363fcac4c4b7871",
+          "ledger": [],
+          "ledgerNote": "The fixture's own record of what happened inside it. OGWA's steps above come only from its reads and the provider's answers; this record is shown so a reviewer can check them against the truth.",
+          "mutationsApplied": 0,
+          "name": "SYNTHETIC_PROVIDER_FIXTURE",
+          "stateAfter": {
+            "ad-group:50f9acf1-fb4e-51ad-bef0-b8a894271828": {
+              "distinguishedName": "CN=OKTA-AdAnalytics-Users,OU=Okta,OU=Groups,DC=corp,DC=geneseepress,DC=example",
+              "domain": "corp.geneseepress.example",
+              "exists": true,
+              "objectGuid": "50f9acf1-fb4e-51ad-bef0-b8a894271828",
+              "samAccountName": "OKTA-AdAnalytics-Users",
+              "sid": "S-1-5-21-3100000001-3100000002-3100000003-1284"
+            },
+            "okta-assignment:asgn_4e2c595c7fe059f8acf95f4d14c1e99e": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": true
+            }
+          },
+          "stateBefore": {
+            "ad-group:50f9acf1-fb4e-51ad-bef0-b8a894271828": {
+              "distinguishedName": "CN=OKTA-AdAnalytics-Users,OU=Okta,OU=Groups,DC=corp,DC=geneseepress,DC=example",
+              "domain": "corp.geneseepress.example",
+              "exists": true,
+              "objectGuid": "50f9acf1-fb4e-51ad-bef0-b8a894271828",
+              "samAccountName": "OKTA-AdAnalytics-Users",
+              "sid": "S-1-5-21-3100000001-3100000002-3100000003-1284"
+            },
+            "okta-assignment:asgn_4e2c595c7fe059f8acf95f4d14c1e99e": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": true
+            }
+          },
+          "stateChanged": false,
+          "synthetic": true
+        },
+        "recorded": false,
+        "scenario": null,
+        "steps": [
+          {
+            "answer": null,
+            "answerDetail": null,
+            "at": "2026-10-01T14:21:00Z",
+            "attempt": null,
+            "detail": "Planned, not submitted: Remove the assignment of Okta group 00gSYNTHGP0113 (OKTA-AdAnalytics-Users) to application 0oaSYNTHGP064 (Ad Analytics). The target would go from present = true to present = false. Nothing was submitted and the synthetic provider's state is unchanged.",
+            "differences": [],
+            "label": "DRY RUN — NO STATE CHANGED",
+            "observation": "NOT_APPLIED",
+            "observed": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": true
+            },
+            "problems": [],
+            "reads": [
+              {
+                "succeeded": true
+              }
+            ],
+            "reason": "PLANNED_NOT_SUBMITTED",
+            "seq": 1,
+            "state": "DRY_RUN"
+          }
+        ],
+        "submissions": 0,
+        "succeeded": false,
+        "syntheticOnly": true,
+        "target": {
+          "identity": {
+            "application_id": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+            "assignment_id": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e",
+            "okta_app_id": "0oaSYNTHGP064",
+            "okta_group_external_id": "00gSYNTHGP0113",
+            "okta_group_id": "ogrp_1d6e75b5a3485d23a591d2add395dd63"
+          },
+          "identityDigest": "sha256:778e6a5790ae74973482e47ec7abd53cb5c702fe597642d6acaa7636468f73e1",
+          "kind": "OKTA_ASSIGNMENT",
+          "targetId": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+        }
+      },
+      "policy": {
+        "approvalMaxValidHours": 168,
+        "label": "RECORDED POLICY VERSION 2",
+        "name": "GP-LIFECYCLE-004 v1.2.0",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "recorded": true,
+        "release": {
+          "changes": [
+            "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+          ],
+          "effectiveFrom": "2026-09-28T09:00:00Z",
+          "name": "GP-LIFECYCLE-004 v1.2.0",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+          "supersedes": "1.1.0",
+          "synthetic": true,
+          "title": "Genesee Press group lifecycle: retire unused application groups",
+          "version": "1.2.0"
+        },
+        "source": "RECORDED_VERSION",
+        "version": "1.2.0",
+        "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "versionSequence": 1
+      },
+      "source": "POST /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b/remediation-drills (DRY_RUN, as synthetic.executor.one)"
+    },
+    "evidenceAssessment": {
+      "assessedAt": "2026-10-01T14:20:58+00:00",
+      "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+      "classification": "RETIREMENT_CANDIDATE",
+      "conflicts": [],
+      "constraints": [
+        {
+          "decision": "NO_APPROVAL_OPEN",
+          "detail": "No approval is open in APPROVED; the next approval the candidate faces is the Okta unassignment.",
+          "itemKeys": [],
+          "label": "No action: no approval is open in this state"
+        }
+      ],
+      "decision": {
+        "autoRemediationEligible": false,
+        "code": "NO_APPROVAL_OPEN",
+        "eligibleForHumanApproval": false,
+        "label": "No action: no approval is open in this state"
+      },
+      "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+      "identity": {
+        "candidateCount": 0,
+        "confidence": "EXACT_CONFIGURED_MAPPING",
+        "decisionGrade": true,
+        "detail": "EXACT_CONFIGURED_MAPPING on objectGUID, objectSid. An exact mapping identifies the AD group; it says nothing about whether changing it is safe.",
+        "matchedAttributes": [
+          "objectGUID",
+          "objectSid"
+        ],
+        "state": "CONFIRMED"
+      },
+      "isApproval": false,
+      "issue": {
+        "adGroup": "OKTA-AdAnalytics-Users",
+        "applications": [
+          "Ad Analytics"
+        ],
+        "candidateReasons": [
+          "EMPTY_GROUP_ASSIGNED",
+          "ZERO_GROUP_USAGE_90D"
+        ],
+        "oktaGroup": "OKTA-AdAnalytics-Users",
+        "steps": [
+          "Okta unassignment",
+          "AD quarantine",
+          "AD deletion"
+        ],
+        "summary": "Remove the Okta group OKTA-AdAnalytics-Users's assignment to Ad Analytics; afterwards, quarantine and then delete the AD group OKTA-AdAnalytics-Users, each step separately approved by a different person."
+      },
+      "items": [
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "okta-group",
+          "kind": "okta-group",
+          "label": "Okta group",
+          "neededFor": [
+            "OKTA_UNASSIGN",
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "OKTA-AdAnalytics-Users (APP_GROUP, imported from directory 0oaSYNTHGPADDIR)",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [
+            "AD_SOURCED_GROUP"
+          ],
+          "recordId": "ogrp_1d6e75b5a3485d23a591d2add395dd63",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "CONFIRMED",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "application:oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "kind": "application",
+          "label": "Okta application: Ad Analytics",
+          "neededFor": [],
+          "observation": "ACTIVE in Okta",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [],
+          "recordId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "UNKNOWN",
+          "state": "CONFIRMED",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "assignment:oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "kind": "assignment",
+          "label": "Okta assignment to the application",
+          "neededFor": [
+            "OKTA_UNASSIGN",
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "Assigned (the access the proposal would remove exists)",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [
+            "ASSIGNMENT_PRESENT"
+          ],
+          "recordId": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "CONFIRMED",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "usage:oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "kind": "usage",
+          "label": "Sign-in usage (group-attributed)",
+          "neededFor": [
+            "OKTA_UNASSIGN"
+          ],
+          "observation": "0 sign-in(s) by 0 user(s) in 90 days (group-attributed)",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [
+            "NO_OBSERVED_USAGE",
+            "USAGE_WITHIN_RETIREMENT_THRESHOLD",
+            "USAGE_WINDOW_COVERS_RETIREMENT"
+          ],
+          "recordId": "use_7501223db4680178c78db63c9da925b6",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "mapping",
+          "kind": "mapping",
+          "label": "Identity mapping (Okta group to AD group)",
+          "neededFor": [
+            "OKTA_UNASSIGN",
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "EXACT_CONFIGURED_MAPPING on objectGUID, objectSid",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [
+            "EXACT_MAPPING"
+          ],
+          "recordId": "map_fc9b2c8f7522628585bb71378ef923fd",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "CONFIRMED",
+          "system": "OGWA correlation"
+        },
+        {
+          "baseState": "CONFIRMED",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "ad-group",
+          "kind": "ad-group",
+          "label": "AD group",
+          "neededFor": [
+            "OKTA_UNASSIGN",
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "OKTA-AdAnalytics-Users exists; 0 member value(s); no protection marker",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [
+            "NOT_PROTECTED"
+          ],
+          "recordId": "adg_03402430561d5f7083d658d3b9264b9d",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "CONFIRMED",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:AAP_REFERENCE",
+          "kind": "dependency",
+          "label": "AAP references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_73ae49239538303cf2a58f6d2abbeded",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:AD_ACL_REFERENCE",
+          "kind": "dependency",
+          "label": "AD ACL references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_ed39c79b48e3455e34d193d00f4ec52e",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:AD_GROUP_MEMBERS",
+          "kind": "dependency",
+          "label": "AD members and primaryGroupID references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [
+            "AD_GROUP_EMPTY"
+          ],
+          "recordId": "dep_94150e96c51204ebf302419237fc6cd5",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:AD_NESTED_MEMBERSHIP",
+          "kind": "dependency",
+          "label": "AD nesting (parents and member groups)",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [
+            "AD_NO_PARENT_GROUPS"
+          ],
+          "recordId": "dep_b31e46e37e48b2599e604c09ec9e2b92",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:APPLICATION_CONFIGURATION",
+          "kind": "dependency",
+          "label": "Application-side configuration",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_1d06904f4d7b4b3cd9e57645662cb365",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:GPO_REFERENCE",
+          "kind": "dependency",
+          "label": "GPO references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_9c0753a5cff307d5809e1ac07db1f67d",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:OKTA_OTHER_APP_ASSIGNMENT",
+          "kind": "dependency",
+          "label": "Other Okta application assignments",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [
+            "SINGLE_OKTA_ASSIGNMENT"
+          ],
+          "recordId": "dep_4283e5f7137ad6370479a7b77a72ce6c",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        },
+        {
+          "baseState": "REPORTS_NONE",
+          "conflicts": [],
+          "decisionGrade": true,
+          "freshness": "CURRENT",
+          "key": "dependency:OKTA_POLICY_REFERENCE",
+          "kind": "dependency",
+          "label": "Okta policy and group-rule references",
+          "neededFor": [
+            "AD_QUARANTINE",
+            "AD_DELETION"
+          ],
+          "observation": "No blocking finding",
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "reasons": [],
+          "recordId": "dep_775b198ce12799ba6b46d268e2ba84d4",
+          "required": true,
+          "resultStatus": "COMPLETE",
+          "source": "SYNTHETIC",
+          "stance": "SUPPORTS",
+          "state": "REPORTS_NONE",
+          "system": "Synthetic demo source"
+        }
+      ],
+      "lifecycleState": "APPROVED",
+      "needed": [],
+      "notes": [
+        "An assessment is evidence for review, never an approval. OGWA plans dry runs only (D8); no automated remediation exists, so nothing here is eligible for automatic action."
+      ],
+      "pendingStep": {
+        "accepts": false,
+        "evaluated": false,
+        "label": "Okta unassignment",
+        "open": false,
+        "problems": [],
+        "stage": "OKTA_UNASSIGN"
+      },
+      "policy": {
+        "name": "GP-LIFECYCLE-004 v1.2.0",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "recorded": true,
+        "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+        "source": "RECORDED_VERSION",
+        "version": "1.2.0",
+        "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "versionSequence": 1
+      },
+      "source": "GET /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b -> evidenceAssessment",
+      "stateCounts": {
+        "AMBIGUOUS": 0,
+        "CONFIRMED": 5,
+        "CONFLICTING": 0,
+        "NOT_COLLECTED": 0,
+        "NOT_COUNTED_SOURCE": 0,
+        "PARTIAL": 0,
+        "REPORTS_NONE": 9,
+        "SOURCE_UNAVAILABLE": 0
+      }
+    },
+    "evidenceSnapshot": {
+      "adGroup": {
+        "adminCount": false,
+        "digest": "sha256:5cf1c750b719b6076bc0af59f9c7a1b5e970520ca077f6e0971436c47d95286a",
+        "distinguishedName": "CN=OKTA-AdAnalytics-Users,OU=Okta,OU=Groups,DC=corp,DC=geneseepress,DC=example",
+        "domain": "corp.geneseepress.example",
+        "exists": true,
+        "id": "adg_03402430561d5f7083d658d3b9264b9d",
+        "isCriticalSystemObject": false,
+        "kind": "AD_GROUP",
+        "memberCount": 0,
+        "objectGuid": "50f9acf1-fb4e-51ad-bef0-b8a894271828",
+        "protectedFromAccidentalDeletion": false,
+        "provenance": {
+          "collectorVersion": "synthetic-seed-1.0",
+          "decisionGrade": true,
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "resultStatus": "COMPLETE",
+          "scope": "synthetic:ad:corp.geneseepress.example:guid:50f9acf1-fb4e-51ad-bef0-b8a894271828",
+          "source": "SYNTHETIC"
+        },
+        "samAccountName": "OKTA-AdAnalytics-Users",
+        "sid": "S-1-5-21-3100000001-3100000002-3100000003-1284"
+      },
+      "applications": [
+        {
+          "digest": "sha256:94fee5bfd5a717e61c354c933bb86198c21d5c68b4d1c0dd13031022d1afac01",
+          "id": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "kind": "OKTA_APPLICATION",
+          "label": "Ad Analytics",
+          "oktaAppId": "0oaSYNTHGP064",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:okta:app:0oaSYNTHGP064",
+            "source": "SYNTHETIC"
+          },
+          "signOnMode": "BOOKMARK",
+          "status": "ACTIVE"
+        }
+      ],
+      "assignments": [
+        {
+          "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "digest": "sha256:16675193583b8fac12a8055f8b9d68dda2b8f8f5b9079d5edde06e5a50e56db2",
+          "id": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e",
+          "kind": "ASSIGNMENT",
+          "oktaGroupId": "ogrp_1d6e75b5a3485d23a591d2add395dd63",
+          "present": true,
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:okta:app-groups:ad-analytics",
+            "source": "SYNTHETIC"
+          }
+        }
+      ],
+      "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+      "dependencies": [
+        {
+          "dependencyKind": "AAP_REFERENCE",
+          "digest": "sha256:6dff311413e75bdc12dcdcfc4feb9b943cf0babd8a8a5e529e489ab1236a3ed5",
+          "findings": [],
+          "id": "dep_73ae49239538303cf2a58f6d2abbeded",
+          "kind": "DEPENDENCY",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:deps:GP-C11:AAP_REFERENCE",
+            "source": "SYNTHETIC"
+          },
+          "subjectId": "adg_03402430561d5f7083d658d3b9264b9d"
+        },
+        {
+          "dependencyKind": "AD_ACL_REFERENCE",
+          "digest": "sha256:3be42bae2398e4d794430e64441f4b96cee9f7d622a5363a18fac69e8547c54c",
+          "findings": [],
+          "id": "dep_ed39c79b48e3455e34d193d00f4ec52e",
+          "kind": "DEPENDENCY",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:deps:GP-C11:AD_ACL_REFERENCE",
+            "source": "SYNTHETIC"
+          },
+          "subjectId": "adg_03402430561d5f7083d658d3b9264b9d"
+        },
+        {
+          "dependencyKind": "AD_GROUP_MEMBERS",
+          "digest": "sha256:ab6dfb8f8dbaf239da6e8299aad4b53880bc259d6cde6b188c1551b6ea33a0ce",
+          "findings": [],
+          "id": "dep_94150e96c51204ebf302419237fc6cd5",
+          "kind": "DEPENDENCY",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:deps:GP-C11:AD_GROUP_MEMBERS",
+            "source": "SYNTHETIC"
+          },
+          "subjectId": "adg_03402430561d5f7083d658d3b9264b9d"
+        },
+        {
+          "dependencyKind": "AD_NESTED_MEMBERSHIP",
+          "digest": "sha256:6619d51161eed3a6c5d7e9241c8c7f1db2819a58017f8a6e41155d941ef5ae90",
+          "findings": [],
+          "id": "dep_b31e46e37e48b2599e604c09ec9e2b92",
+          "kind": "DEPENDENCY",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:deps:GP-C11:AD_NESTED_MEMBERSHIP",
+            "source": "SYNTHETIC"
+          },
+          "subjectId": "adg_03402430561d5f7083d658d3b9264b9d"
+        },
+        {
+          "dependencyKind": "APPLICATION_CONFIGURATION",
+          "digest": "sha256:a4c7f6ca5f647ae966070a690183b4c7d7a742323e3831ee117379e08e497f8c",
+          "findings": [],
+          "id": "dep_1d06904f4d7b4b3cd9e57645662cb365",
+          "kind": "DEPENDENCY",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:deps:GP-C11:APPLICATION_CONFIGURATION",
+            "source": "SYNTHETIC"
+          },
+          "subjectId": "adg_03402430561d5f7083d658d3b9264b9d"
+        },
+        {
+          "dependencyKind": "GPO_REFERENCE",
+          "digest": "sha256:e9f7d2acb33f4f6018dc27f84f4fbc81e431e487bb516fdf6e7f09fa1baf6f28",
+          "findings": [],
+          "id": "dep_9c0753a5cff307d5809e1ac07db1f67d",
+          "kind": "DEPENDENCY",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:deps:GP-C11:GPO_REFERENCE",
+            "source": "SYNTHETIC"
+          },
+          "subjectId": "adg_03402430561d5f7083d658d3b9264b9d"
+        },
+        {
+          "dependencyKind": "OKTA_OTHER_APP_ASSIGNMENT",
+          "digest": "sha256:1d9de4a7e7d41b86b932c46c90c8236c950bec68158785380a681a2e67bfce77",
+          "findings": [],
+          "id": "dep_4283e5f7137ad6370479a7b77a72ce6c",
+          "kind": "DEPENDENCY",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:deps:GP-C11:OKTA_OTHER_APP_ASSIGNMENT",
+            "source": "SYNTHETIC"
+          },
+          "subjectId": "ogrp_1d6e75b5a3485d23a591d2add395dd63"
+        },
+        {
+          "dependencyKind": "OKTA_POLICY_REFERENCE",
+          "digest": "sha256:6d0dc5a7b9812ea02c25bb0a204a2baff0945a50781180150a8bae88ad49636e",
+          "findings": [],
+          "id": "dep_775b198ce12799ba6b46d268e2ba84d4",
+          "kind": "DEPENDENCY",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:deps:GP-C11:OKTA_POLICY_REFERENCE",
+            "source": "SYNTHETIC"
+          },
+          "subjectId": "ogrp_1d6e75b5a3485d23a591d2add395dd63"
+        }
+      ],
+      "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+      "mapping": {
+        "adGroupId": "adg_03402430561d5f7083d658d3b9264b9d",
+        "candidateAdGroupIds": [],
+        "confidence": "EXACT_CONFIGURED_MAPPING",
+        "configurationRef": "config/correlation.genesee-press.json#app:ad-analytics:transitional:user",
+        "digest": "sha256:c55e66a5dd85217489b61cb350bc612027887a39887955250e3c1266affcb3da",
+        "id": "map_fc9b2c8f7522628585bb71378ef923fd",
+        "isExact": true,
+        "kind": "IDENTITY_MAPPING",
+        "matchedAttributes": [
+          "objectGUID",
+          "objectSid"
+        ],
+        "oktaGroupId": "ogrp_1d6e75b5a3485d23a591d2add395dd63",
+        "provenance": {
+          "collectorVersion": "ogwa-correlation/1",
+          "decisionGrade": true,
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "resultStatus": "COMPLETE",
+          "scope": "correlation:okta-group:00gSYNTHGP0113",
+          "source": "SYNTHETIC"
+        },
+        "reason": "RESOLVED | resolved by CONFIGURED (configured); 2 source(s) agree on objectGUID 50f9acf1-fb4e-51ad-bef0-b8a894271828"
+      },
+      "oktaGroup": {
+        "digest": "sha256:22b71488346b656ceacac50da6609d323faf1fef7ff531c2dbfd1ec5db3fcde8",
+        "directoryObjectSidUnverified": "S-1-5-21-3100000001-3100000002-3100000003-1284",
+        "directoryQualifiedName": "GPCORP\\OKTA-AdAnalytics-Users",
+        "groupType": "APP_GROUP",
+        "id": "ogrp_1d6e75b5a3485d23a591d2add395dd63",
+        "kind": "OKTA_GROUP",
+        "name": "OKTA-AdAnalytics-Users",
+        "oktaGroupId": "00gSYNTHGP0113",
+        "provenance": {
+          "collectorVersion": "synthetic-seed-1.0",
+          "decisionGrade": true,
+          "observedAt": "2026-10-01T06:00:00+00:00",
+          "resultStatus": "COMPLETE",
+          "scope": "synthetic:okta:group:00gSYNTHGP0113",
+          "source": "SYNTHETIC"
+        },
+        "sourceDirectoryId": "0oaSYNTHGPADDIR"
+      },
+      "source": "GET /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b/evidence",
+      "usage": [
+        {
+          "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "digest": "sha256:36d08afc9b337e35c5ba005953684f0504fe9fc7e36455481a81a0391fd25852",
+          "distinctUserCount": 0,
+          "eventCount": 0,
+          "id": "use_b130cb092881bc9068b0bf77e7809c93",
+          "kind": "USAGE",
+          "lastActivityAt": null,
+          "oktaGroupId": null,
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:okta:systemlog:app:ad-analytics:*:90d",
+            "source": "SYNTHETIC"
+          },
+          "windowEnd": "2026-09-24T13:00:00+00:00",
+          "windowStart": "2026-06-26T13:00:00+00:00"
+        },
+        {
+          "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+          "digest": "sha256:50afa577fdc4a868bc8e13141d86681d1587fa5c6eb23f2f5d3b703b364606ba",
+          "distinctUserCount": 0,
+          "eventCount": 0,
+          "id": "use_7501223db4680178c78db63c9da925b6",
+          "kind": "USAGE",
+          "lastActivityAt": null,
+          "oktaGroupId": "ogrp_1d6e75b5a3485d23a591d2add395dd63",
+          "provenance": {
+            "collectorVersion": "synthetic-seed-1.0",
+            "decisionGrade": true,
+            "observedAt": "2026-10-01T06:00:00+00:00",
+            "resultStatus": "COMPLETE",
+            "scope": "synthetic:okta:systemlog:app:ad-analytics:app:ad-analytics:transitional:user:90d",
+            "source": "SYNTHETIC"
+          },
+          "windowEnd": "2026-09-24T16:00:00+00:00",
+          "windowStart": "2026-06-26T16:00:00+00:00"
+        }
+      ]
+    },
+    "governedDryRunRecorded": {
+      "auditEventId": "aud_f13c409b0bda26b403a4d1d14b10a05b",
+      "authorization": {
+        "approval": {
+          "auditDigest": "sha256:981aa41c8a4c87a0482b34ed7775d11c89fd11cb71da7e7084661fd0c83baaa6",
+          "auditEventId": "aud_b04ab408b4e028964479cf6a55127386",
+          "auditSequence": 1602,
+          "binding": "IN_FORCE",
+          "candidateEpoch": 0,
+          "decidedAt": "2026-10-01T07:00:00+00:00",
+          "decision": "APPROVE",
+          "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+          "expiresAt": "2026-10-08T07:00:00+00:00",
+          "id": "apr_056064d644040cc5e1c63e7208301432",
+          "operator": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "source": "RECORDED_VERSION",
+            "version": "1.2.0",
+            "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "versionSequence": 1
+          },
+          "stage": "OKTA_UNASSIGN"
+        },
+        "authorized": true,
+        "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+        "decision": {
+          "actor": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "approvalId": "apr_056064d644040cc5e1c63e7208301432",
+          "auditDigest": "sha256:581019970ce519fb237c9726b2cfeda4e5d2d5a566b53aba0d4f09c0e69bfb87",
+          "auditEventId": "aud_7bbd96c3c3c812a70f2dc88bbea89e56",
+          "auditSequence": 1603,
+          "binding": "IN_FORCE",
+          "decidedAt": "2026-10-01T07:05:00+00:00",
+          "from": "NEEDS_REVIEW",
+          "id": "dec_25771dcd20d0f4e213b236114c8bb3a2",
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "source": "RECORDED_VERSION",
+            "version": "1.2.0",
+            "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "versionSequence": 1
+          },
+          "to": "APPROVED"
+        },
+        "policyInForce": {
+          "approvalMaxValidHours": 168,
+          "label": "RECORDED POLICY VERSION 2",
+          "name": "GP-LIFECYCLE-004 v1.2.0",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "recorded": true,
+          "release": {
+            "changes": [
+              "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+            ],
+            "effectiveFrom": "2026-09-28T09:00:00Z",
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "supersedes": "1.1.0",
+            "synthetic": true,
+            "title": "Genesee Press group lifecycle: retire unused application groups",
+            "version": "1.2.0"
+          },
+          "source": "RECORDED_VERSION",
+          "version": "1.2.0",
+          "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+          "versionSequence": 1
+        },
+        "problems": [],
+        "rule": "A remediation rests only on an approval, and the decision that applied it, judged by the policy version in force. Each record shows the policy it recorded when it was made, never the policy in force now."
+      },
+      "executed": false,
+      "policy": {
+        "approvalMaxValidHours": 168,
+        "label": "RECORDED POLICY VERSION 2",
+        "name": "GP-LIFECYCLE-004 v1.2.0",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "recorded": true,
+        "release": {
+          "changes": [
+            "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+          ],
+          "effectiveFrom": "2026-09-28T09:00:00Z",
+          "name": "GP-LIFECYCLE-004 v1.2.0",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+          "supersedes": "1.1.0",
+          "synthetic": true,
+          "title": "Genesee Press group lifecycle: retire unused application groups",
+          "version": "1.2.0"
+        },
+        "source": "RECORDED_VERSION",
+        "version": "1.2.0",
+        "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "versionSequence": 1
+      },
+      "productionMutation": false,
+      "record": {
+        "adapter": "SYNTHETIC",
+        "approvalId": "apr_056064d644040cc5e1c63e7208301432",
+        "auditEventId": "aud_f13c409b0bda26b403a4d1d14b10a05b",
+        "chain": {
+          "approvalId": "apr_056064d644040cc5e1c63e7208301432",
+          "auditSequence": 1618,
+          "decisionId": "dec_25771dcd20d0f4e213b236114c8bb3a2",
+          "executionMode": "DRY_RUN",
+          "operationId": "rop_42b4a5685218f2eaf7277da25af0c702",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "policySequence": 1,
+          "policyVersion": "1.2.0",
+          "policyVersionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+          "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584"
+        },
+        "correlationId": "req_1b3aa5d2f7193f12ffad23343a3239d4",
+        "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+        "executed": false,
+        "executionMode": "LOCAL_SYNTHETIC",
+        "gatesPassed": "10/10",
+        "operation": "OKTA_GROUP_UNASSIGN",
+        "outcome": "SIMULATED",
+        "plannedChanges": "Remove the assignment of Okta group 00gSYNTHGP0113 (OKTA-AdAnalytics-Users) to application 0oaSYNTHGP064 (Ad Analytics).",
+        "policy": {
+          "name": "GP-LIFECYCLE-004 v1.2.0",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "publishedRelease": "MATCHES_RECORDED",
+          "recorded": true,
+          "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+          "source": "RECORDED_VERSION",
+          "version": "1.2.0",
+          "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+          "versionSequence": 1
+        },
+        "productionMutation": false,
+        "recordedAt": "2026-10-01T14:21:02+00:00",
+        "requestedBy": "synthetic.executor.one",
+        "targetId": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e",
+        "targetIdentityDigest": "sha256:778e6a5790ae74973482e47ec7abd53cb5c702fe597642d6acaa7636468f73e1",
+        "targetKind": "OKTA_ASSIGNMENT"
+      },
+      "recordedAt": "2026-10-01T14:21:02+00:00",
+      "remediation": {
+        "adapter": "SYNTHETIC",
+        "executed": false,
+        "gates": [
+          {
+            "gate": "EXECUTION_MODE_PERMITS_DRY_RUN",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "SINGLE_EXPLICIT_TARGET",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "EXACT_VERIFIED_MAPPING",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "FRESH_EVIDENCE",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "NOT_PROTECTED",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "VALID_APPROVAL",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "APPROVAL_FINGERPRINT_MATCHES",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "NO_DEPENDENCY_BLOCKER",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "SEPARATION_OF_DUTIES",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "LIFECYCLE_RULES",
+            "passed": true,
+            "problems": []
+          }
+        ],
+        "notes": [
+          "simulated against the synthetic world's recorded evidence; no system was contacted or changed"
+        ],
+        "operation": "OKTA_GROUP_UNASSIGN",
+        "outcome": "SIMULATED",
+        "plannedChanges": [
+          {
+            "action": "unassign_group_from_application",
+            "details": {
+              "after.present": "false",
+              "before.present": "true",
+              "okta_app_id": "0oaSYNTHGP064",
+              "okta_group_id": "00gSYNTHGP0113",
+              "other_assignments_of_candidate": "0"
+            },
+            "summary": "Remove the assignment of Okta group 00gSYNTHGP0113 (OKTA-AdAnalytics-Users) to application 0oaSYNTHGP064 (Ad Analytics).",
+            "system": "okta",
+            "targetId": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+          }
+        ],
+        "productionMutation": false,
+        "target": {
+          "identity": {
+            "application_id": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+            "assignment_id": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e",
+            "okta_app_id": "0oaSYNTHGP064",
+            "okta_group_external_id": "00gSYNTHGP0113",
+            "okta_group_id": "ogrp_1d6e75b5a3485d23a591d2add395dd63"
+          },
+          "identityDigest": "sha256:778e6a5790ae74973482e47ec7abd53cb5c702fe597642d6acaa7636468f73e1",
+          "kind": "OKTA_ASSIGNMENT",
+          "targetId": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+        }
+      },
+      "source": "POST /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b/remediation-dry-runs (as synthetic.executor.one): the governed, recorded dry run of the same approved change"
+    },
+    "syntheticExecution": {
+      "authorization": {
+        "approval": {
+          "auditDigest": "sha256:981aa41c8a4c87a0482b34ed7775d11c89fd11cb71da7e7084661fd0c83baaa6",
+          "auditEventId": "aud_b04ab408b4e028964479cf6a55127386",
+          "auditSequence": 1602,
+          "binding": "IN_FORCE",
+          "candidateEpoch": 0,
+          "decidedAt": "2026-10-01T07:00:00+00:00",
+          "decision": "APPROVE",
+          "evidenceFingerprint": "sha256:b5b494da1656c547bdb13152def39b12f149fafe28e30df1786cdb2fce8e8d13",
+          "expiresAt": "2026-10-08T07:00:00+00:00",
+          "id": "apr_056064d644040cc5e1c63e7208301432",
+          "operator": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "source": "RECORDED_VERSION",
+            "version": "1.2.0",
+            "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "versionSequence": 1
+          },
+          "stage": "OKTA_UNASSIGN"
+        },
+        "authorized": true,
+        "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+        "decision": {
+          "actor": {
+            "id": "synthetic.reviewer.one",
+            "kind": "HUMAN"
+          },
+          "approvalId": "apr_056064d644040cc5e1c63e7208301432",
+          "auditDigest": "sha256:581019970ce519fb237c9726b2cfeda4e5d2d5a566b53aba0d4f09c0e69bfb87",
+          "auditEventId": "aud_7bbd96c3c3c812a70f2dc88bbea89e56",
+          "auditSequence": 1603,
+          "binding": "IN_FORCE",
+          "decidedAt": "2026-10-01T07:05:00+00:00",
+          "from": "NEEDS_REVIEW",
+          "id": "dec_25771dcd20d0f4e213b236114c8bb3a2",
+          "policy": {
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "publishedRelease": "MATCHES_RECORDED",
+            "recorded": true,
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "source": "RECORDED_VERSION",
+            "version": "1.2.0",
+            "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+            "versionSequence": 1
+          },
+          "to": "APPROVED"
+        },
+        "policyInForce": {
+          "approvalMaxValidHours": 168,
+          "label": "RECORDED POLICY VERSION 2",
+          "name": "GP-LIFECYCLE-004 v1.2.0",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "recorded": true,
+          "release": {
+            "changes": [
+              "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+            ],
+            "effectiveFrom": "2026-09-28T09:00:00Z",
+            "name": "GP-LIFECYCLE-004 v1.2.0",
+            "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+            "policyId": "GP-LIFECYCLE-004",
+            "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+            "supersedes": "1.1.0",
+            "synthetic": true,
+            "title": "Genesee Press group lifecycle: retire unused application groups",
+            "version": "1.2.0"
+          },
+          "source": "RECORDED_VERSION",
+          "version": "1.2.0",
+          "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+          "versionSequence": 1
+        },
+        "problems": [],
+        "rule": "A remediation rests only on an approval, and the decision that applied it, judged by the policy version in force. Each record shows the policy it recorded when it was made, never the policy in force now."
+      },
+      "chain": {
+        "approvalAuditSequence": 1602,
+        "approvalId": "apr_056064d644040cc5e1c63e7208301432",
+        "attempts": [
+          {
+            "answer": "TIMEOUT",
+            "attempt": 1,
+            "next": "RETRY_PERMITTED",
+            "submittedAt": "2026-10-01T14:21:01Z",
+            "verification": "NOT_APPLIED"
+          },
+          {
+            "answer": "APPLIED",
+            "attempt": 2,
+            "next": "EXECUTED",
+            "submittedAt": "2026-10-01T14:21:33Z",
+            "verification": null
+          }
+        ],
+        "authorized": true,
+        "decisionAuditSequence": 1603,
+        "decisionId": "dec_25771dcd20d0f4e213b236114c8bb3a2",
+        "executionMode": "SYNTHETIC_EXECUTION",
+        "finalLabel": "POST-ACTION VERIFIED",
+        "finalState": "POST_ACTION_VERIFIED",
+        "operationId": "rop_42b4a5685218f2eaf7277da25af0c702",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "policySequence": 1,
+        "policyVersion": "1.2.0",
+        "policyVersionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "postActionVerification": "CONFIRMED",
+        "recorded": false,
+        "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+        "scenario": "TIMEOUT_NOT_APPLIED",
+        "submissions": 2,
+        "succeeded": true
+      },
+      "drill": {
+        "attempts": [
+          {
+            "answer": "TIMEOUT",
+            "attempt": 1,
+            "next": "RETRY_PERMITTED",
+            "submittedAt": "2026-10-01T14:21:01Z",
+            "verification": "NOT_APPLIED"
+          },
+          {
+            "answer": "APPLIED",
+            "attempt": 2,
+            "next": "EXECUTED",
+            "submittedAt": "2026-10-01T14:21:33Z",
+            "verification": null
+          }
+        ],
+        "candidateId": "cand_797cf35a5dd5a884f18293d1cc5cd11b",
+        "externalSystemsContacted": false,
+        "finalLabel": "POST-ACTION VERIFIED",
+        "finalState": "POST_ACTION_VERIFIED",
+        "gates": [
+          {
+            "gate": "EXECUTION_MODE_PERMITS_DRY_RUN",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "SINGLE_EXPLICIT_TARGET",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "EXACT_VERIFIED_MAPPING",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "FRESH_EVIDENCE",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "NOT_PROTECTED",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "VALID_APPROVAL",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "APPROVAL_FINGERPRINT_MATCHES",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "NO_DEPENDENCY_BLOCKER",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "SEPARATION_OF_DUTIES",
+            "passed": true,
+            "problems": []
+          },
+          {
+            "gate": "LIFECYCLE_RULES",
+            "passed": true,
+            "problems": []
+          }
+        ],
+        "governedOutcome": "SIMULATED",
+        "lifecycleChanged": false,
+        "maxSubmissions": 2,
+        "mode": "SYNTHETIC_EXECUTION",
+        "modeBanner": {
+          "detail": "No external provider or persistent environment was modified. The change was submitted only to an in-memory synthetic provider fixture, under a scripted, deterministic fault scenario; the fixture was discarded when this answer was built, and nothing was recorded.",
+          "headline": "SYNTHETIC EXECUTION"
+        },
+        "notice": "Synthetic drill: run against an in-memory provider fixture built from this candidate's recorded synthetic evidence, then discarded. Nothing was recorded; the demo store, the lifecycle, Okta, Active Directory, and AAP are unchanged.",
+        "operation": "OKTA_GROUP_UNASSIGN",
+        "operationId": "rop_42b4a5685218f2eaf7277da25af0c702",
+        "plannedChanges": [
+          {
+            "action": "unassign_group_from_application",
+            "details": {
+              "after.present": "false",
+              "before.present": "true",
+              "okta_app_id": "0oaSYNTHGP064",
+              "okta_group_id": "00gSYNTHGP0113",
+              "other_assignments_of_candidate": "0"
+            },
+            "summary": "Remove the assignment of Okta group 00gSYNTHGP0113 (OKTA-AdAnalytics-Users) to application 0oaSYNTHGP064 (Ad Analytics).",
+            "system": "okta",
+            "targetId": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+          }
+        ],
+        "plannedTransition": {
+          "after": {
+            "present": false
+          },
+          "before": {
+            "present": true
+          },
+          "operationId": "rop_42b4a5685218f2eaf7277da25af0c702",
+          "summary": "Remove the assignment of Okta group 00gSYNTHGP0113 (OKTA-AdAnalytics-Users) to application 0oaSYNTHGP064 (Ad Analytics).",
+          "targetKey": "okta-assignment:asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+        },
+        "postActionVerification": {
+          "differences": [],
+          "observation": "APPLIED",
+          "reason": "MATCHES_EXPECTED_STATE",
+          "result": "CONFIRMED"
+        },
+        "productionMutation": false,
+        "provider": {
+          "digestAfter": "sha256:ad36d77d83faa0a65aa82be6ef3ce80bc613f704b0c300f50a14151a3b5309b5",
+          "digestBefore": "sha256:a6e282033c9aef40b65cc0ffc5bb01c1a73e730653e98f10a363fcac4c4b7871",
+          "ledger": [
+            {
+              "actor": "rop_42b4a5685218f2eaf7277da25af0c702",
+              "answer": "TIMEOUT",
+              "applied": false,
+              "at": "2026-10-01T14:21:31Z",
+              "code": "TIMEOUT_BEFORE_APPLY",
+              "fault": "TIMEOUT_BEFORE_APPLY",
+              "seq": 1,
+              "targetKey": "okta-assignment:asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+            },
+            {
+              "actor": "rop_42b4a5685218f2eaf7277da25af0c702",
+              "answer": "APPLIED",
+              "applied": true,
+              "at": "2026-10-01T14:21:35Z",
+              "code": "APPLY",
+              "fault": "APPLY",
+              "seq": 2,
+              "targetKey": "okta-assignment:asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+            }
+          ],
+          "ledgerNote": "The fixture's own record of what happened inside it. OGWA's steps above come only from its reads and the provider's answers; this record is shown so a reviewer can check them against the truth.",
+          "mutationsApplied": 1,
+          "name": "SYNTHETIC_PROVIDER_FIXTURE",
+          "stateAfter": {
+            "ad-group:50f9acf1-fb4e-51ad-bef0-b8a894271828": {
+              "distinguishedName": "CN=OKTA-AdAnalytics-Users,OU=Okta,OU=Groups,DC=corp,DC=geneseepress,DC=example",
+              "domain": "corp.geneseepress.example",
+              "exists": true,
+              "objectGuid": "50f9acf1-fb4e-51ad-bef0-b8a894271828",
+              "samAccountName": "OKTA-AdAnalytics-Users",
+              "sid": "S-1-5-21-3100000001-3100000002-3100000003-1284"
+            },
+            "okta-assignment:asgn_4e2c595c7fe059f8acf95f4d14c1e99e": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": false
+            }
+          },
+          "stateBefore": {
+            "ad-group:50f9acf1-fb4e-51ad-bef0-b8a894271828": {
+              "distinguishedName": "CN=OKTA-AdAnalytics-Users,OU=Okta,OU=Groups,DC=corp,DC=geneseepress,DC=example",
+              "domain": "corp.geneseepress.example",
+              "exists": true,
+              "objectGuid": "50f9acf1-fb4e-51ad-bef0-b8a894271828",
+              "samAccountName": "OKTA-AdAnalytics-Users",
+              "sid": "S-1-5-21-3100000001-3100000002-3100000003-1284"
+            },
+            "okta-assignment:asgn_4e2c595c7fe059f8acf95f4d14c1e99e": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": true
+            }
+          },
+          "stateChanged": true,
+          "synthetic": true
+        },
+        "recorded": false,
+        "scenario": {
+          "description": "The first submission times out before the provider applies anything. OGWA does not assume either outcome: it reads the target, finds it unchanged, re-checks the gates and the precondition, and retries once with the same operation id. The retry is applied, and a post-action read confirms it.",
+          "expectedFinalState": "POST_ACTION_VERIFIED",
+          "key": "TIMEOUT_NOT_APPLIED",
+          "submissions": [
+            "TIMEOUT_BEFORE_APPLY",
+            "APPLY"
+          ],
+          "title": "Timeout, change not applied: verified, then retried",
+          "unreadableReads": []
+        },
+        "steps": [
+          {
+            "answer": null,
+            "answerDetail": null,
+            "at": "2026-10-01T14:21:01Z",
+            "attempt": 1,
+            "detail": "Attempt 1 of at most 2 submitted to the synthetic provider with operation id rop_42b4a5685218f2eaf7277da25af0c702, on the precondition that the target is still present = true.",
+            "differences": [],
+            "label": "EXECUTION REQUESTED — SYNTHETIC DEMO",
+            "observation": "NOT_APPLIED",
+            "observed": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": true
+            },
+            "problems": [],
+            "reads": [
+              {
+                "succeeded": true
+              }
+            ],
+            "reason": "SUBMITTED",
+            "seq": 1,
+            "state": "EXECUTION_REQUESTED"
+          },
+          {
+            "answer": "TIMEOUT",
+            "answerDetail": "timed out after 30 s",
+            "at": "2026-10-01T14:21:31Z",
+            "attempt": 1,
+            "detail": "The provider did not answer: timed out after 30 s. The change may or may not have been applied: nothing is assumed, and nothing is resubmitted until a read says which.",
+            "differences": [],
+            "label": "OUTCOME UNKNOWN — VERIFYING",
+            "observation": null,
+            "observed": null,
+            "problems": [],
+            "reads": [],
+            "reason": "TIMED_OUT",
+            "seq": 2,
+            "state": "OUTCOME_UNKNOWN"
+          },
+          {
+            "answer": null,
+            "answerDetail": null,
+            "at": "2026-10-01T14:21:32Z",
+            "attempt": null,
+            "detail": "The target is still in the planned before-state: the change was not applied.",
+            "differences": [],
+            "label": "VERIFYING — READING SYNTHETIC PROVIDER STATE",
+            "observation": "NOT_APPLIED",
+            "observed": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": true
+            },
+            "problems": [],
+            "reads": [
+              {
+                "succeeded": true
+              }
+            ],
+            "reason": "READ_TARGET",
+            "seq": 3,
+            "state": "VERIFYING"
+          },
+          {
+            "answer": null,
+            "answerDetail": null,
+            "at": "2026-10-01T14:21:32Z",
+            "attempt": null,
+            "detail": "The target is still in the planned before-state: the change was verified not applied, so one retry with the same operation id is safe. The gates and the precondition are checked again before it is submitted.",
+            "differences": [],
+            "label": "RETRY PERMITTED — VERIFIED NOT APPLIED",
+            "observation": null,
+            "observed": null,
+            "problems": [],
+            "reads": [],
+            "reason": "VERIFIED_NOT_APPLIED",
+            "seq": 4,
+            "state": "RETRY_PERMITTED"
+          },
+          {
+            "answer": null,
+            "answerDetail": null,
+            "at": "2026-10-01T14:21:33Z",
+            "attempt": 2,
+            "detail": "Retry 2 of at most 2 submitted to the synthetic provider with operation id rop_42b4a5685218f2eaf7277da25af0c702, on the precondition that the target is still present = true.",
+            "differences": [],
+            "label": "EXECUTION REQUESTED — SYNTHETIC DEMO",
+            "observation": "NOT_APPLIED",
+            "observed": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": true
+            },
+            "problems": [],
+            "reads": [
+              {
+                "succeeded": true
+              }
+            ],
+            "reason": "SUBMITTED",
+            "seq": 5,
+            "state": "EXECUTION_REQUESTED"
+          },
+          {
+            "answer": "APPLIED",
+            "answerDetail": "acknowledged",
+            "at": "2026-10-01T14:21:35Z",
+            "attempt": 2,
+            "detail": "The synthetic provider says the change was applied. That is not yet a success: a post-action read must confirm it.",
+            "differences": [],
+            "label": "EXECUTED — SYNTHETIC DEMO",
+            "observation": null,
+            "observed": null,
+            "problems": [],
+            "reads": [],
+            "reason": "ACKNOWLEDGED",
+            "seq": 6,
+            "state": "EXECUTED"
+          },
+          {
+            "answer": null,
+            "answerDetail": null,
+            "at": "2026-10-01T14:21:36Z",
+            "attempt": null,
+            "detail": "The target is in the planned after-state (present = false), and nothing else in scope changed.",
+            "differences": [],
+            "label": "POST-ACTION VERIFIED",
+            "observation": "APPLIED",
+            "observed": {
+              "applicationId": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+              "oktaAppId": "0oaSYNTHGP064",
+              "oktaGroupId": "00gSYNTHGP0113",
+              "present": false
+            },
+            "problems": [],
+            "reads": [
+              {
+                "succeeded": true
+              }
+            ],
+            "reason": "MATCHES_EXPECTED_STATE",
+            "seq": 7,
+            "state": "POST_ACTION_VERIFIED"
+          }
+        ],
+        "submissions": 2,
+        "succeeded": true,
+        "syntheticOnly": true,
+        "target": {
+          "identity": {
+            "application_id": "oapp_7b3c85661b6b5de589c5350831e6e31d",
+            "assignment_id": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e",
+            "okta_app_id": "0oaSYNTHGP064",
+            "okta_group_external_id": "00gSYNTHGP0113",
+            "okta_group_id": "ogrp_1d6e75b5a3485d23a591d2add395dd63"
+          },
+          "identityDigest": "sha256:778e6a5790ae74973482e47ec7abd53cb5c702fe597642d6acaa7636468f73e1",
+          "kind": "OKTA_ASSIGNMENT",
+          "targetId": "asgn_4e2c595c7fe059f8acf95f4d14c1e99e"
+        }
+      },
+      "policy": {
+        "approvalMaxValidHours": 168,
+        "label": "RECORDED POLICY VERSION 2",
+        "name": "GP-LIFECYCLE-004 v1.2.0",
+        "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+        "policyId": "GP-LIFECYCLE-004",
+        "recorded": true,
+        "release": {
+          "changes": [
+            "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+          ],
+          "effectiveFrom": "2026-09-28T09:00:00Z",
+          "name": "GP-LIFECYCLE-004 v1.2.0",
+          "policyDigest": "sha256:8a2e49d83e08a1ec86247d1857edc363a0f428d8ad41b3f36c0348e1d0131f93",
+          "policyId": "GP-LIFECYCLE-004",
+          "releaseDigest": "sha256:c16a3497251b38307856ebf9b741c0b545c630d1b21f9762e794b4c2d0adc584",
+          "supersedes": "1.1.0",
+          "synthetic": true,
+          "title": "Genesee Press group lifecycle: retire unused application groups",
+          "version": "1.2.0"
+        },
+        "source": "RECORDED_VERSION",
+        "version": "1.2.0",
+        "versionId": "pver_20d68a9b40c56eb1965a2c58a6dd57ee",
+        "versionSequence": 1
+      },
+      "source": "POST /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b/remediation-drills (SYNTHETIC_EXECUTION, TIMEOUT_NOT_APPLIED, as synthetic.executor.one)"
+    }
+  },
+  "synthetic": true,
+  "title": "OGWA synthetic governance audit sample: GP-C10 (no safe action) and GP-C11 (controlled synthetic remediation)"
+}

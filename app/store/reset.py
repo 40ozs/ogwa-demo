@@ -1,7 +1,7 @@
 """Guarded reset of a local synthetic store.
 
-The reset replaces a database file with a newly seeded synthetic demo world. It refuses
-unless every one of these holds:
+The reset deletes a database file and recreates it with the synthetic demo world. It
+refuses unless every one of these holds:
 
 1. the execution mode is LOCAL_SYNTHETIC;
 2. the target is a local SQLite file (not in-memory, not a network database);
@@ -12,15 +12,9 @@ unless every one of these holds:
 
 Checks 4 and 5 open the existing file read-only. A file that cannot be read as an OGWA
 store is never deleted.
-
-The seed is written to a sibling ``<name>.seeding`` file and moved onto the target in one step
-only once it is complete (and verified, when the caller asks), so an interrupted or failed
-reset leaves the target as it was, never a partial store.
 """
 
-import os
 import sqlite3
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,7 +29,6 @@ from app.store.evidence_tables import SPECS
 
 DEFAULT_ALLOWED_ROOT = PROJECT_ROOT / "var"
 _SIDECAR_SUFFIXES = ("-journal", "-wal", "-shm")
-_SEEDING_SUFFIX = ".seeding"  # the seed's own file until it replaces the target
 
 
 class ResetRefused(StoreError):
@@ -92,27 +85,17 @@ def _non_synthetic_rows(conn: sqlite3.Connection) -> int:
 
 
 def reset_synthetic_store(target: DatabaseTarget, *, mode: ExecutionMode, confirmed: bool,
-                          allowed_root: Path = DEFAULT_ALLOWED_ROOT, clock=None, dataset: str = "classic",
-                          verify: Callable[[DatabaseTarget, SeedSummary], None] | None = None) -> ResetResult:
-    """``dataset``: ``classic`` (the 16-scenario lifecycle harness) or ``null-meridian``.
-    ``verify(seeded, summary)``: raises to keep the seeded file from replacing the target."""
+                          allowed_root: Path = DEFAULT_ALLOWED_ROOT, clock=None, dataset: str = "classic") -> ResetResult:
+    """``dataset``: ``classic`` (the 16-scenario lifecycle harness), ``genesee-press`` or ``null-meridian``."""
     create = demo_dataset(dataset).create  # an unknown dataset is refused before anything is touched
     existed = check_reset_allowed(target, mode=mode, allowed_root=allowed_root, confirmed=confirmed)
     path = target.path.resolve()
-    seeding = DatabaseTarget(target.backend, path.with_name(path.name + _SEEDING_SUFFIX))
-    for stale in (seeding.path, *_sidecars(seeding.path)):  # left by an interrupted reset
-        if stale.is_file():
-            stale.unlink()
-    store, summary = create(seeding, clock=clock)
-    store.close()
-    if verify is not None:
-        verify(seeding, summary)
-    for sidecar in _sidecars(path):  # a stale journal must never roll back into the new file
+    if existed:
+        path.unlink()
+    for suffix in _SIDECAR_SUFFIXES:
+        sidecar = path.with_name(path.name + suffix)
         if sidecar.is_file():
             sidecar.unlink()
-    os.replace(seeding.path, path)
+    store, summary = create(target, clock=clock)
+    store.close()
     return ResetResult(path, existed, summary, dataset)
-
-
-def _sidecars(path: Path) -> list[Path]:
-    return [path.with_name(path.name + suffix) for suffix in _SIDECAR_SUFFIXES]

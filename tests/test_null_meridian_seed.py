@@ -25,7 +25,6 @@ from app.demo.synthetic_world import create_seeded_store
 from app.domain.audit import AuditAction
 from app.domain.evidence import EvidenceSource
 from app.domain.model import OktaGroup
-from app.runtime import __main__ as runtime_cli
 from app.store import __main__ as cli
 from app.store import reset as reset_module
 from app.store.environment import DatabaseEnvironment
@@ -71,7 +70,7 @@ class SeededNullMeridianTests(unittest.TestCase):
         self.assertIn("NAME_ONLY", dict(refused[0].details)["problems"])
 
     def test_golden_correlation_outcomes(self):
-        # One mapping per visible Okta group, counted at its latest observation.
+        # One mapping per visible Okta group, counted at its latest observation. OGWA-DEMO-03:
         # NM-C11's evidence was collected again on the snapshot day, so the engine proved its
         # mapping a second time (same anchor, same answer); no other mapping was observed twice.
         latest = self.store.connection.execute(
@@ -236,21 +235,22 @@ class ResetTests(unittest.TestCase):
             self.reset(dataset="production")
         self.assertEqual(self.target.path.read_bytes(), before)
 
-    def run_cli(self, *args, module=cli):
+    def run_cli(self, *args):
         env = {k: v for k, v in os.environ.items() if not k.upper().startswith("OGWA_")}
+        env["OGWA_EXECUTION_MODE"] = "LOCAL_SYNTHETIC"
         env["OGWA_DATABASE_URL"] = f"sqlite:///{self.target.path.as_posix()}"
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(reset_module, "DEFAULT_ALLOWED_ROOT", self.root), \
                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = module.main(list(args))
+            code = cli.main(list(args))
         return code, out.getvalue(), err.getvalue()
 
-    def test_cli_seeds_null_meridian_by_default(self):
-        self.assertEqual((DEFAULT_DATASET, DATASET_KEYS), ("null-meridian", ("null-meridian", "classic")))
-        code, out, _ = self.run_cli("reset-demo", "--confirm-synthetic-reset", module=runtime_cli)
+    def test_cli_seeds_null_meridian_by_name(self):
+        # SYNTH-OGWA-01: the CLI's default is Genesee Press (tests/test_genesee_press.py); the legacy dataset is named.
+        self.assertEqual((DEFAULT_DATASET, DATASET_KEYS), ("genesee-press", ("genesee-press", "null-meridian", "classic")))
+        code, out, _ = self.run_cli("reset-demo", "--confirm-synthetic-reset", "--dataset", "null-meridian")
         self.assertEqual(code, 0, out)
-        self.assertIn("for dataset null-meridian (Null Meridian", out)
-        self.assertIn("seed_namespace: null-meridian-v1", out)
+        self.assertIn("dataset null-meridian, seed null-meridian-v1", out)
         self.assertIn("NM-C08  HOLD", out)
         self.assertIn(GOLDEN_AUDIT_HEAD, out)
         code, out, _ = self.run_cli("status")
@@ -272,7 +272,7 @@ class NoLiveAccessTests(unittest.TestCase):
 
     MODULES = sorted([*(REPO_ROOT / "app" / "demo" / "null_meridian").glob("*.py"), *(REPO_ROOT / "app" / "governance").glob("*.py"),
                       REPO_ROOT / "app" / "demo" / "datasets.py", REPO_ROOT / "app" / "api" / "directory.py"])
-    FORBIDDEN = ("app.integrations", "app.remediation", "socket",
+    FORBIDDEN = ("app.integrations", "app.core.http_client", "app.core.http_mutation", "app.remediation", "socket",
                  "urllib", "http", "subprocess", "ssl", "requests")
 
     def test_no_dataset_module_imports_a_network_integration_or_process_module(self):

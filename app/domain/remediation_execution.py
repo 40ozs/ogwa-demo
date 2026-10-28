@@ -1,6 +1,6 @@
 """What executing a remediation means: a controlled state transition, not a button click.
 
-The governed remediation path performs no change (D8, D153): every
+OGWA-DEMO-03. The governed remediation path performs no change (D8, D153): every
 ``RemediationOutcome`` is a plan, no ``ExecutionJob`` is ever executed, and the execute route
 refuses everyone. None of that changes here. This module defines the execution semantics a
 future executing build would need, as a closed state machine, so that the synthetic
@@ -349,7 +349,7 @@ class ExecutionTrace:
         return sum(1 for s in self.steps if s.state is X.EXECUTION_REQUESTED)
 
     def attempts(self) -> tuple[dict[str, Any], ...]:
-        """Each submission with what came of it, read off the steps: the provider's
+        """Each submission with what came of it, read off the steps (OGWA-DEMO-04): the provider's
         answer, the verification read after an unknown outcome, and the state that followed. A
         reading of the trace, never a second record of it."""
         out: list[dict[str, Any]] = []
@@ -385,7 +385,7 @@ class ExecutionTrace:
 
 
 # What a POST_ACTION_VERIFIED step must carry: the read that found the target in its planned
-# after-state, and nothing else in scope changed. Without it the state is refused.
+# after-state, and nothing else in scope changed (OGWA-DEMO-04). Without it the state is refused.
 def post_action_predicate_problems(step: ExecutionStep) -> tuple[str, ...]:
     problems = []
     if step.reason is not Reason.MATCHES_EXPECTED_STATE:

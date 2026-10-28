@@ -2,12 +2,12 @@ import re
 import unittest
 from pathlib import Path
 
-from app.core.config import KNOWN_KEYS, LIVE_INTEGRATION_KEYS, load_settings
+from app.core.config import KNOWN_KEYS, SECRET_KEYS
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 TEXT_SUFFIXES = {".py", ".md", ".toml", ".ps1", ".psm1", ".psd1", ".txt", ".json", ".yml", ".yaml", ".example", ".gitignore",
-                 ".js", ".mjs", ".css", ".html", ".svg"}  # the last five: the operator UI
+                 ".js", ".mjs", ".css", ".html", ".svg"}  # the last five: the operator UI (P09)
 SKIP_DIRS = {".git", "__pycache__", ".venv", "venv", "var", "data", "evidence", "exports"}
 
 # Credential-shaped strings. Matches containing "synthetic" are deliberate test values.
@@ -41,11 +41,14 @@ class RepositoryHygieneTests(unittest.TestCase):
     def test_env_example_lists_exactly_the_known_keys(self):
         self.assertEqual(set(_env_example_entries()), set(KNOWN_KEYS))
 
-    def test_env_example_names_no_live_setting_and_loads_as_the_demo(self):
+    def test_env_example_secret_values_are_blank(self):
         entries = _env_example_entries()
-        self.assertFalse(set(entries) & set(LIVE_INTEGRATION_KEYS))
-        settings = load_settings(entries)
-        self.assertEqual((settings.runtime_mode.value, settings.mode.value), ("demo", "LOCAL_SYNTHETIC"))
+        for key in SECRET_KEYS:
+            with self.subTest(key=key):
+                self.assertEqual(entries[key], "")
+
+    def test_env_example_does_not_select_a_production_mode(self):
+        self.assertEqual(_env_example_entries()["OGWA_EXECUTION_MODE"], "LOCAL_SYNTHETIC")
 
     def test_gitignore_excludes_sensitive_material(self):
         lines = set((REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines())

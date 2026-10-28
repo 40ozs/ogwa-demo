@@ -1,4 +1,4 @@
-"""The sanitized reviewer audit sample, generated from the application itself.
+"""The sanitized reviewer audit sample, generated from the application itself (OGWA-DEMO-04).
 
 ``python -m app.demo.null_meridian.audit_sample --write docs/demo/samples/ogwa-audit-sample.json``
 seeds a fresh, in-memory Null Meridian store (the same seed as every demo reset), serves the real
@@ -27,7 +27,7 @@ from typing import Any
 from app.api.local import build_local_api
 from app.api.sessions import CSRF_HEADER, SESSION_COOKIE
 from app.core.database_url import parse_database_url
-from app.demo.null_meridian.profile import AS_OF, DATASET_KEY, SEED
+from app.demo.null_meridian.edition import Edition, null_meridian
 from app.demo.null_meridian.world import create_null_meridian_store
 from app.demo.synthetic_world import HOUR, SeedClock
 from app.domain.ids import deterministic_ids
@@ -128,21 +128,27 @@ def _drill_body(fingerprint: str, approval_id: str, assignment_id: str, mode: st
     return body
 
 
-def build_audit_sample() -> dict[str, Any]:
-    """Seed, serve, ask, and return the sample. Deterministic: the same build gives the same bytes."""
-    clock = SeedClock(AS_OF + HOUR)
-    store, summary = create_null_meridian_store(parse_database_url("sqlite:///:memory:"), clock=clock)
+def build_audit_sample(edition: Edition | None = None, notes: tuple[str, ...] = NOTES,
+                       generated_by: str = "python -m app.demo.null_meridian.audit_sample --write "
+                                           "docs/demo/samples/ogwa-audit-sample.json") -> dict[str, Any]:
+    """Seed, serve, ask, and return the sample. Deterministic: the same build gives the same bytes.
+    ``edition``: the dataset (Null Meridian by default; ``app.demo.genesee_press.audit_sample``)."""
+    edition = edition or null_meridian()
+    clock = SeedClock(edition.as_of + HOUR)
+    store, summary = create_null_meridian_store(parse_database_url("sqlite:///:memory:"), clock=clock, edition=edition)
     try:
-        with deterministic_ids(f"{SEED}:audit-sample"):
-            return _sample(store, summary, clock)
+        with deterministic_ids(f"{edition.seed}:audit-sample"):
+            return _sample(store, summary, clock, edition, notes, generated_by)
     finally:
         store.close()
 
 
-def _sample(store, summary, clock) -> dict[str, Any]:
+def _sample(store, summary, clock, edition: Edition, notes: tuple[str, ...], generated_by: str) -> dict[str, Any]:
     api = build_local_api(store, clock=clock)
     ids = {s.key: s.candidate_id for s in summary.scenarios}
-    c10, c11 = ids["NM-C10"], ids["NM-C11"]
+    k10, k11 = edition.candidate_prefix + "10", edition.candidate_prefix + "11"
+    text = edition.text
+    c10, c11 = ids[k10], ids[k11]
     security = _Client(api).sign_in(SECURITY)
     executor = _Client(api).sign_in(EXECUTOR)
     seeded_head = _head(security)
@@ -152,14 +158,14 @@ def _sample(store, summary, clock) -> dict[str, Any]:
     a_detail = security.ok("GET", f"{V}/candidates/{c10}")
     a_approval_status, a_approval = security.request("POST", f"{V}/candidates/{c10}/approvals", {
         "stage": "OKTA_UNASSIGN", "decision": "APPROVE", "reason": "OGWA-DEMO-04 audit sample: a reviewer tries to "
-        "approve NM-C10", "expectedEvidenceFingerprint": a_detail["evidenceFingerprint"]})
+        f"approve {k10}", "expectedEvidenceFingerprint": a_detail["evidenceFingerprint"]})
     a_approvals = security.ok("GET", f"{V}/candidates/{c10}/approvals")
     # NM-C10 has no approval of its own; another candidate's approval is not borrowed.
     c11_approval = security.ok("GET", f"{V}/candidates/{c11}/approvals")["items"][0]["id"]
     a_drill_status, a_drill = executor.request("POST", f"{V}/candidates/{c10}/remediation-drills", _drill_body(
         a_detail["evidenceFingerprint"], c11_approval, store.load_candidate(c10).assignment_ids[0], "DRY_RUN"))
     scenario_a = {
-        "candidateKey": "NM-C10", "candidateId": c10,
+        "candidateKey": k10, "candidateId": c10,
         "evidenceAssessment": {"source": f"GET /api/v1/candidates/{c10} -> evidenceAssessment",
                                **a_detail["evidenceAssessment"]},
         "decisionExplanation": {"source": f"GET /api/v1/candidates/{c10} -> decisionExplanation",
@@ -168,7 +174,7 @@ def _sample(store, summary, clock) -> dict[str, Any]:
                             "status": a_approval_status, "response": a_approval},
         "approvalsAfter": {"source": f"GET /api/v1/candidates/{c10}/approvals", **a_approvals},
         "drillAttemptWithAnotherCandidatesApproval": {
-            "source": f"POST /api/v1/candidates/{c10}/remediation-drills (as {EXECUTOR}, citing NM-C11's approval)",
+            "source": f"POST /api/v1/candidates/{c10}/remediation-drills (as {EXECUTOR}, citing {k11}'s approval)",
             "status": a_drill_status, "response": a_drill},
         "auditChain": _chain(security, c10),
     }
@@ -187,7 +193,7 @@ def _sample(store, summary, clock) -> dict[str, Any]:
         "operation": "OKTA_GROUP_UNASSIGN", "target": {"assignmentId": assignment}, "approvalId": c11_approval,
         "expectedEvidenceFingerprint": fingerprint}, expect=201)
     scenario_b = {
-        "candidateKey": "NM-C11", "candidateId": c11,
+        "candidateKey": k11, "candidateId": c11,
         "evidenceSnapshot": {"source": f"GET /api/v1/candidates/{c11}/evidence", **b_evidence},
         "evidenceAssessment": {"source": f"GET /api/v1/candidates/{c11} -> evidenceAssessment",
                                **b_detail["evidenceAssessment"]},
@@ -209,11 +215,12 @@ def _sample(store, summary, clock) -> dict[str, Any]:
     }
     return {
         "format": FORMAT,
-        "title": "OGWA synthetic governance audit sample: NM-C10 (no safe action) and NM-C11 (controlled synthetic "
-                 "remediation)",
-        "generatedBy": "python -m app.demo.null_meridian.audit_sample --write docs/demo/samples/ogwa-audit-sample.json",
-        "synthetic": True, "notes": list(NOTES),
-        "dataset": {"key": DATASET_KEY, "seed": SEED, "asOf": AS_OF.isoformat(), "auditHeadAfterSeed": seeded_head},
+        "title": text("OGWA synthetic governance audit sample: NM-C10 (no safe action) and NM-C11 (controlled synthetic "
+                      "remediation)"),
+        "generatedBy": generated_by,
+        "synthetic": True, "notes": list(notes),
+        "dataset": {"key": edition.key, "seed": edition.seed, "asOf": edition.as_of.isoformat(),
+                    "auditHeadAfterSeed": seeded_head},
         "policy": {"source": "GET /api/v1/policy -> inForce, versions", "inForce": policy["inForce"],
                    "versions": policy["versions"]},
         "scenarioA": scenario_a,
@@ -226,14 +233,14 @@ def render(sample: dict[str, Any]) -> str:
     return json.dumps(sample, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, default_path: Path = DEFAULT_PATH, build=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--write", type=Path, nargs="?", const=DEFAULT_PATH, help="write the sample to this path")
-    group.add_argument("--check", type=Path, nargs="?", const=DEFAULT_PATH,
+    group.add_argument("--write", type=Path, nargs="?", const=default_path, help="write the sample to this path")
+    group.add_argument("--check", type=Path, nargs="?", const=default_path,
                        help="fail unless the file at this path is exactly what this build generates")
     args = parser.parse_args(argv)
-    text = render(build_audit_sample())
+    text = render((build or build_audit_sample)())
     if args.write is not None:
         args.write.parent.mkdir(parents=True, exist_ok=True)
         args.write.write_text(text, encoding="utf-8")

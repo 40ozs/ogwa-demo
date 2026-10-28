@@ -59,7 +59,7 @@ PINNED_CHECKSUMS = {
     12: "sha256:938355e8a16bbf274852c16517b46d3151334b3b467547f78a14cc10a45ba5c7",
 }
 
-# The original list of things that must be persisted, and the table that holds each.
+# The P03 list of things that must be persisted, and the table that holds each.
 PERSISTED_CONCEPTS = {
     "applications": "okta_applications",
     "groups": "okta_groups",
@@ -74,8 +74,8 @@ PERSISTED_CONCEPTS = {
     "execution jobs": "execution_jobs",
     "audit events": "audit_events",
     "collector runs": "collector_runs",
-    "identity mapping reviews": "mapping_reviews",
-    "candidate policy versions": "policy_versions",
+    "identity mapping reviews (P06)": "mapping_reviews",
+    "candidate policy versions (P07)": "policy_versions",
     "synthetic directory snapshot (0012)": "synthetic_directory_records",
 }
 
@@ -206,8 +206,8 @@ class MigrationContentTests(unittest.TestCase):
         self.assertEqual(set(m.JOB_MODES), {mode.value for mode in JOB_MODES})
         self.assertEqual(set(m.STORE_MODES), permitted_modes)
         self.assertEqual(set(v0004_candidate_policy.FINDING_CODES), {c.value for c in FindingCode})
-        # Audit actions: 0005 extends the v0001 list (D41), 0007 extends 0005's, and
-        # 0010 extends 0007's; every historical value stays allowed, and the latest list
+        # Audit actions: 0005 extends the v0001 list (D41), 0007 extends 0005's (after P08), and
+        # 0010 extends 0007's (P10); every historical value stays allowed, and the latest list
         # equals the domain.
         self.assertEqual(set(v0010_remediation_dry_runs.AUDIT_ACTIONS), {a.value for a in AuditAction})
         self.assertLess(set(m.AUDIT_ACTIONS), set(v0005_review_audit_actions.AUDIT_ACTIONS))
@@ -219,8 +219,8 @@ class MigrationContentTests(unittest.TestCase):
         # Confidences: 0006 extends the v0001 list (D56); every earlier value stays allowed.
         self.assertEqual(set(v0006_unverified_stable_id.CONFIDENCES), {c.value for c in MappingConfidence})
         self.assertLess(set(m.CONFIDENCES), set(v0006_unverified_stable_id.CONFIDENCES))
-        # Lifecycle states: 0009 extends the v0001 list, and
-        # 0011 extends 0009's (the AD quarantine and deletion stages).
+        # Lifecycle states: 0009 extends the v0001 list (EVIDENCE_INCOMPLETE, after P09), and
+        # 0011 extends 0009's (the AD quarantine and deletion stages, P10B).
         v0011 = v0011_ad_quarantine_deletion_stages
         self.assertEqual(set(v0011.LIFECYCLE_STATES), {s.value for s in LifecycleState})
         self.assertLess(set(m.LIFECYCLE_STATES), set(v0009_evidence_incomplete_state.LIFECYCLE_STATES))
@@ -294,7 +294,7 @@ class StoreIsolationTests(unittest.TestCase):
 
     FORBIDDEN = {
         "socket", "http", "http.client", "urllib.request", "subprocess", "requests", "httpx",
-        "app.core.safety",
+        "app.core.http_client", "app.core.http_mutation", "app.core.safety",
     }
 
     def test_store_and_demo_import_nothing_forbidden(self):

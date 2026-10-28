@@ -16,7 +16,7 @@ export const WRITE_PATHS = Object.freeze([
   "/candidates/{candidateId}/transitions",
   "/candidates/{candidateId}/approvals",
   "/candidates/{candidateId}/execution-jobs",
-  // A synthetic drill. It records nothing and changes only an in-memory
+  // OGWA-DEMO-03: a synthetic drill. It records nothing and changes only an in-memory
   // provider fixture that the server discards when it answers.
   "/candidates/{candidateId}/remediation-drills",
 ]);

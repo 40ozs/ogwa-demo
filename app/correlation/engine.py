@@ -417,7 +417,7 @@ def _may_be_exact(claim: ClaimCheck) -> bool:
     """Whether a claim may be the basis of an exact mapping. Any claim may corroborate one.
 
     A directory-source objectSid, or an earlier approval recorded by that method, is not a
-    basis until it is verified (D37). Read at call time so the gate cannot be cached.
+    basis until P11 verifies it (D37). Read at call time so the gate cannot be cached.
     """
     return claim.method is not MappingMethod.DIRECTORY_SOURCE_SID or correlation_model.DIRECTORY_SOURCE_SID_VERIFIED
 

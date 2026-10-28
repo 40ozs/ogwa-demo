@@ -1,8 +1,7 @@
-"""The Active Directory report contract. See docs/architecture/ad-integration.md.
+"""Read-only Active Directory integration. See docs/architecture/ad-integration.md.
 
-OGWA never queries AD itself, and this build includes no AD reader. This package validates
-AD reader reports in a strict JSON form and turns them into domain evidence; the demo's
-reports and evidence are synthetic.
+OGWA never queries AD itself. A read-only AAP job runs the PowerShell worker
+(``worker/OGWA.ADReader``) with an ``ADReadRequest`` and returns its JSON report.
 
 Public surface:
 

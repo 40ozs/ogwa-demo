@@ -1,4 +1,4 @@
-"""Remediation dry runs behind the API. Dry runs only; nothing is ever executed.
+"""Remediation dry runs behind the API (P10). Dry runs only; nothing is ever executed.
 
 One request asks for one operation on one target of one candidate. The order of checks
 follows ``app.api.services`` and every step fails closed:
@@ -17,14 +17,14 @@ follows ``app.api.services`` and every step fails closed:
 The request carries no template, script, command, OU, or host: the server-side allowlist
 supplies all of them. There is no bulk form and no execute form.
 
-**Synthetic drills.** ``drill`` runs the same checks 2 to 4, then
+**Synthetic drills (OGWA-DEMO-03).** ``drill`` runs the same checks 2 to 4, then
 ``app.remediation.drill``: the governed gates, allowlist, and synthetic adapter first (a
 blocked request is 409 ``REMEDIATION_BLOCKED`` and builds nothing), then a dry run or a
 scripted synthetic execution against an in-memory provider fixture. A drill records
 nothing: no audit event, no job, no lifecycle move. It is not a governed state change, so
 its refusals stay in the security log (D64, D72), like a mapping inspection's.
 
-**Policy binding.** Once the governed gates pass, both a dry run and a drill
+**Policy binding (OGWA-DEMO-04).** Once the governed gates pass, both a dry run and a drill
 also need their authorization to hold (``app.api.authorization``): the approval, and the
 decision that applied it, judged by the policy version in force. Otherwise 409
 ``APPROVAL_POLICY_NOT_IN_FORCE`` (a drill builds nothing; a dry run records nothing but its
@@ -211,7 +211,7 @@ _RECORD_FIELDS = {
 
 
 def remediation_record_json(event: AuditEvent, store: Store | None = None) -> dict[str, Any]:
-    """A recorded dry run. With ``store`` it also names the policy its event recorded,
+    """A recorded dry run. With ``store`` (OGWA-DEMO-04) it also names the policy its event recorded,
     as recorded (None: recorded before dry runs named their policy), and its chain."""
     details = dict(event.details)
     record = {name: details.get(key) for key, name in _RECORD_FIELDS.items()}

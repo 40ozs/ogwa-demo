@@ -1,0 +1,52 @@
+{
+  "format": "ogwa-policy-release/v1",
+  "policyId": "GP-LIFECYCLE-004",
+  "version": "1.2.0",
+  "title": "Genesee Press group lifecycle: retire unused application groups",
+  "purpose": "Synthetic demo policy of the fictional company Genesee Press. It decides when an Okta application group and its Active Directory counterpart may be put to a named human for retirement: no sign-in through the group in 90 days, an exact identity mapping, an empty and unnested AD group, no other application assignment, complete dependency checks, and current evidence. It never authorizes a change: every step is approved by different people, and this build only plans dry runs (D8).",
+  "effectiveFrom": "2026-09-28T09:00:00Z",
+  "supersedes": "1.1.0",
+  "changes": [
+    "Approval evidence window shortened from 14 days (336 h) to 7 days (168 h): a named approver now needs every record the next step reads to have been observed within the last week."
+  ],
+  "synthetic": true,
+  "policy": {
+    "format": "ogwa-candidate-policy/v1",
+    "usage": {
+      "lowUsageMaxSignIns": 5,
+      "lowUsageMaxUniqueUsers": null,
+      "reviewMinWindowDays": 30,
+      "recentLoginWindowDays": 30,
+      "retirementWindowDays": 90,
+      "retirementMaxSignIns": 0
+    },
+    "freshness": {
+      "reviewHours": 720,
+      "approvalHours": 168,
+      "executionHours": 24,
+      "clockSkewMinutes": 5
+    },
+    "lifecycle": {
+      "holdPeriodDays": 30,
+      "approvalMaxTtlHours": 168
+    },
+    "requiredDependencyKinds": [
+      "AAP_REFERENCE",
+      "AD_ACL_REFERENCE",
+      "AD_GROUP_MEMBERS",
+      "AD_NESTED_MEMBERSHIP",
+      "APPLICATION_CONFIGURATION",
+      "GPO_REFERENCE",
+      "OKTA_OTHER_APP_ASSIGNMENT",
+      "OKTA_POLICY_REFERENCE"
+    ],
+    "protected": {
+      "oktaGroupIds": [],
+      "adObjectGuids": [],
+      "adSids": []
+    },
+    "adDirectorySourceIds": [
+      "0oaSYNTHGPADDIR"
+    ]
+  }
+}

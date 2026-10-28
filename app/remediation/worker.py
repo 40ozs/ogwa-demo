@@ -1,7 +1,7 @@
 """The JSON contract between OGWA and the PowerShell remediation worker (OGWA.Remediation).
 
-The worker takes one ``ogwa.remediation.request/v1`` document and answers with one
-``ogwa.remediation.result/v1`` document. This module builds the request and
+A future AAP job would run the worker with one ``ogwa.remediation.request/v1`` document and
+read back one ``ogwa.remediation.result/v1`` document. This module builds the request and
 validates the result, strictly in both directions:
 
 - a request names one operation, one explicit target (stable identifiers plus the identity
@@ -79,7 +79,7 @@ class WorkerContractError(ValueError):
 
 def worker_request(operation: RemediationOperation, target: RemediationTarget, *, mode: str, correlation_id: str,
                    quarantine_ou: str | None = None) -> dict[str, Any]:
-    """The request the worker would receive for this one target."""
+    """The request a future AAP job would hand the worker for this one target."""
     if mode not in WORKER_MODES:
         raise WorkerContractError(f"the worker accepts only these modes: {', '.join(WORKER_MODES)}")
     if not isinstance(correlation_id, str) or not _CORRELATION_RE.match(correlation_id):

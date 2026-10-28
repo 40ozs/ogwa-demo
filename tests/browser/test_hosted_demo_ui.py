@@ -5,8 +5,9 @@ Opt-in, like the other browser tests (UI_BROWSER_TESTS=1). The server is
 loopback, or, with ``UI_BROWSER_TARGET``, the Worker itself (``wrangler dev`` or the deployed
 workers.dev URL).
 
-The public demo has no sign-in. Each test starts where a reviewer starts, with no session (cookies
-cleared) at the public URL or a link into it, and fails if a sign-in form ever appears:
+OGWA-DEMO-HOSTED-ANON-01: the public demo has no sign-in. Each test starts where a reviewer starts,
+with no session (cookies cleared) at the public URL or a link into it, and fails if a sign-in form
+ever appears:
 
 - A. a fresh visitor lands on the dashboard, with the demo indicator, and reaches every view;
 - B. a direct link to a reviewer page opens that page, not the dashboard;

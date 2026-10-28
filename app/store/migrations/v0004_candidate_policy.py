@@ -1,4 +1,4 @@
-"""0004 — candidate-classification policy.
+"""0004 — candidate-classification policy (P07).
 
 1. ``dependency_findings.code``: what a finding is (direct members, primary-group
    references, parent groups, member groups, nested principals, other Okta assignments),

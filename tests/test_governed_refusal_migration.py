@@ -1,4 +1,4 @@
-"""Migration 0007: the GOVERNED_REQUEST_REFUSED audit action.
+"""Migration 0007 (after P08): the GOVERNED_REQUEST_REFUSED audit action.
 
 The synthetic demo world is seeded into a schema-6 store (the build is held at 6 for the
 seed) and then upgraded. Every audit event must be unchanged, the chain must verify, the

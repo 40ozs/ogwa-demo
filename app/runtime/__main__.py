@@ -4,14 +4,16 @@
     reset-demo --confirm-synthetic-reset    re-create the demo store from the dataset's own seed
     verify [--expected-audit-head HEAD]     validate the demo store against the configured dataset
 
-The dataset is the configured ``OGWA_DEMO_DATASET`` selector (default ``null-meridian``),
-resolved through the dataset registry ``app.demo.datasets``; there is no ``--dataset`` flag,
-so the store and the server always agree on it. This is the one reset command for the demo
-store.
+``reset-demo`` and ``verify`` run only with ``OGWA_RUNTIME_MODE=demo``. The dataset is the
+configured ``OGWA_DEMO_DATASET`` selector (default ``genesee-press``), resolved through the
+dataset registry ``app.demo.datasets``; there is no ``--dataset`` flag, so the store and the
+server always agree on it. This is the one reset command for the demo runtime; under it,
+``python -m app.store reset-demo`` refuses and points here.
 
-The sequence is: reset the demo store (the guarded reset runs the dataset's own seed),
-validate the canonical dataset, then start OGWA (``python -m app.api serve``). Nothing here
-contacts a network service. Exit codes: 0 success, 1 validation failure, 2 refused.
+The sequence is: select the demo runtime, reset the demo store (the guarded reset runs the
+dataset's own seed), validate the canonical dataset, then start OGWA
+(``python -m app.api serve``). Nothing here contacts a network service. Exit codes: 0
+success, 1 validation failure, 2 refused.
 """
 
 import argparse
@@ -28,16 +30,17 @@ from app.store.store import utc_now
 
 def _status(settings) -> int:
     print(f"runtime_mode:  {settings.runtime_mode.value}")
-    print(f"demo_dataset:  {settings.demo_dataset}")
+    print(f"demo_dataset:  {settings.demo_dataset or '-'}")
     for key, state in dataset_status().items():
         print(f"dataset[{key}]: {state}")
-    path = settings.database.path
-    print(f"demo_store:    {'present' if path is not None and path.is_file() else 'missing'}")
+    if settings.is_demo:
+        path = settings.database.path
+        print(f"demo_store:    {'present' if path is not None and path.is_file() else 'missing'}")
     return 0
 
 
 def _reset(settings, confirmed: bool) -> int:
-    dataset = resolve_dataset(settings.demo_dataset)
+    dataset = resolve_dataset(settings.demo_dataset or "")
     result = reset_demo_store(settings, dataset, confirmed=confirmed, allowed_root=reset_module.DEFAULT_ALLOWED_ROOT)
     report = result.report
     print(f"{'Replaced' if result.replaced_existing else 'Created'} the demo store for dataset {result.dataset} "
@@ -61,7 +64,7 @@ def _print_report(report) -> None:
 
 
 def _verify(settings, expected_head: str | None) -> int:
-    dataset = resolve_dataset(settings.demo_dataset)
+    dataset = resolve_dataset(settings.demo_dataset or "")
     try:
         store, report = open_demo_store(settings, dataset, clock=utc_now, expected_audit_head=expected_head)
     except DemoPersistenceUnavailable as exc:
@@ -87,6 +90,9 @@ def main(argv: list[str] | None = None) -> int:
         settings = load_settings()
         if args.command == "status":
             return _status(settings)
+        if not settings.is_demo:
+            print("Refused: this command runs only with OGWA_RUNTIME_MODE=demo.", file=sys.stderr)
+            return 2
         print(f"OGWA demo | dataset={settings.demo_dataset}")
         if args.command == "reset-demo":
             return _reset(settings, args.confirm_synthetic_reset)

@@ -7,10 +7,10 @@ from app.core.errors import ConfigError
 
 
 class DatabaseUrlTests(unittest.TestCase):
-    def test_default_is_the_git_ignored_demo_store(self):
+    def test_default_is_a_git_ignored_local_file(self):
         target = parse_database_url(None)
-        self.assertEqual(DEFAULT_DATABASE_URL, "sqlite:///var/ogwa-demo.sqlite3")
-        self.assertEqual(target.path, (PROJECT_ROOT / "var" / "ogwa-demo.sqlite3").resolve())
+        self.assertEqual(DEFAULT_DATABASE_URL, "sqlite:///var/ogwa-local.sqlite3")
+        self.assertEqual(target.path, (PROJECT_ROOT / "var" / "ogwa-local.sqlite3").resolve())
         self.assertEqual(parse_database_url("   "), target)
 
     def test_relative_paths_resolve_against_the_project_not_the_cwd(self):
@@ -38,8 +38,9 @@ class DatabaseUrlTests(unittest.TestCase):
                 parse_database_url(url)
 
     def test_settings_expose_the_database_without_secrets(self):
-        settings = load_settings({"OGWA_DATABASE_URL": "sqlite:///var/x.sqlite3"})
-        self.assertEqual(settings.diagnostics()["database.location"], str((PROJECT_ROOT / "var" / "x.sqlite3").resolve()))
+        settings = load_settings({"OGWA_DATABASE_URL": "sqlite:///:memory:"})
+        self.assertTrue(settings.database.in_memory)
+        self.assertEqual(settings.diagnostics()["database.location"], ":memory:")
         self.assertEqual(settings.diagnostics()["database.backend"], "sqlite")
 
     def test_bad_database_url_refuses_startup(self):

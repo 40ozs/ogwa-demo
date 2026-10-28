@@ -1,4 +1,4 @@
-"""The synthetic provider fixture: the only thing a remediation drill can ever change.
+"""The synthetic provider fixture: the only thing a remediation drill can ever change (OGWA-DEMO-03).
 
 A fixture is an in-memory model of the objects one candidate's remediation would touch, its
 Okta group's application assignments and its mapped AD group, copied from the candidate's
@@ -20,7 +20,7 @@ It behaves like a provider a careful executor would have to deal with:
   realistic times without anyone waiting.
 
 Every change goes through ``MutationCapableService._perform`` with the mutation policy the
-caller injects: in ``LOCAL_SYNTHETIC``, against a synthetic target, the policy says
+caller injects (P01): in ``LOCAL_SYNTHETIC``, against a synthetic target, the policy says
 EXECUTE; in ``DRY_RUN_MUTATION`` it can only plan, so nothing is applied at all. Any other
 policy is refused when the fixture is built. The ledger is the fixture's own record of what
 happened inside it. A drill never consults it to decide anything; it is reported so that a
@@ -297,7 +297,7 @@ class SyntheticProviderFixture(MutationCapableService):
         return not failed
 
     def _change(self, key: str, new_state, *, action: str) -> bool:
-        """Change one object through the mutation policy. True if it was changed."""
+        """Change one object through the P01 mutation policy. True if it was changed."""
         system = "okta" if key.startswith("okta-") else "ad"
 
         def operation() -> None:

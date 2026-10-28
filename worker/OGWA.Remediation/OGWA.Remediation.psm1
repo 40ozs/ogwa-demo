@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 <#
-    OGWA.Remediation - the remediation worker of OGWA, dry-run only.
+    OGWA.Remediation - the remediation worker of OGWA, dry-run only (P10).
 
     Each state-changing command names one explicit target (stable identifiers plus the
     identity OGWA expects, never a pattern), declares SupportsShouldProcess with

@@ -1,4 +1,4 @@
-"""The UI's information architecture on the API side: sorted and counted listings, and the identity resolver.
+"""OGWA-UI-IA-01 on the API side: sorted and counted listings, and the identity resolver.
 
 Everything runs over real seeded worlds (Null Meridian, and the classic world for evidence
 without a directory snapshot). The UI's presentation of these answers is covered by
@@ -130,9 +130,9 @@ class SortedListingTests(unittest.TestCase):
 
     def test_dashboard_summarizes_dependency_findings(self):
         summary = self.get("/dashboard").json["dependencyFindings"]
-        # NM-C10 adds five checks (three complete, one FAILED, one PARTIAL), and NM-C09's
+        # OGWA-DEMO-01: NM-C10 adds five checks (three complete, one FAILED, one PARTIAL), and NM-C09's
         # membership read now reports the members its AD group object lists (the fourth finding).
-        # NM-C11 adds eight complete checks with no finding (re-collected, not added again).
+        # OGWA-DEMO-03: NM-C11 adds eight complete checks with no finding (re-collected, not added again).
         self.assertEqual(summary, {"checks": 71, "checksWithFindings": 4, "findings": 4, "blocking": 4})
 
 
@@ -187,7 +187,7 @@ class IdentityResolverTests(unittest.TestCase):
         for bad in ("All-Staff", "adg_XYZ", "x" * 40, ",".join(f"adg_{i:032x}" for i in range(51))):
             with self.subTest(ids=bad[:30]):
                 self.assertEqual(self.client.get(f"{V}/identities?ids={bad}").status, 400)
-        # Null Meridian records its policy versions, so no unrecorded-policy notice is added.
+        # Null Meridian records its policy versions (OGWA-DEMO-02), so no unrecorded-policy notice is added.
         self.assertEqual(self.client.get(f"{V}/identities").json, {"items": {}})
 
     def test_an_okta_group_shows_its_ad_counterpart_only_from_an_exact_mapping(self):

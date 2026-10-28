@@ -31,7 +31,7 @@ test("S08, S09, S10 and S13 have distinct mapping descriptions (D98)", withFixtu
   }
 });
 
-test("the dangerous-state wording appears where it applies", withFixtures, () => {
+test("the prompt's dangerous-state wording appears where it applies", withFixtures, () => {
   assert.ok(headlines("S09").includes("Mapping ambiguous — automatic retirement blocked."));
   assert.ok(headlines("S12").includes("Dependency coverage incomplete — AD deletion blocked."));
   assert.ok(headlines("S11").includes("Evidence stale — revalidation required."));
@@ -54,7 +54,7 @@ test("S13: unverified SID and incomplete collection, never called stale (D97)", 
 });
 
 test("S07: incomplete coverage is not called stale, and its diversion is EVIDENCE_INCOMPLETE", withFixtures, () => {
-  // Owner decision: incomplete and stale are different lifecycle states (migration 0009).
+  // Owner decision after P09: incomplete and stale are different lifecycle states (migration 0009).
   assert.equal(scenario("S07").detail.SECURITY.classification.lifecycleDiversion, "EVIDENCE_INCOMPLETE");
   assert.equal(scenario("S11").detail.SECURITY.classification.lifecycleDiversion, "STALE_EVIDENCE");
   assert.match(stateInfo("EVIDENCE_INCOMPLETE").label, /incomplete/);
@@ -172,7 +172,7 @@ test("a viewer is offered nothing, anywhere", withFixtures, () => {
   }
 });
 
-test("only the defined actions are ever offered", withFixtures, () => {
+test("only the P09 actions are ever offered", withFixtures, () => {
   const allowedTargets = new Set(Object.keys(UI_TRANSITIONS));
   for (const key of Object.keys(fx.scenarios)) {
     const s = scenario(key);
@@ -185,7 +185,7 @@ test("only the defined actions are ever offered", withFixtures, () => {
     }
   }
   // The specific diversions the API allows (DEPENDENCY_BLOCKED, MAPPING_AMBIGUOUS, PROTECTED,
-  // STALE_EVIDENCE) are API-only.
+  // STALE_EVIDENCE) are API-only in P09.
   for (const target of ["DEPENDENCY_BLOCKED", "MAPPING_AMBIGUOUS", "PROTECTED", "STALE_EVIDENCE", "EVIDENCE_INCOMPLETE",
     "RETIRED", "HOLD"]) {
     assert.equal(UI_TRANSITIONS[target], undefined, target);
@@ -220,7 +220,7 @@ test("S01 in its hold period: revalidation is requested with the evidence finger
   assert.equal(revalidate.needsFingerprint, true);
 });
 
-// --- The AD quarantine and deletion stages ----------------------------------------------------
+// --- P10B: the AD quarantine and deletion stages ----------------------------------------------------
 
 test("S16: only Security/IAM is offered the AD deletion approval, and nobody a dry run yet", withFixtures, () => {
   const s = scenario("S16");

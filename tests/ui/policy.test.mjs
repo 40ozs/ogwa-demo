@@ -1,4 +1,4 @@
-// Unit tests for the policy-version wording (app/ui/static/js/policy.js).
+// Unit tests for the policy-version wording (app/ui/static/js/policy.js), OGWA-DEMO-02.
 // Run by tests/test_ui_policy.py, which first writes fixtures produced by the real API over a
 // freshly seeded Null Meridian store (UI_POLICY_FIXTURES). Synthetic data only.
 import assert from "node:assert/strict";

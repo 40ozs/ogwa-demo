@@ -1,6 +1,6 @@
 """Runs the remediation-drill UI tests (tests/ui/drill.test.mjs) under Node's built-in runner.
 
-The fixtures are what the real API returns: Null Meridian's NM-C11 dry run and
+The fixtures are what the real API returns (OGWA-DEMO-03): Null Meridian's NM-C11 dry run and
 every catalog scenario, and the classic world's AD deletion under each scenario, plus the
 server's scenario catalog. So the UI's wording is tested against real server output.
 Synthetic data only; Node is used only as a local test runner (no packages, no network).
@@ -40,7 +40,7 @@ def build_fixtures() -> dict:
         approval = nm.client(VIEWER).get(f"{V}/candidates/{candidate}/approvals").json["items"][0]["id"]
         fixtures = {"catalog": nm.client(VIEWER).get(f"{V}/remediation-drill-scenarios").json,
                     "nmC11": _drills(nm, candidate, approval, "OKTA_GROUP_UNASSIGN")}
-        # Whole responses (drill, policy, authorization, chain) for the walkthrough's runs.
+        # OGWA-DEMO-04: whole responses (drill, policy, authorization, chain) for the walkthrough's runs.
         executor = nm.client(EXECUTOR)
         fixtures["nmC11Responses"] = {
             "DRY_RUN": post_drill(nm, executor, candidate, approval).json,
