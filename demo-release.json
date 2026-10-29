@@ -1,10 +1,10 @@
 {
   "schema": "genesee-press-demo-release/1",
   "application": "ogwa",
-  "release_id": "genesee-press-2.1.0-2a7c2dc69aca",
+  "release_id": "genesee-press-2.1.0-d53589ab4c35",
   "application_repository": "40ozs/ogwa",
-  "source_branch": "integration/SYNTH-CROSSAPP-01",
-  "application_upstream_sha": "2a7c2dc69aca328dc8494f357dc190a5bfd7d01b",
+  "source_branch": "integration/SYNTH-CUTOVER-02",
+  "application_upstream_sha": "d53589ab4c359d2184490e3cd04fe07200694050",
   "synthetic_enterprise_repository": "40ozs/synthetic-enterprise",
   "synthetic_enterprise_sha": "ce7c0c7d9fbc82c67e596dde95cf5e2432acf450",
   "synthetic_enterprise_branch": "integration/SYNTH-CROSSAPP-01",
@@ -27,7 +27,7 @@
   },
   "demo_repository": "40ozs/ogwa-demo",
   "demo_branch": "main",
-  "generated_at": "2026-10-29T00:10:26Z",
+  "generated_at": "2026-10-29T01:09:39Z",
   "generated_at_note": "Input of the export, recorded here; reproduction re-uses it, so the tree is byte-identical.",
   "exporter": {
     "repository": "40ozs/synthetic-enterprise",
@@ -36,7 +36,7 @@
     "tool_sha256": "662788415d5f2aa7141e48ff60d3d9f1debabc670b47ce375dc299526fd8c5a4",
     "verifier_sha256": "799e4ee88d4af2f1d6de490c6f522f1c6daab2a618d75c02facde22f6202a681",
     "spec": "tools/cutover/specs/ogwa.json",
-    "spec_sha256": "47d6f7f310ee3e32927e7fd9452a175c909154cb8f8c7646b7cbe669db53eb5d"
+    "spec_sha256": "02d98596775c45aac236de1f2d6839d31afc95bce73cc2b2eb35b70dbb078689"
   },
   "selection": {
     "source_files": 439,
@@ -45,50 +45,7 @@
     "excluded_sha256": "59c8eb534459a4b17d8bc4a8e1de9ff2310fef30cdf1ecb362349595126c1cde"
   },
   "sanitization": {
-    "redactions": [
-      {
-        "path": "app/domain/candidate_policy.py",
-        "line": 45,
-        "original_line_sha256": "b0bbb81d22c615f5ec846cc66268c744420d6a4cb3b9179507d0efea7ecaa083",
-        "reason": "Comment-only: names employer-internal tooling (SYNTH-DISCOVERY-01 U-03, DEMO-PUBLIC-01 T3). Wording follows the previously published ogwa-demo; AST unchanged."
-      },
-      {
-        "path": "app/domain/candidate_policy.py",
-        "line": 46,
-        "original_line_sha256": "ba27fb463e2573243e8c6094f66801453685dbba35c4f8c3a6f20517f44d76c6",
-        "reason": "Comment-only: names employer-internal tooling (SYNTH-DISCOVERY-01 U-03, DEMO-PUBLIC-01 T3). Wording follows the previously published ogwa-demo; AST unchanged."
-      },
-      {
-        "path": "app/domain/policy.py",
-        "line": 41,
-        "original_line_sha256": "b7c1f28afe187c9e13d0b82888b73bca1d4fa0eb9c70e57ffe3324c448febaa5",
-        "reason": "Comment-only: names employer-internal tooling (SYNTH-DISCOVERY-01 U-03, DEMO-PUBLIC-01 T3). Wording follows the previously published ogwa-demo; AST unchanged."
-      },
-      {
-        "path": "app/domain/policy.py",
-        "line": 58,
-        "original_line_sha256": "dfb42be17dd2573ca6565493eefb20a61e551fc971258d46f1947f8360bfdd6a",
-        "reason": "Comment-only: names employer-internal tooling (SYNTH-DISCOVERY-01 U-03, DEMO-PUBLIC-01 T3). Wording follows the previously published ogwa-demo; AST unchanged."
-      },
-      {
-        "path": "app/domain/policy.py",
-        "line": 59,
-        "original_line_sha256": "4a009b96d6897d684903ee2fddd61685a96c5d37c5fc3d3510ca2fde4ea52c32",
-        "reason": "Comment-only: names employer-internal tooling (SYNTH-DISCOVERY-01 U-03, DEMO-PUBLIC-01 T3). Wording follows the previously published ogwa-demo; AST unchanged."
-      },
-      {
-        "path": "app/integrations/ad/assessment.py",
-        "line": 44,
-        "original_line_sha256": "4cc11a5056b98e42b5617c1cbbf71e7e3c6caffb372fd44beb50b474977999e7",
-        "reason": "Comment-only: names employer-internal tooling (SYNTH-DISCOVERY-01 U-03, DEMO-PUBLIC-01 T3). Wording follows the previously published ogwa-demo; AST unchanged."
-      },
-      {
-        "path": "tests/test_candidate_policy.py",
-        "line": 51,
-        "original_line_sha256": "73ff8eada6dc9125ab0ad183b950e8706dda192e3408ad8243b9c8c8ad2a8b27",
-        "reason": "Comment-only: names employer-internal tooling (SYNTH-DISCOVERY-01 U-03, DEMO-PUBLIC-01 T3). Wording follows the previously published ogwa-demo; AST unchanged."
-      }
-    ],
+    "redactions": [],
     "accepted_scan_findings": [
       {
         "rule": "email-domain",

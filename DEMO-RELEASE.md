@@ -1,4 +1,4 @@
-# OGWA demo release `genesee-press-2.1.0-2a7c2dc69aca`
+# OGWA demo release `genesee-press-2.1.0-d53589ab4c35`
 
 This repository is a **one-way release mirror**. It is generated from a verified application
 integration commit and the Genesee Press synthetic world; it is not a development repository.
@@ -6,12 +6,12 @@ Changes are made upstream and arrive here only through a new release export.
 
 | | |
 |---|---|
-| Application source | `40ozs/ogwa` `integration/SYNTH-CROSSAPP-01` @ `2a7c2dc69aca328dc8494f357dc190a5bfd7d01b` |
+| Application source | `40ozs/ogwa` `integration/SYNTH-CUTOVER-02` @ `d53589ab4c359d2184490e3cd04fe07200694050` |
 | Synthetic world | `40ozs/synthetic-enterprise` @ `ce7c0c7d9fbc82c67e596dde95cf5e2432acf450` |
 | Dataset / contract | `synthetic-enterprise-world@2.1.0` / `0.2.0` |
 | Projection | `ogwa@0.3.1` (lock `SYNTHETIC_ENTERPRISE.lock`, commit `ce7c0c7d9fbc82c67e596dde95cf5e2432acf450`) |
 | Integration record | `docs/demo/reports/SYNTH-CROSSAPP-01-report.md` @ `296b528e5927f579f2513b6c43b750f50f1de8e8` |
-| Release generated | 2026-10-29T00:10:26Z by `tools/cutover/demo_release.py` (SYNTH-CUTOVER-01) |
+| Release generated | 2026-10-29T01:09:39Z by `tools/cutover/demo_release.py` (SYNTH-CUTOVER-02) |
 
 Machine-readable provenance: [`demo-release.json`](demo-release.json). Every file's digest:
 [`demo-release/files.sha256`](demo-release/files.sha256).
@@ -38,13 +38,11 @@ The OGWA application at the verified integration commit, with the vendored Genes
 (`ogwa@0.3.1`) as the default dataset and Null Meridian kept as the documented legacy fixture. It replaces
 the earlier hand-maintained public copy (`417ed5a`, kept in this repository's history as the rollback
 point): its demo-only code edits and Docker packaging are not carried forward; this tree is the upstream
-application exactly, apart from seven comment lines.
+application exactly. No file is altered during export.
 
 Left out on purpose: the internal run reports (`docs/agent-runs/`), the project-status ledger and nine
 architecture/security documents that record development provenance, and the source repository's
-self-hosted CI. Seven comment lines that named development-environment tooling are reworded; each is
-recorded by line and digest in `demo-release.json` and leaves the Python syntax tree unchanged. Some
-documents still link to the omitted reports. No source history is included.
+self-hosted CI. Some documents still link to the omitted reports. No source history is included.
 
 ## Hosted demo: database first, then the Worker
 
