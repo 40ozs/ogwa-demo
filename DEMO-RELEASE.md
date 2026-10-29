@@ -1,4 +1,4 @@
-# OGWA demo release `genesee-press-2.1.0-1670298c8de8`
+# OGWA demo release `genesee-press-2.1.0-3df36fda9a86`
 
 This repository is a **one-way release mirror**. It is generated from a verified application
 integration commit and the Genesee Press synthetic world; it is not a development repository.
@@ -6,12 +6,12 @@ Changes are made upstream and arrive here only through a new release export.
 
 | | |
 |---|---|
-| Application source | `40ozs/ogwa` `integration/SYNTH-HOSTED-CUTOVER-MAC-01` @ `1670298c8de8862473ed0c1384282b21827fcd2c` |
+| Application source | `40ozs/ogwa` `integration/SYNTH-HOSTED-CUTOVER-MAC-01` @ `3df36fda9a863dc1ab41b7483d60c954856c951c` |
 | Synthetic world | `40ozs/synthetic-enterprise` @ `ce7c0c7d9fbc82c67e596dde95cf5e2432acf450` |
 | Dataset / contract | `synthetic-enterprise-world@2.1.0` / `0.2.0` |
 | Projection | `ogwa@0.3.1` (lock `SYNTHETIC_ENTERPRISE.lock`, commit `ce7c0c7d9fbc82c67e596dde95cf5e2432acf450`) |
 | Integration record | `docs/demo/reports/SYNTH-CROSSAPP-01-report.md` @ `296b528e5927f579f2513b6c43b750f50f1de8e8` |
-| Release generated | 2026-10-29T06:21:21Z by `tools/cutover/demo_release.py` (SYNTH-HOSTED-CUTOVER-MAC-01) |
+| Release generated | 2026-10-29T06:55:55Z by `tools/cutover/demo_release.py` (SYNTH-HOSTED-CUTOVER-MAC-01) |
 
 Machine-readable provenance: [`demo-release.json`](demo-release.json). Every file's digest:
 [`demo-release/files.sha256`](demo-release/files.sha256).

@@ -5,7 +5,7 @@
   "compatibility_flags": ["python_workers"],
   "workers_dev": true,
   "preview_urls": false,
-  "rules": [{"type": "Data", "globs": ["**/*.json", "**/*.gz"], "fallthrough": true}],
+  "rules": [{"type": "Data", "globs": ["**/*.json", "**/*.gz", "**/*.jsonl", "**/*.lock"], "fallthrough": true}],
   "assets": {"directory": "public", "not_found_handling": "none"},
   "d1_databases": [{"binding": "DB", "database_name": "ogwa-demo-3", "database_id": "6abd5d7c-8e15-490e-8495-706b2bd4bf45"}],
   "vars": {"OGWA_RUNTIME_MODE": "demo", "OGWA_DEMO_DATASET": "genesee-press"},

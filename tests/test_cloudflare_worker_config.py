@@ -71,11 +71,16 @@ class WorkerConfigTests(unittest.TestCase):
 
     def test_staged_copies_are_never_committed(self):
         ignored = (WORKER / ".gitignore").read_text(encoding="utf-8").splitlines()
-        for entry in ("src/app/", "src/config/", "src/*.gz", "src/hosted-build.json", "public/", "python_modules/",
-                      ".wrangler/", ".dev.vars", ".dev.vars.*"):
+        for entry in ("src/app/", "src/config/", "src/*.gz", "src/hosted-build.json", "src/SYNTHETIC_ENTERPRISE.lock",
+                      "src/vendor/", "public/", "python_modules/", ".wrangler/", ".dev.vars", ".dev.vars.*"):
             self.assertIn(entry, ignored)
         pyproject = (WORKER / "pyproject.toml").read_text(encoding="utf-8")
         self.assertIn("dependencies = []", pyproject, "no third-party package")
+
+    def test_the_bundle_carries_the_files_the_genesee_press_profile_reads_at_import(self):
+        # SYNTH-HOSTED-CUTOVER-MAC-01: without them Pyodide fails validation (10021, FileNotFoundError).
+        globs = {g for rule in CONFIG["rules"] if rule["type"] == "Data" for g in rule["globs"]}
+        self.assertLessEqual({"**/*.lock", "**/*.json", "**/*.jsonl"}, globs)
 
 
 class WorkerEntryTests(unittest.TestCase):

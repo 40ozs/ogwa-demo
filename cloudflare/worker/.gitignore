@@ -3,6 +3,8 @@ src/app/
 src/config/
 src/*.gz
 src/hosted-build.json
+src/SYNTHETIC_ENTERPRISE.lock
+src/vendor/
 public/
 # pywrangler / wrangler
 .dev.vars

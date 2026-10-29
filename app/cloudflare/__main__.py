@@ -37,6 +37,7 @@ from app.cloudflare.identity import IDENTITY_SQL, SCHEMA_SQL, StoreIdentity, rea
 from app.core.config import load_settings
 from app.core.database_url import PROJECT_ROOT
 from app.core.errors import OgwaSafetyError
+from app.demo.genesee_press.projection import LOCK_PATH, VENDOR_ROOT
 from app.runtime.datasets import resolve_dataset
 from app.runtime.demo_store import DemoPersistenceUnavailable, open_demo_store, reset_demo_store
 from app.store.store import utc_now
@@ -119,6 +120,14 @@ def _build(worker: Path, out: Path, budget: int) -> int:
     src = worker / "src"
     modules = _stage_tree(PROJECT_ROOT / "app", src / "app", "*.py")
     _stage_tree(PROJECT_ROOT / "config", src / "config", "*.json")
+    # Pyodide sees only bundled files, and the Genesee Press profile reads these three at import.
+    lock = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
+    folder = VENDOR_ROOT / lock["snapshot"] / "projections" / "ogwa"
+    shutil.rmtree(src / "vendor", ignore_errors=True)
+    for path in (LOCK_PATH, folder / "projection.json", folder / "organization.jsonl"):
+        dest = src / path.relative_to(PROJECT_ROOT)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(path, dest)
     (src / IMAGE_NAME).write_bytes(gzip.compress(image, compresslevel=9, mtime=0))
     manifest = manifest_json(hosted.identity, hosted.schema, environment)
     (src / MANIFEST_NAME).write_text(manifest, encoding="utf-8")
