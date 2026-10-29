@@ -33,7 +33,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 $worker = Join-Path $repo 'cloudflare/worker'
 $buildDir = Join-Path $repo 'cloudflare/build'
 $wrangler = 'wrangler@4.147.0'
-$database = 'ogwa-demo-2'
+$database = 'ogwa-demo-3'
 
 function Invoke-Checked([string]$what, [scriptblock]$command) {
     & $command

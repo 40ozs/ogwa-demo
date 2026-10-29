@@ -38,7 +38,7 @@ class WorkerConfigTests(unittest.TestCase):
         self.assertEqual(CONFIG["name"], "ogwa-demo")
         self.assertEqual(CONFIG["main"], "src/entry.py")
         self.assertEqual(CONFIG["assets"], {"directory": "public", "not_found_handling": "none"})
-        self.assertEqual([(d["binding"], d["database_name"]) for d in CONFIG["d1_databases"]], [("DB", "ogwa-demo-2")])
+        self.assertEqual([(d["binding"], d["database_name"]) for d in CONFIG["d1_databases"]], [("DB", "ogwa-demo-3")])
         self.assertTrue(CONFIG["workers_dev"])
         self.assertFalse(CONFIG["preview_urls"], "no second, unreviewed URL")
 
