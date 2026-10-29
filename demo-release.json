@@ -27,13 +27,13 @@
   },
   "demo_repository": "40ozs/ogwa-demo",
   "demo_branch": "main",
-  "generated_at": "2026-10-28T23:56:37Z",
+  "generated_at": "2026-10-29T00:10:26Z",
   "generated_at_note": "Input of the export, recorded here; reproduction re-uses it, so the tree is byte-identical.",
   "exporter": {
     "repository": "40ozs/synthetic-enterprise",
     "path": "tools/cutover/demo_release.py",
     "version": "1.0.0",
-    "tool_sha256": "a21a115a51d7ce169ec8fec2ac387f6eadd93025406d0b6677b9c85b6f33b0c6",
+    "tool_sha256": "662788415d5f2aa7141e48ff60d3d9f1debabc670b47ce375dc299526fd8c5a4",
     "verifier_sha256": "799e4ee88d4af2f1d6de490c6f522f1c6daab2a618d75c02facde22f6202a681",
     "spec": "tools/cutover/specs/ogwa.json",
     "spec_sha256": "47d6f7f310ee3e32927e7fd9452a175c909154cb8f8c7646b7cbe669db53eb5d"

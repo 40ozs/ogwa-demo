@@ -22,13 +22,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Release tree equals demo-release/files.sha256; provenance; prohibited files
+      - name: "Release tree equals demo-release/files.sha256; provenance; prohibited files"
         run: python3 demo-release/verify_release.py
-      - name: Vendored Genesee Press projection, generated files and overlay
+      - name: "Vendored Genesee Press projection, generated files and overlay"
         run: |
           python3 -m app.demo.genesee_press verify-vendor
           python3 -m app.demo.genesee_press check
           python3 -m app.demo.genesee_press overlay-check
           python3 -m app.demo.genesee_press.audit_sample --check
-      - name: Application suite (standard library; browser tests are opt-in and skipped)
+      - name: "Application suite (standard library; browser tests are opt-in and skipped)"
         run: python3 -m unittest discover -s tests -t .
