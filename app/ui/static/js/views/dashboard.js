@@ -1,11 +1,15 @@
-// The dashboard answers "is anything wrong, and what deserves attention?" at a glance: a row of
-// key figures, a short list of what to look at next, and small charts. Each number links to the
-// page that explains it. The technical posture (policy, store, audit head) is kept, folded away
-// under "System details".
+// The dashboard answers "what needs attention now?" first (OGWA-UI-REVIEW-01): what waits for a
+// decision, what is blocked, evidence and collection problems, holds near their end, and the
+// head of the review queue. Then key figures and small charts. Each number links to the
+// filtered Review queue or the list that explains it. The technical posture (policy, store,
+// audit head) is kept, folded away under "System details".
 import { get } from "../api.js";
 import { stateInfo } from "../assess.js";
-import { badge, facts, fmtTime, h, humanize, link, mono, section, svg, table } from "../dom.js";
-import { hashFor } from "../present.js";
+import { badge, facts, fmtTime, h, humanize, link, mono, section, svg, table, uid } from "../dom.js";
+import { collectIds, hashFor, refView, span } from "../present.js";
+import { nextStep, OPEN_STATUSES, reviewStatus } from "../review.js";
+import { resolveRefs } from "./common.js";
+import { loadQueue, queueTable } from "./review.js";
 
 const STATE_ORDER = ["DISCOVERED", "CANDIDATE", "NEEDS_REVIEW", "APPROVED", "OKTA_UNASSIGN_DRY_RUN", "HOLD",
   "REVALIDATION_REQUIRED", "QUARANTINE_APPROVED", "QUARANTINE_DRY_RUN", "QUARANTINE_HOLD", "DELETION_REVALIDATION_REQUIRED",
@@ -28,7 +32,10 @@ export async function dashboard(ctx) {
   const governanceTotal = sum(Object.values(bySeverity));
   const health = dir ? dir.counts.groupHealth || {} : {};
   const findingsLink = (severity) => hashFor("/findings", {}, { tab: "governance", severity });
-  const groupsLink = (value) => hashFor("/directory", {}, { tab: "groups", health: value });
+  const groupsLink = (value) => hashFor("/inventory/groups", {}, { tab: "directory", health: value });
+  const queue = await loadQueue(data);
+  const preview = queue.items.filter((c) => OPEN_STATUSES.includes(reviewStatus(c.state).key)).slice(0, 5);
+  const refs = await resolveRefs(collectIds(preview, "oktaGroupId"));
 
   ctx.view.append(
     // OGWA-DEMO-04: the demo's entry point. Only a store with the synthetic company directory has
@@ -37,8 +44,12 @@ export async function dashboard(ctx) {
       link("#/scenarios", "Start the five-minute reviewer walkthrough"),
       `: evidence quality on ${walkthroughKey(dir, 10)}, then a verified synthetic remediation on ${walkthroughKey(dir, 11)}. ` +
       "All data is synthetic.") : null,
-    keyFigures(data, dir, bySeverity, governanceTotal, deps),
-    attention(data, dir, bySeverity, deps),
+    attention(data, queue, dir, bySeverity, deps),
+    section("Review queue",
+      queueTable("Next in the review queue", preview, refs, queue.now, "Nothing is waiting for review, blocked, or in progress."),
+      h("p", null, link("#/review", "Open the review queue"))),
+    findForm(),
+    section("Key figures", keyFigures(data, dir, bySeverity, governanceTotal, deps)),
     h("div", { class: "chart-grid" },
       governanceTotal ? section("Governance findings by severity",
         barList("Governance findings by severity", [
@@ -74,12 +85,12 @@ function keyFigures(data, dir, bySeverity, governanceTotal, deps) {
     tiles.push(
       ["Active employees", dir.counts.activeEmployees, hashFor("/people", {}, { status: "ACTIVE" })],
       ["Deactivated employees", dir.counts.formerEmployees, hashFor("/people", {}, { status: "TERMINATED", sort: "terminationDate", order: "desc" })],
-      ["Departments", dir.departments.length, hashFor("/directory", {}, { tab: "departments" })]);
+      ["Departments", dir.departments.length, "#/directory"]);
   }
   tiles.push(
-    ["AD groups", ev.adGroups, dir ? hashFor("/directory", {}, { tab: "groups", source: "AD" }) : "#/mappings"],
-    ["Okta groups", ev.oktaGroups, hashFor("/okta", {}, { tab: "groups" })],
-    ["Okta applications", ev.applications, hashFor("/okta", {}, { tab: "applications" })],
+    ["AD groups", ev.adGroups, dir ? hashFor("/inventory/groups", {}, { tab: "directory", source: "AD" }) : "#/mappings"],
+    ["Okta groups", ev.oktaGroups, hashFor("/inventory/groups", {}, { tab: "okta" })],
+    ["Okta applications", ev.applications, hashFor("/inventory/applications", {}, { tab: "okta" })],
     ["Open findings", governanceTotal + (deps.findings || 0), hashFor("/findings", {}, { tab: governanceTotal ? "governance" : "dependency" }),
       `${count(governanceTotal)} governance · ${count(deps.findings)} dependency`],
     ["Actionable or blocking", (bySeverity.ACTIONABLE || 0) + (deps.blocking || 0), hashFor("/findings", {}, { tab: "governance", severity: "ACTIONABLE" }),
@@ -91,22 +102,64 @@ function keyFigures(data, dir, bySeverity, governanceTotal, deps) {
 
 // --- what deserves attention ------------------------------------------------------------------
 
-function attention(data, dir, bySeverity, deps) {
-  const waiting = sum(Object.values(data.awaitingApproval || {}));
+const DAY = 86400000;
+const review = (status) => hashFor("/review", {}, { status });
+const cands = (n) => (n === 1 ? "candidate" : "candidates");
+
+function attention(data, queue, dir, bySeverity, deps) {
+  const byState = data.candidatesByState || {};
   const collectors = data.collectors || {};
   const recent = dir && dir.deactivations;
+  // Holds that ended or end within 7 days, on the server's clock; none are counted without it.
+  const holds = queue.now ? queue.items.filter((c) => {
+    const d = nextStep(c, queue.now).deadline;
+    const s = d && span(queue.now, d.at);
+    return s && s.ms <= 7 * DAY;
+  }).length : 0;
+  const evidence = (byState.STALE_EVIDENCE || 0) + (byState.EVIDENCE_INCOMPLETE || 0);
   const items = [
+    [queue.counts["needs-review"], "caution", "Decision", `${cands(queue.counts["needs-review"])} waiting for a person's decision`, review("needs-review")],
+    [queue.counts.blocked, "blocked", "Blocked", `${cands(queue.counts.blocked)} blocked`, review("blocked")],
+    [evidence, "blocked", "Evidence", `${cands(evidence)} blocked on stale or incomplete evidence`, review("blocked")],
+    [(collectors.incomplete || 0) + (collectors.unfinished || 0), "blocked", "Collection", "collector runs incomplete or unfinished", "#/collectors"],
+    [holds, "caution", "Hold", `holds ended or ending within 7 days${queue.truncated ? ` (among the first ${count(queue.items.length)} candidates)` : ""}`, review("waiting")],
+    [queue.counts["in-progress"], "caution", "Dry run", `${cands(queue.counts["in-progress"])} approved for a future step (dry run only)`, review("in-progress")],
     [bySeverity.ACTIONABLE, "blocked", "Actionable", "actionable governance findings", hashFor("/findings", {}, { tab: "governance", severity: "ACTIONABLE" })],
     [deps.blocking, "blocked", "Blocking", "blocking dependency findings", hashFor("/findings", {}, { tab: "dependency", sort: "findings", order: "desc" })],
-    [waiting, "caution", "Decision", "lifecycle candidates waiting for a decision", "#/approvals"],
-    [(collectors.incomplete || 0) + (collectors.unfinished || 0), "blocked", "Collection", "collector runs incomplete or unfinished", "#/collectors"],
     [recent ? recent.last90Days : 0, "info", "Recent", `people deactivated in the 90 days to ${recent ? recent.asOf : ""}`,
       hashFor("/people", {}, { status: "TERMINATED", sort: "terminationDate", order: "desc" })],
   ].filter(([n]) => n);
   return section("Needs attention",
     items.length ? h("ul", { class: "attention" }, items.map(([n, tone, tag, text, href]) => h("li", null,
       badge(tag, tone), " ", link(href, `${count(n)} ${text}`))))
-      : h("p", { class: "muted" }, "No actionable finding, waiting decision, or collector problem is recorded."));
+      : h("p", { class: "muted" }, "No waiting decision, blocked candidate, hold, actionable finding, or collector problem is recorded."));
+}
+
+// --- find ------------------------------------------------------------------------------------------
+
+/**
+ * Open one object by its stable id (GET /identities: OGWA ids and AD objectSids), or search people
+ * and groups by name on the server. Nothing is matched by name in the browser.
+ */
+function findForm() {
+  const id = uid("find");
+  const hint = uid("find-hint");
+  const input = h("input", { type: "text", id, maxlength: "100", autocomplete: "off", "aria-describedby": hint });
+  const result = h("div", { "aria-live": "polite" });
+  const form = h("form", { class: "filters", role: "search", "aria-label": "Find an object", on: { submit: async (event) => {
+    event.preventDefault();
+    const value = input.value.trim();
+    if (!value) return;
+    const view = refView((await resolveRefs([value]))[value], value);
+    if (view.href) { location.hash = view.href; return; }
+    result.replaceChildren(h("p", null, `No object has the id "${value}". Search by name on the server: `,
+      link(hashFor("/people", {}, { q: value }), "People"), " · ",
+      link(hashFor("/inventory/groups", {}, { tab: "directory", q: value }), "Directory groups")));
+  } } },
+  h("div", { class: "field" }, h("label", { for: id }, "Find by id"),
+    h("span", { class: "hint", id: hint }, "An OGWA id (person, group, application, candidate) or an AD objectSid."), input),
+  h("button", { type: "submit" }, "Open"));
+  return section("Find", form, result);
 }
 
 // --- charts -------------------------------------------------------------------------------------
@@ -189,12 +242,12 @@ function systemDetails(data) {
         ["Okta unassignment (needs review)", String((data.awaitingApproval || {}).OKTA_UNASSIGN || 0)],
         ["AD quarantine (revalidation required)", String((data.awaitingApproval || {}).AD_QUARANTINE || 0)],
         ["AD deletion (deletion proposed)", String((data.awaitingApproval || {}).AD_DELETION || 0)],
-      ], "Waiting for approval"), h("p", null, link("#/approvals", "Approvals and holds"))),
-      h("div", { class: "card" }, h("h2", null, "Collector health"), facts([
+      ], "Waiting for approval"), h("p", null, link(hashFor("/review", {}, { status: "needs-review" }), "Review queue: needs review"))),
+      h("div", { class: "card" }, h("h2", null, "Collection health"), facts([
         ["Runs recorded", String(collectors.runs || 0)],
         ["Incomplete", String(collectors.incomplete || 0)],
         ["Unfinished", String(collectors.unfinished || 0)],
-      ], "Collector health"), h("p", null, link("#/collectors", "Collector health")))),
+      ], "Collection health"), h("p", null, link("#/collectors", "Collection health")))),
     section("Candidates by state",
       table("Candidates by lifecycle state", [
         { label: "State", rowHeader: true, render: (s) => link(`#/candidates?state=${encodeURIComponent(s)}`, stateInfo(s).label), sort: (s) => stateInfo(s).label },

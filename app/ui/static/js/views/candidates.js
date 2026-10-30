@@ -29,7 +29,7 @@ export async function candidates(ctx) {
   h("button", { type: "submit" }, "Show"));
 
   ctx.view.append(
-    lede("The review queue, oldest first. A candidate is evidence for review, never authorization to change anything."),
+    lede("Every candidate by its lifecycle state, oldest first. What needs attention, in priority order, is in the Review queue. A candidate is evidence for review, never authorization to change anything."),
     form,
     listing("/candidates", query, data, state ? `Candidates in state ${stateInfo(state).label}` : "All candidates", [
       { label: "Okta group", rowHeader: true, render: (c) => candidateName(refs, c), sort: "oktaGroup" },

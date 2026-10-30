@@ -1,6 +1,6 @@
 # Operator UI
 
-Status: P09. The UI is a restrained review console over the [operator API](api.md). It runs
+Status: P09; restructured as an operator review workflow in OGWA-UI-REVIEW-01. The UI is a restrained review console over the [operator API](api.md). It runs
 only where the API runs: `LOCAL_SYNTHETIC`, a SYNTHETIC store, and synthetic sign-in. It has
 no delete, unassign, or execute action.
 
@@ -27,7 +27,8 @@ Browser ── same origin ──▶ app/ui/server.py (OgwaWebApp, WSGI)
 | `js/api.js` | The only network code: same-origin `fetch` to `/api/v1`, CSRF header, the five write paths. A public-demo visitor's POST refused before any handler ran (lapsed session, or a CSRF token another tab replaced) is sent once more with the new visitor session; nothing else is ever resent |
 | `js/assess.js` | Pure functions that put the API's evidence into plain words (unit-tested under Node) |
 | `js/dom.js` | Safe DOM construction (`createElement`/`textContent` only, `createElementNS` for SVG), formatting, the shared table (sorting, paging) |
-| `js/present.js` | Pure presentation rules (OGWA-UI-IA-01): employee status words, sort and page arithmetic, tab keys, hash addresses, how a resolved identity is shown (unit-tested under Node) |
+| `js/present.js` | Pure presentation rules (OGWA-UI-IA-01): employee status words, sort and page arithmetic, tab keys, hash addresses and where old ones moved (`movedRoute`), time on the server's clock (`span`, `deadlineText`), how a resolved identity is shown (unit-tested under Node) |
+| `js/review.js` | Pure operator review rules (OGWA-UI-REVIEW-01): the one mapping from lifecycle state to review status, the lifecycle stepper, the next step and who takes it, evidence readiness, the impact of a dependency check, governance rules in plain words, and dry-run plan wording (unit-tested under Node) |
 | `js/main.js` | Session, routing, focus management, announcements |
 | `js/views/*.js` | The views below |
 | `css/ogwa.css` | Tokens, tones, light/dark, focus, reduced motion, responsive layout |
@@ -43,27 +44,46 @@ if one were added by mistake. API responses keep their own headers (`default-src
 
 ## Views
 
-| View | Route | Source |
-| --- | --- | --- |
-| Dashboard | `#/` | `GET /dashboard`, `GET /directory`, `GET /governance-findings` (counts) |
-| People | `#/people[?department=&status=&q=]`, `#/people/{id}` | `GET /people`; the detail view shows history and every access route |
-| Company Directory | `#/directory?tab=departments\|groups\|applications` | `GET /directory`; the Groups tab `GET /directory-groups[?era=&health=&source=&q=]` |
-| AD group (canonical group page) | `#/directory-groups/{id}` | `GET /directory-groups/{id}`: AD identity, findings, lineage, nesting, assignments, members |
-| Okta | `#/okta?tab=applications\|groups` | `GET /applications`, `GET /groups` (+ `GET /identities` for the exactly mapped AD group) |
-| Okta application, Okta group | `#/applications/{id}`, `#/groups/{id}` | `GET /applications/{id}`, `GET /groups/{id}` |
-| Identity mappings | `#/mappings[/{groupId}]` | `GET /mappings` (read-only; review history shown, not editable) |
-| Findings | `#/findings?tab=dependency\|governance[&severity=&code=]` | `GET /dependency-findings`, `GET /governance-findings` |
-| Lifecycle candidates | `#/candidates[?state=]` | `GET /candidates` |
-| Candidate detail | `#/candidates/{id}` | candidate, evidence, dependencies, decisions, approvals, jobs, group; audit events with `READ_AUDIT` |
-| Approvals and holds | `#/approvals` | `GET /approvals` (new in P09), candidates in NEEDS_REVIEW, REVALIDATION_REQUIRED, DELETION_PROPOSED, BLOCKED, HOLD, QUARANTINE_HOLD |
-| Portfolio scenarios | `#/scenarios` | `GET /demo-scenarios`; opens with the dataset's five-minute reviewer walkthrough (OGWA-DEMO-04), linked from the dashboard when the synthetic directory is present |
-| Execution jobs | `#/jobs[/{id}]` | `GET /execution-jobs` (new in P09), `GET /execution-jobs/{id}` |
-| Collector health | `#/collectors` | `GET /collector-runs` |
-| Audit history | `#/audit[?subjectId=]` | `GET /audit-events` (`READ_AUDIT`) |
+Since OGWA-UI-REVIEW-01 the navigation follows what an operator is doing rather than the domain
+model: Dashboard and Portfolio scenarios, then **Inventory**, **Review**, and **Operations**.
 
-Addresses from before OGWA-UI-IA-01 still work: `#/directory-groups`, `#/applications`,
-`#/groups`, and `#/dependencies` are replaced (`location.replace`, so Back skips them) by their
-tab, keeping their filters; `#/findings?severity=…` opens the Governance tab.
+| Group | View | Route | Source |
+| --- | --- | --- | --- |
+| — | Dashboard | `#/` | `GET /dashboard`, `GET /directory`, `GET /governance-findings` (counts), `GET /candidates` (the queue's head) |
+| — | Portfolio scenarios | `#/scenarios` | `GET /demo-scenarios`; opens with the dataset's five-minute reviewer walkthrough (OGWA-DEMO-04), linked from the dashboard when the synthetic directory is present |
+| Inventory | People | `#/people[?department=&status=&q=]`, `#/people/{id}` | `GET /people`; the detail view shows history and every access route |
+| Inventory | Company Directory (profile and departments; reached from People and the dashboard) | `#/directory` | `GET /directory` |
+| Inventory | Groups | `#/inventory/groups?tab=directory\|okta` | Directory groups: `GET /directory-groups[?era=&health=&source=&q=]` (AD and Okta groups in the snapshot); Okta groups: `GET /groups` (+ `GET /identities` for the exactly mapped AD group). The sources stay separate tabs |
+| Inventory | AD group (canonical group page), Okta group | `#/directory-groups/{id}`, `#/groups/{id}` | `GET /directory-groups/{id}`; `GET /groups/{id}`, and each of its candidates (`GET /candidates/{id}`) with its review status and next step |
+| Inventory | Applications | `#/inventory/applications?tab=directory\|okta`, `#/applications/{id}` | Directory applications: `GET /directory`; Okta applications: `GET /applications` |
+| Inventory | Identity mappings | `#/mappings[/{groupId}]` | `GET /mappings` (read-only; review history shown, not editable) |
+| Review | Review queue | `#/review[?status=needs-review\|blocked\|waiting\|in-progress\|retired\|closed\|all]` | `GET /dashboard` (per-state counts and the server clock), `GET /candidates` paged through, 200 at a time, up to 1,000 |
+| Review | Every candidate by lifecycle state (linked from the queue) | `#/candidates[?state=]` | `GET /candidates` |
+| Review | Candidate detail | `#/candidates/{id}` | candidate, evidence, dependencies, decisions, approvals, jobs, group; audit events with `READ_AUDIT` |
+| Review | Findings: Impact & Blockers, Governance | `#/findings?tab=dependency\|governance[&severity=&code=]` | `GET /dependency-findings`, `GET /governance-findings` |
+| Review | Decisions | `#/decisions` | `GET /approvals`, `GET /dashboard` (server clock, policy in force) |
+| Operations | Plans & simulations | `#/jobs[/{id}]` | `GET /execution-jobs`, `GET /execution-jobs/{id}` |
+| Operations | Collection health | `#/collectors` | `GET /collector-runs` |
+| Operations | Audit | `#/audit[?subjectId=]` | `GET /audit-events` (`READ_AUDIT`) |
+
+### Old addresses
+
+Every earlier address still arrives (`present.movedRoute`). The address is replaced
+(`location.replace`, so Back skips it) and its filters, sort, and page are kept:
+
+| Old address | Now |
+| --- | --- |
+| `#/directory-groups[?…]`, `#/directory?tab=groups[&…]` | `#/inventory/groups?tab=directory[&…]` |
+| `#/groups`, `#/okta?tab=groups` | `#/inventory/groups?tab=okta` |
+| `#/applications`, `#/okta`, `#/okta?tab=applications` | `#/inventory/applications?tab=okta` |
+| `#/directory?tab=applications` | `#/inventory/applications?tab=directory` |
+| `#/dependencies[?…]` | `#/findings?tab=dependency[&…]` (the Impact & Blockers tab keeps its key) |
+| `#/findings?severity=…` | the Governance tab |
+| `#/approvals` ("Approvals and holds") | `#/review`; with a sort or cursor (the old decision list's), `#/decisions` with them |
+
+Unchanged: `#/`, `#/people[/{id}]`, `#/directory` (departments), `#/directory-groups/{id}`,
+`#/groups/{id}`, `#/applications/{id}`, `#/mappings[/{id}]`, `#/candidates[?state=]`,
+`#/candidates/{id}`, `#/findings`, `#/scenarios`, `#/jobs[/{id}]`, `#/collectors`, `#/audit`.
 
 The directory views are read-only and show the snapshot only when the store holds one (the
 Null Meridian dataset); otherwise they say so. `tests/browser/test_null_meridian_views.py`
@@ -74,13 +94,130 @@ Under Demo Mode ([../demo-mode.md](../demo-mode.md)) the header also shows the
 sign-in. Expanded, its explanation takes its own header row and never covers the
 navigation. `tests/browser/test_demo_null_meridian_ui.py` walks every view with it.
 
+## Operator review (OGWA-UI-REVIEW-01)
+
+The UI answers, in this order: what needs attention, what needs a decision from me, what is
+blocked and why, where each candidate is in its lifecycle, what happens next, and what evidence
+supports it. This is presentation only: the state machine, classification, evidence grades,
+dependency coverage, approval rules and expiry, gates, remediation authorization, and the audit
+chain are unchanged, and the server checks every action again.
+
+### Review status: one reading of the lifecycle state
+
+`review.reviewStatus(state)` is the only place a lifecycle state is grouped. Every view that
+shows a review status shows the lifecycle state beside it (in the queue under "Lifecycle:", on
+the candidate page in the headline), so the grouping is never the only fact.
+
+| Review status | Lifecycle states | Why |
+| --- | --- | --- |
+| Needs review (caution) | `NEEDS_REVIEW`, `REVALIDATION_REQUIRED`, `DELETION_REVALIDATION_REQUIRED`, `DELETION_PROPOSED` | A named person's decision is open there: the Okta approval, the AD quarantine approval, the deletion proposal, the AD deletion approval |
+| Blocked (blocked) | `BLOCKED`, `MAPPING_AMBIGUOUS`, `DEPENDENCY_BLOCKED`, `STALE_EVIDENCE`, `EVIDENCE_INCOMPLETE`, `RETIREMENT_DRY_RUN`, and any state the UI does not know | The state machine's blocked class; the legacy single AD stage can only be diverted (D148); an unknown state is treated as blocked |
+| Waiting (neutral) | `DISCOVERED`, `CANDIDATE`, `HOLD`, `QUARANTINE_HOLD` | Waiting on classification or on time. No decision is open, and a hold is not a block |
+| In progress (dry run only) (caution) | `APPROVED`, `OKTA_UNASSIGN_DRY_RUN`, `QUARANTINE_APPROVED`, `QUARANTINE_DRY_RUN`, `DELETION_APPROVED`, `DELETION_DRY_RUN` | An approval is recorded; OGWA plans dry runs only, and any change happens outside OGWA and counts only when read-only discovery observes it |
+| Retired (observed) (terminal) | `RETIRED` | Discovery observed the group gone |
+| Closed (terminal) | `EXCLUDED`, `REJECTED`, `PROTECTED` | Terminal states (`PROTECTED` is terminal in the state machine; its own state label stays "Protected", toned blocked) |
+
+There is deliberately **no "Ready" status**: every step forward needs a named person's decision
+or an observed external change, so nothing is ever presented as ready to proceed. A test pins it.
+
+### Review queue
+
+`#/review` replaces the "Approvals and holds" page as the place to find waiting work. It lists
+every candidate in priority order: needs review, then blocked, then waiting, then in progress;
+within a status, the nearest deadline and then the longest wait first (`review.queueOrder`).
+Columns: candidate, review status (with the lifecycle state), stage, what it needs (the required
+decision or the blocker), the next step and who takes it, how long it has waited (since its last
+change), and its deadline (a hold's end). Filters are links (`?status=`) with their counts, from
+`GET /dashboard`'s per-state counts, so they count every candidate even if the list stops short;
+a filter keeps focus after the page re-renders. The queue reads at most 1,000 candidates and says
+so above the table when there are more.
+
+The queue words what the lifecycle records; the classifier's current verdict on the evidence is
+on each candidate's page (fetching it for every row would cost one detail request per candidate).
+
+### Candidate detail: the operator's reading first
+
+The page opens with, in order: the review status and the lifecycle state with its one-sentence
+meaning; **Lifecycle**, a stepper; **What blocks this candidate** (the existing banners); **Next
+step** (what it needs, what happens next, who, any deadline, and which actions are open to the
+signed-in person, from the server's `allowedActions`); and **Evidence readiness** ("6 of 14
+required sources complete and current": the server's required assessment items whose state is
+Confirmed or Source says none and whose freshness is Current, with the others named). The
+forensic sections follow unchanged: "Is this safe to act on?", "Why this decision", the drill,
+the decision summary, reasons, coverage, evidence timestamps, decisions, approvals, dry-run
+plans, and the audit trail.
+
+The **stepper** (`review.lifecycleStages`) shows ten stages: Discovery, Review, Okta unassignment,
+Hold, Revalidation, AD quarantine, Post-quarantine hold, Deletion review, AD deletion, Retired.
+Each says its status in words: Completed, Current, Current, waiting (a hold, with its end on the
+server's clock), Blocked (a blocked candidate, at the stage it was blocked from, naming the
+lifecycle state), Stopped here (excluded, rejected, or protected: at the furthest stage its
+recorded decisions reached), Not yet eligible (every later stage: never shown as reached or
+guaranteed), and Not reached (after a terminal stop). The text equivalent is the list itself
+(`ol aria-label="Lifecycle stages"`, the current stage `aria-current="step"`) plus a summary
+sentence; the marks (✓ ● ◷ ✕ ■ ○ –) are `aria-hidden`, and colour is never the only cue. The
+state machine stays authoritative: the stepper is a projection of the candidate's state,
+`blockedFrom`, and decision history.
+
+### Findings: Impact & Blockers
+
+The dependency tab is now **Impact & Blockers** (its key stays `tab=dependency`, and
+`#/dependencies` still arrives there). Each row leads with what is affected and its impact
+(`review.impactOf`): the category (Known dependency, Directory constraint for AD membership and
+nesting, External reference for ACL, GPO, AAP, application configuration, and Okta policy
+references, Coverage gap, or None found) and its effect: "Blocks lifecycle progress for this
+group", "Informational: does not block on its own", "None found (complete, decision-grade
+check)", or "Not established: OGWA could not determine whether a dependency exists". A known
+dependency and an undetermined one are never worded alike; something found by an incomplete
+check still counts and says more may exist. The check's kind is kept as secondary evidence.
+
+Governance findings lead with the rule in plain words (`review.RULE_LABEL`, for example
+"Deactivated members still retain access") with the rule code beneath it. The codes are
+unchanged and still filter (`?code=`).
+
+### Decisions and holds
+
+**Decisions** (`#/decisions`) lists the approvals and rejections people recorded: candidate,
+stage, decision, by, decided, expiry (the server's `expired` flag, worded "Expired 3 days ago"
+or "2 days remaining" with the absolute time beneath), the policy that judged it (marked
+Superseded when it is not the one in force), and the reason. Holds are not decisions: they are
+waiting work in the Review queue and on the candidate page.
+
+### Plans & simulations
+
+The visible name of `#/jobs` is **Plans & simulations**. A recorded job's status is worded so it
+never suggests execution: "Plan finished, nothing executed", "Plan failed, nothing executed"; a
+job recorded as executed, or not a dry run, is shown as blocked (this build cannot execute). The
+raw status is kept on the plan's own page. Synthetic drills record nothing, so the page explains
+where to run one instead of listing them.
+
+### Dashboard
+
+"Needs attention" comes first: candidates waiting for a person's decision, blocked, blocked on
+stale or incomplete evidence, collector runs incomplete or unfinished, holds that ended or end
+within 7 days (on the server's clock), candidates approved for a future step, actionable
+governance findings, blocking dependency findings, and recent deactivations. Each links to the
+filtered Review queue or the list behind it. Then the head of the review queue (five rows),
+**Find** (open an object by its OGWA id or AD objectSid through `GET /identities`; anything else
+is offered as a server-side people or group search, never matched by name in the browser), key
+figures, the charts, and System details.
+
+### Time
+
+Relative times ("6 days", "2 days remaining", "Expired 3 hours ago") are always computed from two
+server instants: the record's and the server's clock (`GET /dashboard`'s `generatedAt`, or the
+classification time on a candidate page). Without a server time only the absolute time is shown;
+the browser's clock is never used. The absolute time is always shown too.
+
 ## Navigation, tabs, tables, identities (OGWA-UI-IA-01)
 
-- **Docked side navigation.** Twelve destinations in four groups (overview; people and
-  directories; review; operations), each an icon and a label. The toggle (`#nav-toggle`,
+- **Docked side navigation.** Twelve destinations: Dashboard and Portfolio scenarios, then
+  three named groups (Inventory, Review, Operations, since OGWA-UI-REVIEW-01), each group a list
+  labelled by its heading (`ul aria-labelledby`), each destination an icon and a label. The toggle (`#nav-toggle`,
   `aria-expanded`) collapses it to icons; a collapsed link keeps its label as its accessible
   name and shows it as a tooltip on hover and keyboard focus. A detail page marks its section
-  (an AD group marks Company Directory, an Okta group marks Okta). The choice lasts while the
+  (an AD or Okta group marks Groups, an application Applications, a candidate Review queue).
+  Collapsed, the group labels are hidden visually like the link labels. The choice lasts while the
   page is open: **it is not written to browser storage**, because the UI stores nothing
   (`tests/test_ui_static.py` pins that). Below 48rem the navigation is a menu above the page,
   closed by default and closed again after a link is followed.
@@ -115,7 +252,7 @@ navigation. `tests/browser/test_demo_null_meridian_ui.py` walks every view with 
   API keeps `TERMINATED` and `terminationDate`. Stored governance finding text that says "former
   employee" is shown as "deactivated employee" (`present.employeeTerms`); the rule code
   `TERMINATED_MEMBERS_RETAINED` is an identifier and is unchanged.
-- **Dashboard**: key figures, "Needs attention", findings by severity, group health, and
+- **Dashboard** (order since OGWA-UI-REVIEW-01, above): "Needs attention", the review queue's head, Find, key figures, findings by severity, group health, and
   deactivations per year (a table beside the chart); every figure and bar links to the list
   behind it. Chart fills are their own tokens (`--chart-*`), checked with the dataviz palette
   checks for both schemes; every bar carries its label and value as text. The safety posture,
@@ -123,7 +260,7 @@ navigation. `tests/browser/test_demo_null_meridian_ui.py` walks every view with 
 
 ### Candidate detail
 
-The page answers "why can't this proceed?" before anything else:
+After the operator's reading above (OGWA-UI-REVIEW-01), the page answers "why can't this proceed?":
 
 0. **Is this safe to act on?** (OGWA-DEMO-01): the server's evidence assessment, grouped by the
    six reviewer questions (issue, supporting sources, sources that disagree or are unavailable,
@@ -250,6 +387,7 @@ lists stack and wide tables scroll inside their own keyboard-focusable region.
 | `tests/test_ui_static.py` | No HTML sinks, storage, external URLs, or execute path; the six write paths (OGWA-DEMO-03 added the drill, which records nothing); the P09 action set; no green; contrast; focus and reduced motion; module imports resolve |
 | `tests/test_ui_present.py` → `tests/ui/present.test.mjs` | `present.js` against the real API over Null Meridian: common names for SIDs and AD evidence ids, two groups of one name told apart, unresolved ids shown, access-path order, Active/Deactivated and the date, sort and page arithmetic, tab keys |
 | `tests/test_ui_ia.py` | The API side: totals and both-way cursors on every listing, sorting across pages in both directions, stable ties, missing values last, final partial page, empty and past-the-end pages, validation; the resolver (SID and AD evidence id → name and canonical page, shared names, unresolved ids, names never accepted as keys, exact mappings only, renamed groups); SID search; the dashboard and deactivation summaries |
+| `tests/test_ui_review.py` → `tests/ui/review.test.mjs` | OGWA-UI-REVIEW-01: `review.js` against the real API over the classic world (and one candidate excluded through the API): every lifecycle state has one review status (and the Python side pins it against `LifecycleState`), holds wait and are not blocked, no status is ready, the stepper for initial review, approval, both holds, revalidation, quarantine, deletion proposal, dependency, stale, incomplete, ambiguous, held, protected, excluded, and retired candidates, next steps, queue order, evidence readiness, impact categories (blocking, informational, none found only after a complete check, not established otherwise), every governance rule worded (pinned against `RULES`), and plan wording that never implies execution |
 | `tests/test_ui_assess.py` → `tests/ui/assess.test.mjs` | `assess.js` against fixtures produced by the real API over a seeded synthetic world (D97, D98, tones, action plans, evidence conditions, the server's approval limit). Part of the standard check: `scripts/check.ps1` requires Node, and the test fails without it |
 | `tests/test_browser_gate_guards.py` | Keeps the browser gate honest without a browser: the host-blocking flags, the clean-page and CSP assertions, and the gate's exit codes cannot be removed |
 | `tests/test_listing_scale.py` | OGWA-UI-IA-02: every sortable field of every store-backed listing, both ways, across every page, against an order computed from the served items and resolved names, on both demo worlds and a synthetic tenant ten times larger (`tests/scale_fixtures.py`); a filter before paging; ties broken by stable id; missing values last; first, last, single, empty, and past-the-end pages; a sorted page loads only its own records; the audit trail's sequence continuity across pages |
@@ -258,6 +396,7 @@ lists stack and wide tables scroll inside their own keyboard-focusable region.
 | `tests/test_ui_api.py` → `tests/ui/api.test.mjs` | `api.js`'s one resend: only a public-demo visitor's POST, only after `UNAUTHENTICATED` or `CSRF_FAILED`, only once; never a read, a signed-in principal's write, another refusal, a server error, or an unknown outcome |
 | `tests/test_ui_drill.py` → `tests/ui/drill.test.mjs` | OGWA-DEMO-03: `drill.js` against real drill output (Null Meridian NM-C11 and a classic AD deletion, every scenario): dry run and execution never share wording, only a verified drill whose record agrees gets the best (info) tone, a self-contradicting or unknown result is blocked |
 | `tests/browser/test_remediation_drill_ui.py` | Opt-in: NM-C11's drill by keyboard (dry run, timeout → verify → retry → verify, verification failure, unverifiable outcome), focus on the result (and on Run drill after a failed request), accessibility audit, no sideways scroll from 320 to 1920 px (NM-C11 after a drill, NM-C10, the walkthrough), a viewer cannot run it, nothing leaves the origin |
+| `tests/browser/test_review_workflow.py` | Opt-in, OGWA-UI-REVIEW-01: the Review queue (statuses with their lifecycle states, priority order, a filter by keyboard keeping focus, Back), waiting apart from blocked, nothing ready, the stepper's text equivalent on four candidates, the candidate page's section order, Impact & Blockers against the API (every coverage gap says OGWA could not tell), a rejection recorded through the UI on Decisions with expiry wording, plans that never say executed or succeeded, the dashboard's attention links into the filtered queue, find by id, phone width |
 | `tests/browser/test_operator_workflows.py` | Opt-in (`pwsh scripts/browser-check.ps1`): headless Chrome or Edge over DevTools, keyboard sign-in, every view, accessibility audit, phone width, focus visibility, reduced motion, light/dark, approval, refusal, dry run, hold, exclusion, refused revalidation, sign-out, slow and failed pages (heading, content and focus change together; a moved focus stays), opened forms on screen at laptop sizes and zoom, focus after a failed decision, no request leaves the origin, no console error or CSP violation |
 
 The browser harness serves a fresh in-memory synthetic world (never `var/`), uses a throw-away

@@ -1,6 +1,6 @@
 # The Cloudflare-hosted demo (Workers Paid + D1)
 
-The public OGWA demo runs the real application, in Demo Mode over the Null Meridian dataset, as a
+The public OGWA demo runs the real application, in Demo Mode over the Genesee Press dataset, as a
 Cloudflare **Python Worker** with **Workers Static Assets** and one **D1** database. It holds no
 integration credential of any kind. It is **read-only** for visitors: the shared store never
 changes (owner decision, OGWA-CLOUDFLARE-DEMO-01).
@@ -15,11 +15,12 @@ request. See "Plan and limits".
 | | |
 | --- | --- |
 | Worker | `ogwa-demo`, at `https://ogwa-demo.d-walkes.workers.dev`, on Workers Paid (required), CPU capped at 2,000 ms per request (`limits.cpu_ms`) |
-| D1 database | `ogwa-demo-2`, id `1b8fc874-d8b0-4ec5-9225-dadc73c6ec83`, region WNAM, binding `DB` (since OGWA-DEMO-DEPLOY-03). The previous database, `ogwa-demo` (`774e88ae-0523-4dbf-8fe3-ce736cd4c514`), is kept unchanged as the rollback target |
+| D1 database | `ogwa-demo-3`, region WNAM, binding `DB` (since SYNTH-HOSTED-CUTOVER-MAC-01; its id is in `wrangler.jsonc`). The earlier databases `ogwa-demo-2` (Null Meridian, bound to the rollback version) and `ogwa-demo` are kept unchanged as rollback assets |
+| Deployment repository | `40ozs/ogwa-demo` `main`: the sanitized release exported from this repository. Build and deploy from a checkout of it, not from this repository (see "Genesee Press cutover") |
 | Static assets | `cloudflare/worker/public/` (the UI), with `_headers` for the UI's security headers |
-| Runtime variables | `OGWA_RUNTIME_MODE=demo`, `OGWA_DEMO_DATASET=null-meridian` (OGWA's own names, `vars` in `wrangler.jsonc`) |
+| Runtime variables | `OGWA_RUNTIME_MODE=demo`, `OGWA_DEMO_DATASET=genesee-press` (OGWA's own names, `vars` in `wrangler.jsonc`) |
 | Secrets | `HOSTED_SESSION_KEY` only: the key that signs session cookies (64 hex digits, set with `wrangler secret put`, never stored elsewhere). No integration credential exists, and the Worker refuses to serve if one with a production name is added (below). |
-| Dataset | selector `null-meridian`, seed namespace `null-meridian-v1`, company Null Meridian, audit head `sha256:e8793f89…eb41` (1,458 events) |
+| Dataset | selector `genesee-press`, seed namespace `genesee-press-v1`, company Genesee Press (synthetic-enterprise dataset 2.1.0), audit head `sha256:f11f0a99…d4b39f` (1,617 events), 11 lifecycle candidates, 31,921 directory records |
 | Python | 3.14 (Pyodide 314.0.6), through `compatibility_date` 2026-10-01 and the `python_workers` flag |
 
 ## Architecture
@@ -37,7 +38,7 @@ browser ──► Workers Static Assets: /, /ui/*  (index.html, CSS, JS; _header
                │  per request: D1 identity == the served store's identity (1 query)
                │               → HostedDemo.handle → the real OGWA WSGI application
                ▼
-             D1 `ogwa-demo-2`: the canonical demo store, written only by the operator bootstrap
+             D1 `ogwa-demo-3`: the canonical demo store, written only by the operator bootstrap
 ```
 
 **Why sessions are signed cookies.** Consecutive requests from one browser reach different
@@ -249,11 +250,13 @@ The Worker cannot write to D1 at all: it only reads the identity and schema.
 2. **Create D1** (once): `npx wrangler d1 create ogwa-demo`, and record the id in
    `cloudflare/worker/wrangler.jsonc`.
 3. **Import, one phase at a time.** Run `pwsh scripts/cloudflare-demo.ps1 -Bootstrap
-   -ConfirmSyntheticBootstrap` once per phase. On Workers Paid, both phases may run the same day.
-   The split was sized for D1 Free's daily write quota and does no harm.
+   -ConfirmSyntheticBootstrap` once per phase. On Workers Paid, all phases may run the same day.
+   The split was sized for D1 Free's daily write quota and does no harm. The Genesee Press build
+   has **three** phases (rows written into `ogwa-demo-3`: 83,651, 63,844 and 32,000); the table
+   below is the earlier two-phase Null Meridian build.
 
-   D1 Free counts each index entry as a written row, and allows 100,000 a day. The complete store
-   needs ~174,000, so the import is split:
+   D1 Free counts each index entry as a written row, and allows 100,000 a day. The complete Null
+   Meridian store needs ~174,000, so the import is split:
 
    | Phase | Contents | Rows written (measured) |
    | --- | --- | --- |
@@ -263,7 +266,7 @@ The Worker cannot write to D1 at all: it only reads the identity and schema.
    Before importing, the script reads D1's schema objects. `next-phase` then names the due
    phase, refuses a D1 that matches no completed phase ("not this build's import"), and says
    `complete` when done. Triggers are created after all rows, so none fires during the import.
-   Until phase 2 is in, the Worker answers 503.
+   Until the last phase is in, a Worker bound to that D1 answers 503.
 4. **Verify**: `pwsh scripts/cloudflare-demo.ps1 -Verify`.
 
 **Disabling the bootstrap after use.** Nothing needs disabling. The bootstrap is an operator
@@ -271,34 +274,32 @@ command with wrangler access to the account, so it is never deployed and never p
 deployed Worker has no write path to D1. The hosted store is `query_only`, and every persisting
 route answers `DEMO_READ_ONLY`.
 
-### Re-import for Genesee Press (SYNTH-OGWA-01; not yet performed)
+### Genesee Press cutover (SYNTH-HOSTED-CUTOVER-MAC-01, SYNTH-OGWA-HOSTED-RETRY-01; done 2026-10-29)
 
-`wrangler.jsonc` now selects `OGWA_DEMO_DATASET=genesee-press`, so the next build seeds Genesee
-Press. The D1 bound today (`ogwa-demo-2`) still holds the Null Meridian store
-(`null-meridian-v1`, head `sha256:e8793f89…eb41`). A Worker built from this branch refuses
-that D1 (the identity query no longer matches) and answers 503 until D1 holds the matching build.
-So the hosted demo is re-seeded only together with a deploy, by the operator:
+The hosted demo serves Genesee Press from D1 `ogwa-demo-3`. The build seeds audit head
+`sha256:f11f0a99…d4b39f` (1,617 events, 11 lifecycle candidates, 31,921 directory records) in **three**
+phases. Records of each step are in `40ozs/synthetic-enterprise` (`docs/demo/reports/`).
 
-1. Build: `python -m app.cloudflare build` → audit head
-   `sha256:83cfda606c7a05916a4f5f0bb184bbec7f4fa95a8ffd0d3c01707f031f77aa17`, 32,337 directory records.
-   The plan has **three** phases (measured locally: ~84,545, ~64,676 and ~32,416 rows), one more than Null
-   Meridian's two.
-2. Create a fresh D1 for it (e.g. `ogwa-demo-3`) and bind it in `wrangler.jsonc`, keeping `ogwa-demo-2`
-   untouched as the rollback target (the same pattern as OGWA-DEMO-DEPLOY-03). Importing into a D1 that
-   holds the Null Meridian build is refused by `next-phase` ("not this build's import").
-3. Import the phases (`-Bootstrap -ConfirmSyntheticBootstrap`, once per phase), `-Verify`, then `-Deploy`.
-4. `python scripts/hosted_smoke.py <url>` against the new deployment.
-
-Rollback is the existing Worker rollback: the previous version is bound to `ogwa-demo-2`.
+- **Deployment repository.** The Worker is built and deployed from a checkout of `40ozs/ogwa-demo`
+  `main`, the sanitized release that synthetic-enterprise's exporter makes from a commit of this
+  repository (its `demo-release.json` names that commit). Run `-Build`, `-Bootstrap`, `-Verify` and
+  `-Deploy` there, not from this repository.
+- **Import and verify before activation.** A new database is fully imported (`-Bootstrap
+  -ConfirmSyntheticBootstrap` once per phase, until `next-phase` says `complete`) and passes `-Verify`
+  before any Worker bound to it is deployed. Only then is `ogwa-demo` `main` advanced and `-Deploy`
+  run, followed by `python scripts/hosted_smoke.py <url>` (61/61).
+- **Rollback assets.** `ogwa-demo-2` (Null Meridian) and `ogwa-demo` stay untouched. The previous Worker
+  version, bound to `ogwa-demo-2`, is the rollback (see "Rollback"). Deleting any of them is a separate
+  owner decision.
 
 ## Hosted verify
 
-`pwsh scripts/cloudflare-demo.ps1 -Verify` runs `wrangler d1 export ogwa-demo-2 --remote` and then
+`pwsh scripts/cloudflare-demo.ps1 -Verify` runs `wrangler d1 export ogwa-demo-3 --remote` and then
 `python -m app.cloudflare verify-export`. The export is loaded into a throw-away SQLite store,
 which then goes through `open_demo_store`, the same validation as `python -m app.runtime verify`:
 
 - `validate_demo_store`: the SYNTHETIC marker, exactly one `SYNTHETIC_SEED_LOADED` with namespace
-  `null-meridian-v1`, dataset `null-meridian`, company Null Meridian, and the 0012 snapshot's
+  `genesee-press-v1`, dataset `genesee-press`, company Genesee Press, and the 0012 snapshot's
   identity and digest;
 - `verify_integrity`, pinned to the build's audit head.
 
@@ -312,8 +313,9 @@ every row (~45,000 rows read), so run it when needed rather than on a schedule.
 ## Deploy
 
 `pwsh scripts/cloudflare-demo.ps1 -Deploy` runs `uvx --from workers-py pywrangler deploy` in
-`cloudflare/worker`. `pywrangler` vendors only Cloudflare's runtime SDK; OGWA has no Python
-dependency. Before deploying, confirm the gates in "Validation" below.
+`cloudflare/worker`, from the `40ozs/ogwa-demo` `main` checkout (see "Genesee Press cutover").
+Merging this repository's `main` deploys nothing. `pywrangler` vendors only Cloudflare's runtime
+SDK; OGWA has no Python dependency. Before deploying, confirm the gates in "Validation" below.
 
 Local rehearsal: build, then import the phases into a local D1 and run `uv run pywrangler dev`
 (`wrangler d1 execute ogwa-demo --local --persist-to DIR --file cloudflare/build/d1/phase-N.sql`,
@@ -336,8 +338,9 @@ The Worker is public, with no Cloudflare Access. OGWA's own authorization applie
   `GET /session`. A drill sent with a lapsed session, or with a CSRF token another tab has
   replaced, is refused before it runs (`401`, `403 CSRF_FAILED`); the UI then takes the new
   visitor session and sends it once more.
-- **The NM-C11 drill.** The visitor may run the synthetic remediation drill on the walkthrough's
-  controlled-remediation candidate (NM-C11, marked `publicDrill`) and on no other: anything else is
+- **The GP-C11 drill.** The visitor may run the synthetic remediation drill on the walkthrough's
+  controlled-remediation candidate (GP-C11 in Genesee Press, NM-C11 in Null Meridian; marked
+  `publicDrill`) and on no other: anything else is
   403 `PUBLIC_DRILL_SCOPE` before the drill service is reached. For that one request, on that one
   candidate, it holds the executor's role; the session keeps VIEWER. Every other drill check is
   unchanged (the approval must be this candidate's, the evidence fresh, the scenario from the
@@ -355,7 +358,7 @@ The Worker is public, with no Cloudflare Access. OGWA's own authorization applie
   - job plans and remediation dry runs.
 
   Any visitor gets that explanation, not a bare 403 for a role it lacks. What still runs records
-  nothing (`NON_PERSISTING`): sign-out, the NM-C11 drill, and mapping inspection and AD search,
+  nothing (`NON_PERSISTING`): sign-out, the GP-C11 drill, and mapping inspection and AD search,
   which need a mapping role no visitor has. Execution stays refused (`DEMO_MODE_BLOCKED`).
 - **Two layers, both fail-closed.** The route policy refuses persisting requests, and SQLite
   refuses any write (`query_only`).
@@ -410,6 +413,9 @@ These steps keep D1 and all evidence intact:
 
 - **Previous Worker version:** `npx wrangler versions list --name ogwa-demo`, then
   `npx wrangler rollback <version-id> --name ogwa-demo`. D1 is not touched by a rollback.
+  To undo the Genesee Press cutover (live version `a4bd4702-d356-4459-904e-855145c3a2fc`, D1 `ogwa-demo-3`):
+  `npx wrangler rollback c6c2036a-0e01-45b2-86b0-9b0e5882715d --name ogwa-demo`, the previous Null Meridian
+  version on `ogwa-demo-2`, without sign-in.
   To undo OGWA-DEMO-DEPLOY-03: `npx wrangler rollback 25af5127-d3bd-4666-a297-93c5b18aa0d3 --name ogwa-demo`.
   A version carries its own bindings, so this restores the old Worker bound to the untouched `ogwa-demo`.
   To undo OGWA-DEMO-HOSTED-ANON-01 (live version `1b5f5691-1a68-4880-9229-e2e7c06c5cea`, same D1): `npx wrangler rollback dd5048d2-c551-414a-bbfa-fdc55309ce23 --name ogwa-demo`, which brings back the synthetic sign-in screen.
@@ -464,7 +470,7 @@ it, with checksums that `verify_applied` checks on every open.
 | Gate | Command |
 | --- | --- |
 | Unit tests, including the Cloudflare tests | `python -m unittest discover -s tests -t .` (`tests/test_cloudflare_*.py`) |
-| Hosted smoke (61 checks over real HTTPS, all as the anonymous visitor: no sign-in, a viewer's permissions only, read-only refusals, a synthetic remediation drill on NM-C11 that must record nothing, its policy/decision/approval chain, verification before the retry under one operation id, the dry-run boundary, NM-C10 staying non-actionable and refusing NM-C11's drill grant, the public walkthrough, and the dashboard's audit head; OGWA-DEMO-HOSTED-ANON-01) | `python scripts/hosted_smoke.py https://ogwa-demo.d-walkes.workers.dev` |
+| Hosted smoke (61 checks over real HTTPS, all as the anonymous visitor: no sign-in, a viewer's permissions only, read-only refusals, a synthetic remediation drill on GP-C11 that must record nothing, its policy/decision/approval chain, verification before the retry under one operation id, the dry-run boundary, GP-C10 staying non-actionable and refusing GP-C11's drill grant, the public walkthrough, and the dashboard's audit head; OGWA-DEMO-HOSTED-ANON-01) | `python scripts/hosted_smoke.py https://ogwa-demo.d-walkes.workers.dev` |
 | CPU per route | `npx wrangler tail ogwa-demo --format json` while the routes are exercised. Every outcome must be `ok`, and `cpuTime` must stay well under `limits.cpu_ms` |
 | Browser gate, local | `pwsh scripts/browser-check.ps1`, which includes `tests.browser.test_hosted_demo_ui` over `HostedDemoServer`, the Worker's own application on loopback |
 | Browser gate against the Worker | `UI_BROWSER_TESTS=1 UI_BROWSER_TARGET=<origin> python -m unittest tests.browser.test_demo_null_meridian_ui tests.browser.test_null_meridian_views tests.browser.test_hosted_demo_ui tests.browser.test_ui_ia tests.browser.test_candidate_tables tests.browser.test_remediation_drill_ui -v` (NM-C10, NM-C11's drill, and the walkthrough address candidates by this build's seeded ids, so a stale Worker fails them) |

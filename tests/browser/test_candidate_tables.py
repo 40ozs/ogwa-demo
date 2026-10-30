@@ -32,7 +32,7 @@ SORTABLE = {
                                           "Judged by policy": False, "Reason": False, "Approval / job": False},
     "Approvals and rejections": {"Stage": True, "Decision": True, "By": True, "Decided": True, "Expires": True,
                                  "Epoch": True, "Judged by policy": True, "Reason": False},
-    "Dry-run jobs": {"Job": False, "Kind": True, "Status": True, "Executed": True, "Mode": True, "Requested": True},
+    "Dry-run plans": {"Plan": False, "Kind": True, "Status": True, "Executed": True, "Mode": True, "Requested": True},
     "Audit events for this candidate, newest first": {"Sequence": False, "Action": False, "When": False,
                                                       "Actor": False, "Result": False, "Request": False},
 }

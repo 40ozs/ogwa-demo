@@ -6,8 +6,8 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import {
-  activeTab, ariaSort, clampPage, collectIds, employeeTerms, eventLabel, hashFor, nextSort, pageWindow, personStatus,
-  refView, snapshotEntry, sortRows, tabKeyTarget,
+  activeTab, ariaSort, clampPage, collectIds, deadlineText, employeeTerms, eventLabel, hashFor, movedRoute, nextSort, pageWindow,
+  personStatus, refView, snapshotEntry, sortRows, span, tabKeyTarget,
 } from "../../app/ui/static/js/present.js";
 
 const fixturePath = process.env.UI_PRESENT_FIXTURES;
@@ -142,4 +142,42 @@ test("access path nodes keep their order and link to the groups they name", with
 
 test("ids are collected once per view", () => {
   assert.deepEqual(collectIds([{ a: "x", b: "y" }, { a: "x", b: null }, { a: ["z"] }], "a", "b"), ["x", "y", "z"]);
+});
+
+// --- moved addresses (OGWA-UI-IA-01, OGWA-UI-REVIEW-01) ---------------------------------------
+
+test("old addresses move to their new page and tab, keeping filters, sort, and page", () => {
+  const moved = (path, query) => { const m = movedRoute(path, query); return m && hashFor(m[0], m[1]); };
+  assert.equal(moved("/directory-groups", { health: "ACTIONABLE" }), "#/inventory/groups?health=ACTIONABLE&tab=directory");
+  assert.equal(moved("/groups", {}), "#/inventory/groups?tab=okta");
+  assert.equal(moved("/applications", { sort: "label", order: "desc" }), "#/inventory/applications?sort=label&order=desc&tab=okta");
+  assert.equal(moved("/okta", { tab: "groups", cursor: "bzo1MA" }), "#/inventory/groups?tab=okta&cursor=bzo1MA");
+  assert.equal(moved("/okta", {}), "#/inventory/applications?tab=okta");
+  assert.equal(moved("/directory", { tab: "groups", q: "finance" }), "#/inventory/groups?tab=directory&q=finance");
+  assert.equal(moved("/directory", { tab: "applications" }), "#/inventory/applications?tab=directory");
+  assert.equal(moved("/dependencies", { sort: "findings" }), "#/findings?sort=findings&tab=dependency");
+  // "Approvals and holds": the waiting work is the Review queue; a sorted or paged decision list is Decisions.
+  assert.equal(moved("/approvals", {}), "#/review");
+  assert.equal(moved("/approvals", { sort: "decidedAt", order: "asc" }), "#/decisions?sort=decidedAt&order=asc");
+  for (const [path, query] of [["/directory", {}], ["/directory", { tab: "departments" }], ["/review", {}], ["/jobs", {}],
+    ["/candidates", { state: "HOLD" }], ["/findings", { tab: "dependency" }]]) {
+    assert.equal(movedRoute(path, query), null, `${path} has not moved`);
+  }
+});
+
+// --- time on the server's clock ---------------------------------------------------------------
+
+test("spans and deadlines are worded from two server instants, never the browser's clock", () => {
+  const now = "2026-03-02T12:00:00+00:00";
+  assert.deepEqual(span("2026-02-24T12:00:00+00:00", now), { ms: 6 * 86400000, text: "6 days" });
+  assert.equal(span("2026-03-02T11:00:00+00:00", now).text, "1 hour");
+  assert.equal(span("2026-03-02T11:30:00+00:00", now).text, "under an hour");
+  assert.equal(span("2026-03-01T12:00:00+00:00", now).text, "24 hours");
+  assert.deepEqual(deadlineText("2026-03-04T12:00:00+00:00", now), { past: false, text: "2 days remaining" });
+  assert.deepEqual(deadlineText("2026-03-02T09:00:00+00:00", now, "Expired"), { past: true, text: "Expired 3 hours ago" });
+  assert.deepEqual(deadlineText("2026-03-02T09:00:00+00:00", now), { past: true, text: "Ended 3 hours ago" });
+  for (const missing of [null, undefined, "", "not a time"]) {
+    assert.equal(deadlineText("2026-03-04T12:00:00+00:00", missing), null);
+    assert.equal(span(missing, now), null);
+  }
 });

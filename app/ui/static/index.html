@@ -29,17 +29,29 @@
     <button id="nav-toggle" type="button" class="nav-toggle" aria-expanded="true" aria-controls="nav-list"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M14 10l-2 2 2 2"/></svg><span class="nav-toggle-label">Collapse menu</span></button>
     <ul class="nav-list" id="nav-list">
       <li><a href="#/" data-label="Dashboard"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span class="nav-label">Dashboard</span></a></li>
-      <li class="nav-group-start"><a href="#/people" data-label="People"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M16 4a4 4 0 0 1 0 8M19 14c2 1 3 3.5 3 7"/></svg><span class="nav-label">People</span></a></li>
-      <li><a href="#/directory" data-label="Company Directory"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2"/></svg><span class="nav-label">Company Directory</span></a></li>
-      <li><a href="#/okta" data-label="Okta"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/></svg><span class="nav-label">Okta</span></a></li>
-      <li><a href="#/mappings" data-label="Identity mappings"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="nav-label">Identity mappings</span></a></li>
-      <li class="nav-group-start"><a href="#/findings" data-label="Findings"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.5"/></svg><span class="nav-label">Findings</span></a></li>
-      <li><a href="#/candidates" data-label="Lifecycle candidates"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg><span class="nav-label">Lifecycle candidates</span></a></li>
-      <li><a href="#/approvals" data-label="Approvals and holds"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="1"/><path d="M9 4V2h6v2M9 10h6M9 14h6M9 18h3"/></svg><span class="nav-label">Approvals and holds</span></a></li>
       <li><a href="#/scenarios" data-label="Portfolio scenarios"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 4h12a4 4 0 0 1 4 4v13H8a4 4 0 0 1-4-4z"/><path d="M8 9h8M8 13h6"/></svg><span class="nav-label">Portfolio scenarios</span></a></li>
-      <li class="nav-group-start"><a href="#/jobs" data-label="Execution jobs"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg><span class="nav-label">Execution jobs</span></a></li>
-      <li><a href="#/collectors" data-label="Collector health"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12h4l3-7 4 14 3-7h6"/></svg><span class="nav-label">Collector health</span></a></li>
-      <li><a href="#/audit" data-label="Audit history"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4M12 7v5l3 2"/></svg><span class="nav-label">Audit history</span></a></li>
+      <li class="nav-group"><span class="nav-group-label" id="nav-group-inventory">Inventory</span>
+        <ul aria-labelledby="nav-group-inventory">
+          <li><a href="#/people" data-label="People"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M16 4a4 4 0 0 1 0 8M19 14c2 1 3 3.5 3 7"/></svg><span class="nav-label">People</span></a></li>
+          <li><a href="#/inventory/groups" data-label="Groups"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2"/></svg><span class="nav-label">Groups</span></a></li>
+          <li><a href="#/inventory/applications" data-label="Applications"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/></svg><span class="nav-label">Applications</span></a></li>
+          <li><a href="#/mappings" data-label="Identity mappings"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="nav-label">Identity mappings</span></a></li>
+        </ul>
+      </li>
+      <li class="nav-group"><span class="nav-group-label" id="nav-group-review">Review</span>
+        <ul aria-labelledby="nav-group-review">
+          <li><a href="#/review" data-label="Review queue"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg><span class="nav-label">Review queue</span></a></li>
+          <li><a href="#/findings" data-label="Findings"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.5"/></svg><span class="nav-label">Findings</span></a></li>
+          <li><a href="#/decisions" data-label="Decisions"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="4" width="14" height="17" rx="1"/><path d="M9 4V2h6v2M9 10h6M9 14h6M9 18h3"/></svg><span class="nav-label">Decisions</span></a></li>
+        </ul>
+      </li>
+      <li class="nav-group"><span class="nav-group-label" id="nav-group-operations">Operations</span>
+        <ul aria-labelledby="nav-group-operations">
+          <li><a href="#/jobs" data-label="Plans &amp; simulations"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg><span class="nav-label">Plans &amp; simulations</span></a></li>
+          <li><a href="#/collectors" data-label="Collection health"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12h4l3-7 4 14 3-7h6"/></svg><span class="nav-label">Collection health</span></a></li>
+          <li><a href="#/audit" data-label="Audit"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4M12 7v5l3 2"/></svg><span class="nav-label">Audit</span></a></li>
+        </ul>
+      </li>
     </ul>
   </nav>
 <main id="main" tabindex="-1">

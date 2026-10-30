@@ -12,6 +12,8 @@ import unittest
 from tests.browser.harness import Browser, SyntheticServer, browser_path
 from tests.browser.test_operator_workflows import BrowserCase, skip_reason
 
+# OGWA-UI-REVIEW-01: the sections a candidate page opens with, before its evidence.
+REVIEW_FIRST = ["Lifecycle", "What blocks this candidate", "Next step", "Evidence readiness"]
 VIEWS = ("#/directory", "#/scenarios", "#/findings", "#/findings?severity=ACTIONABLE", "#/people",
          "#/people?department=data&status=ACTIVE", "#/people?status=TERMINATED", "#/directory-groups",
          "#/directory-groups?health=ACTIONABLE", "#/directory-groups?era=legacy-ad", "#/applications", "#/groups",
@@ -128,9 +130,10 @@ class NullMeridianViewTests(BrowserCase):
             self.assertIn(expected, text)
         self.assertNotIn("Eligible for a named human", text)
         self.assertNotIn("Rules would accept", text)
-        # The assessment comes before every other section of the page.
-        first = b.evaluate("document.querySelector('#view section h2').textContent")
-        self.assertEqual(first, "Is this safe to act on?")
+        # OGWA-UI-REVIEW-01: the operator's reading (lifecycle, what blocks it, the next step, evidence readiness)
+        # comes first; the assessment is the first evidence section after it.
+        sections = b.evaluate("[...document.querySelectorAll('#view section h2')].map(h => h.textContent).slice(0, 5)")
+        self.assertEqual(sections, REVIEW_FIRST + ["Is this safe to act on?"])
         b.screenshot("nm-05-conflicting-evidence")
         b.viewport(375, 812, mobile=True)
         try:
@@ -165,8 +168,8 @@ class NullMeridianViewTests(BrowserCase):
                 self.assertIn("NM-LIFECYCLE-004 v1.1.0", text)
                 self.assertIn("Superseded", text)
                 self.assertIn("Not applicable", text)
-        sections = b.evaluate("[...document.querySelectorAll('#view section h2')].map(h => h.textContent).slice(0, 2)")
-        self.assertEqual(sections, ["Is this safe to act on?", "Why this decision"])
+        sections = b.evaluate("[...document.querySelectorAll('#view section h2')].map(h => h.textContent).slice(0, 6)")
+        self.assertEqual(sections, REVIEW_FIRST + ["Is this safe to act on?", "Why this decision"])
         b.screenshot("nm-06-policy-version")
         b.viewport(375, 812, mobile=True)
         try:

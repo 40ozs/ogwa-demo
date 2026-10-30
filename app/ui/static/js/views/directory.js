@@ -1,10 +1,12 @@
-// The synthetic directory snapshot: the demo company (Company Directory: departments, groups,
-// applications), its people, the canonical AD group page, and the portfolio scenarios.
+// The synthetic directory snapshot: the demo company (Company Directory: its profile and
+// departments), its groups and applications (tabs of Inventory's Groups and Applications pages,
+// OGWA-UI-REVIEW-01), its people, the canonical AD group page, and the portfolio scenarios.
 // Read-only views.
 import { checkedId, get } from "../api.js";
 import { badge, banner, facts, fmtTime, h, humanize, link, mono, section, table, uid } from "../dom.js";
-import { activeTab, employeeTerms, eventLabel, hashFor, PERSON_STATUS_LABEL, personStatus } from "../present.js";
-import { appLink, candidateLink, chain, go, groupLink, groupRef, lede, listing, pageParams, tabs } from "./common.js";
+import { employeeTerms, eventLabel, hashFor, PERSON_STATUS_LABEL, personStatus } from "../present.js";
+import { ruleLabel } from "../review.js";
+import { appLink, candidateLink, chain, go, groupLink, groupRef, lede, listing, pageParams } from "./common.js";
 
 const HEALTH_TONE = { ACTIONABLE: "blocked", QUESTIONABLE: "caution", CLEAN: "neutral", INFO: "info" };
 export const HEALTH_LABEL = { ACTIONABLE: "Actionable", QUESTIONABLE: "Worth a look", CLEAN: "No findings", INFO: "Context" };
@@ -12,8 +14,6 @@ const HEALTH_RANK = { CLEAN: 0, INFO: 1, QUESTIONABLE: 2, ACTIONABLE: 3 };
 const ERA_LABEL = { "legacy-ad": "2016–2019 legacy AD", "app-specific": "2019–2021 app-specific",
   "transitional-okta": "2021–2023 transitional Okta", modern: "2023– sg-* standard" };
 const SOURCE_LABEL = { AD: "AD", OKTA: "Okta", BUILT_IN: "Built-in" };
-const DIRECTORY_TABS = [{ id: "departments", text: "Departments" }, { id: "groups", text: "Groups" },
-  { id: "applications", text: "Applications" }];
 
 export function healthBadge(value) {
   return badge(HEALTH_LABEL[value] || humanize(value), HEALTH_TONE[value] || "neutral");
@@ -69,24 +69,36 @@ function noSnapshot(data) {
 export function findingsTable(caption, items) {
   return table(caption, [
     { label: "Severity", rowHeader: true, render: (f) => healthBadge(f.severity), sort: (f) => -HEALTH_RANK[f.severity] },
-    { label: "Finding", render: (f) => [mono(f.code), " ", employeeTerms(f.summary)], sort: (f) => f.code },
+    { label: "Finding", render: (f) => [h("strong", null, ruleLabel(f.code)), ": ", employeeTerms(f.summary),
+      h("div", { class: "muted" }, mono(f.code))], sort: (f) => ruleLabel(f.code) },
     { label: "Suggested review", render: (f) => employeeTerms(f.recommendation) },
   ], items || [], "No findings.");
 }
 
 // --- the company: Company Directory -------------------------------------------------------
 
+// Its groups and applications are tabs of Inventory's Groups and Applications pages (OGWA-UI-REVIEW-01).
 export async function directory(ctx) {
   ctx.setTitle("Company Directory");
   const data = await get("/directory");
   if (!data.available) { ctx.view.append(noSnapshot(data)); return data; }
-  const tab = activeTab(ctx.query, DIRECTORY_TABS.map((t) => t.id));
-  const panel = tab === "groups" ? await groupsTab(ctx) : tab === "applications" ? applicationsTab(data) : departmentsTab(data);
   ctx.view.append(
-    banner("caution", `${data.profile.company} is fictional.`, `Every person, group, application, and identifier here was generated from the seed ${data.profile.seed}. Nothing was read from a real tenant or directory.`),
+    fictional(data),
     companyProfile(data),
-    tabs("/directory", "Company Directory", DIRECTORY_TABS, tab, panel));
+    h("p", null, link(hashFor("/inventory/groups", {}, { tab: "directory" }), "Directory groups"), " · ",
+      link(hashFor("/inventory/applications", {}, { tab: "directory" }), "Directory applications"), " · ", link("#/people", "People")),
+    section("Departments", departmentsTab(data)));
   return data;
+}
+
+function fictional(data) {
+  return banner("caution", `${data.profile.company} is fictional.`, `Every person, group, application, and identifier here was generated from the seed ${data.profile.seed}. Nothing was read from a real tenant or directory.`);
+}
+
+/** The snapshot's applications (Inventory › Applications, Directory tab). */
+export async function directoryApplications() {
+  const data = await get("/directory");
+  return data.available ? [fictional(data), applicationsTab(data)] : noSnapshot(data);
 }
 
 function companyProfile(data) {
@@ -120,7 +132,7 @@ function companyProfile(data) {
         ["Actionable", `${health.ACTIONABLE || 0} (${pct(health.ACTIONABLE || 0)})`],
       ], "Group health"), h("p", null, link("#/findings?tab=governance", "Governance findings")))),
     table("Groups by the era they were created in", [
-      { label: "Era", rowHeader: true, render: ([era]) => link(hashFor("/directory", {}, { tab: "groups", era }), eraText(era)) },
+      { label: "Era", rowHeader: true, render: ([era]) => link(hashFor("/inventory/groups", {}, { tab: "directory", era }), eraText(era)) },
       { label: "Groups", num: true, render: ([, n]) => String(n) },
     ], Object.entries(c.groupsByEra || {})));
 }
@@ -150,18 +162,21 @@ function applicationsTab(data) {
 
 const GROUP_DEFAULT_SORT = { key: "name", dir: "asc" };
 
-async function groupsTab(ctx) {
+/** The snapshot's groups (Inventory › Groups, Directory tab), paged on the server under `route`. */
+export async function directoryGroups(query, route) {
+  const directory = await get("/directory");
+  if (!directory.available) return noSnapshot(directory);
   const filters = {};
-  for (const name of ["era", "health", "source", "q"]) if (ctx.query[name]) filters[name] = ctx.query[name];
-  const data = await get("/directory-groups", pageParams(ctx.query, filters, GROUP_DEFAULT_SORT));
-  const route = "/directory";
+  for (const name of ["era", "health", "source", "q"]) if (query[name]) filters[name] = query[name];
+  const data = await get("/directory-groups", pageParams(query, filters, GROUP_DEFAULT_SORT));
   return [
+    fictional(directory),
     lede("Every AD and Okta group in the snapshot, including AD-only groups Okta never sees. Health is the most serious governance finding on the group."),
-    searchForm(route, ctx.query, "Find a group", "By name, sAMAccountName, objectSid, objectGUID, or Okta group id"),
-    filterLinks(route, ctx.query, "health", ["ACTIONABLE", "QUESTIONABLE", "CLEAN"], HEALTH_LABEL),
-    filterLinks(route, ctx.query, "era", Object.keys(ERA_LABEL), ERA_LABEL),
-    filterLinks(route, ctx.query, "source", ["AD", "OKTA", "BUILT_IN"], SOURCE_LABEL),
-    listing(route, ctx.query, data, "Directory groups", [
+    searchForm(route, query, "Find a group", "By name, sAMAccountName, objectSid, objectGUID, or Okta group id"),
+    filterLinks(route, query, "health", ["ACTIONABLE", "QUESTIONABLE", "CLEAN"], HEALTH_LABEL),
+    filterLinks(route, query, "era", Object.keys(ERA_LABEL), ERA_LABEL),
+    filterLinks(route, query, "source", ["AD", "OKTA", "BUILT_IN"], SOURCE_LABEL),
+    listing(route, query, data, "Directory groups", [
       { label: "Group", rowHeader: true, render: groupRef, sort: "name" },
       { label: "Source", render: (g) => SOURCE_LABEL[g.source] || humanize(g.source), sort: "source" },
       { label: "Kind", render: (g) => humanize(g.kind), sort: "kind" },

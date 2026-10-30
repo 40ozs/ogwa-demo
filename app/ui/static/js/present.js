@@ -1,5 +1,6 @@
 // Pure presentation rules shared by the views (OGWA-UI-IA-01): employee status words, sorting
-// and paging arithmetic, tab keys, hash addresses, and how a resolved identity is shown.
+// and paging arithmetic, tab keys, hash addresses (and where old ones moved), time on the
+// server's clock, and how a resolved identity is shown.
 // No DOM here; tests/ui/present.test.mjs covers it under Node.
 
 // --- employees ------------------------------------------------------------------------------
@@ -111,6 +112,52 @@ export function hashFor(route, query, changes) {
   }
   const q = params.toString();
   return `#${route}${q ? `?${q}` : ""}`;
+}
+
+/**
+ * Where an address from before OGWA-UI-IA-01 or OGWA-UI-REVIEW-01 lives now, as [route, query],
+ * or null when it has not moved. Filters, sorting, and the page are kept; only the page and its
+ * tab change.
+ */
+export function movedRoute(path, query) {
+  const q = { ...(query || {}) };
+  switch (path) {
+    case "/directory-groups": return ["/inventory/groups", { ...q, tab: "directory" }];
+    case "/groups": return ["/inventory/groups", { ...q, tab: "okta" }];
+    case "/applications": return ["/inventory/applications", { ...q, tab: "okta" }];
+    case "/okta": return [q.tab === "groups" ? "/inventory/groups" : "/inventory/applications", { ...q, tab: "okta" }];
+    case "/directory":
+      return q.tab === "groups" || q.tab === "applications" ? [`/inventory/${q.tab}`, { ...q, tab: "directory" }] : null;
+    case "/dependencies": return ["/findings", { ...q, tab: "dependency" }];
+    // "Approvals and holds": its waiting work is now the Review queue, and its sorted or paged list of
+    // recorded approvals and rejections is Decisions.
+    case "/approvals": return q.sort || q.cursor ? ["/decisions", q] : ["/review", {}];
+    default: return null;
+  }
+}
+
+// --- time, always on the server's clock -----------------------------------------------------
+
+const plural = (n, unit) => `${n} ${unit}${n === 1 ? "" : "s"}`;
+
+/**
+ * The time from `fromIso` to `toIso` in words ("3 days", "5 hours", "under an hour") and its
+ * sign. Both instants come from the server (its clock is the demo clock in a demo); null when
+ * either is missing, so the browser's clock is never used in its place.
+ */
+export function span(fromIso, toIso) {
+  if (!fromIso || !toIso) return null;
+  const ms = Date.parse(toIso) - Date.parse(fromIso);
+  if (Number.isNaN(ms)) return null;
+  const hours = Math.floor(Math.abs(ms) / 3600000);
+  return { ms, text: hours < 1 ? "under an hour" : hours < 48 ? plural(hours, "hour") : plural(Math.floor(hours / 24), "day") };
+}
+
+/** A deadline against the server's clock: "2 days remaining" or "Ended 3 hours ago"; the caller shows the absolute time too. */
+export function deadlineText(atIso, nowIso, endedWord) {
+  const s = span(nowIso, atIso);
+  if (!s) return null;
+  return s.ms > 0 ? { past: false, text: `${s.text} remaining` } : { past: true, text: `${endedWord || "Ended"} ${s.text} ago` };
 }
 
 // --- identities ---------------------------------------------------------------------------

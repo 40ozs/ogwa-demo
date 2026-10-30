@@ -8,43 +8,39 @@ import { errorBox } from "./views/common.js";
 import { dashboard } from "./views/dashboard.js";
 import { directory, directoryGroup, people, person, scenarios } from "./views/directory.js";
 import { findings } from "./views/findings.js";
-import { approvals, audit, job, jobs } from "./views/governance.js";
-import { application, collectors, group, mapping, mappings, okta } from "./views/inventory.js";
+import { audit, job, jobs } from "./views/governance.js";
+import { application, collectors, group, inventoryApplications, inventoryGroups, mapping, mappings } from "./views/inventory.js";
+import { decisions, reviewQueue } from "./views/review.js";
 import { signin } from "./views/signin.js";
+import { hashFor, movedRoute } from "./present.js";
 
 const ID = "(?<id>[a-z]+_[0-9a-f]{32})";
 
-// [path, view, the navigation entry it belongs to]. Detail pages light up their section.
+// [path, view, the navigation entry it belongs to]. Detail pages light up their section
+// (OGWA-UI-REVIEW-01: Inventory, Review, Operations).
 const ROUTES = [
   [/^\/$/, dashboard, "/"],
+  [/^\/scenarios$/, scenarios, "/scenarios"],
   [/^\/people$/, people, "/people"],
   [new RegExp(`^/people/${ID}$`), person, "/people"],
-  [/^\/directory$/, directory, "/directory"],
-  [new RegExp(`^/directory-groups/${ID}$`), directoryGroup, "/directory"],
-  [/^\/okta$/, okta, "/okta"],
-  [new RegExp(`^/applications/${ID}$`), application, "/okta"],
-  [new RegExp(`^/groups/${ID}$`), group, "/okta"],
+  [/^\/directory$/, directory, "/people"],
+  [/^\/inventory\/groups$/, inventoryGroups, "/inventory/groups"],
+  [new RegExp(`^/directory-groups/${ID}$`), directoryGroup, "/inventory/groups"],
+  [new RegExp(`^/groups/${ID}$`), group, "/inventory/groups"],
+  [/^\/inventory\/applications$/, inventoryApplications, "/inventory/applications"],
+  [new RegExp(`^/applications/${ID}$`), application, "/inventory/applications"],
   [/^\/mappings$/, mappings, "/mappings"],
   [new RegExp(`^/mappings/${ID}$`), mapping, "/mappings"],
+  [/^\/review$/, reviewQueue, "/review"],
+  [/^\/candidates$/, candidates, "/review"],
+  [new RegExp(`^/candidates/${ID}$`), candidate, "/review"],
   [/^\/findings$/, findings, "/findings"],
-  [/^\/candidates$/, candidates, "/candidates"],
-  [new RegExp(`^/candidates/${ID}$`), candidate, "/candidates"],
-  [/^\/approvals$/, approvals, "/approvals"],
-  [/^\/scenarios$/, scenarios, "/scenarios"],
+  [/^\/decisions$/, decisions, "/decisions"],
   [/^\/jobs$/, jobs, "/jobs"],
   [new RegExp(`^/jobs/${ID}$`), job, "/jobs"],
   [/^\/collectors$/, collectors, "/collectors"],
   [/^\/audit$/, audit, "/audit"],
 ];
-
-// Pages that became tabs (OGWA-UI-IA-01). Old links and bookmarks still arrive: the address is
-// replaced, so Back does not bounce through it, and its filters are kept.
-const MOVED = new Map([
-  ["/directory-groups", ["/directory", "groups"]],
-  ["/applications", ["/okta", "applications"]],
-  ["/groups", ["/okta", "groups"]],
-  ["/dependencies", ["/findings", "dependency"]],
-]);
 
 const el = {
   main: document.getElementById("main"),
@@ -177,11 +173,10 @@ function show(view, title, from, target) {
 async function route(flash) {
   const seq = ++renderSeq;
   const { path, query } = parseHash();
-  const moved = MOVED.get(path);
+  // Old links and bookmarks still arrive: the address is replaced, so Back does not bounce through it.
+  const moved = movedRoute(path, query);
   if (moved) {
-    const params = new URLSearchParams(query);
-    params.set("tab", moved[1]);
-    location.replace(`#${moved[0]}?${params.toString()}`);
+    location.replace(hashFor(moved[0], moved[1]));
     return;
   }
   const from = document.activeElement;

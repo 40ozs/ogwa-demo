@@ -171,7 +171,8 @@ class HostedDemoUiTests(BrowserCase):
         self.visit("#/")
         links = {f"#/candidates/{self.scenario('NM-C10')}": "Candidate: ", f"#/candidates/{self.scenario('NM-C11')}":
                  "Candidate: ", "#/scenarios": "Portfolio scenarios", "#/directory": "Company Directory",
-                 "#/findings?tab=governance": "Findings", "#/okta?tab=groups": "Okta"}
+                 "#/findings?tab=governance": "Findings", "#/inventory/groups?tab=okta": "Groups",
+                 "#/review": "Review queue", "#/decisions": "Decisions"}
         for link, title in links.items():
             with self.subTest(link=link):
                 self.visit(link)

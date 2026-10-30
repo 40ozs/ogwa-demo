@@ -14,6 +14,7 @@ import {
   freshnessText, otherAssignmentsFact, requiredText, reviewerAnswers, stanceText, stateText,
 } from "../evidence.js";
 import { conditionRank, evidenceLabels, explanationAnswers, policyAgainstInForce, policyName } from "../policy.js";
+import { evidenceReadiness, lifecycleStages, nextStep, planStatus, reviewStatus } from "../review.js";
 import { appLink, errorBox, groupLink, identity, jobLink, mappingLink, resolveRefs } from "./common.js";
 import { coverageTable, resultBadge } from "./inventory.js";
 
@@ -46,14 +47,16 @@ export async function candidate(ctx) {
   const fingerprintDrift = evidence.evidenceFingerprint !== detail.evidenceFingerprint;
   const banners = candidateBanners(detail, evidence);
   const plan = actionPlan(detail, approvals.items, jobs.items);
+  const status = reviewStatus(c.state);
 
+  // OGWA-UI-REVIEW-01: the operator's reading first (status, lifecycle, what blocks it, the next step, evidence
+  // readiness), then the evidence and its provenance. Every line is read from the API; nothing is judged here.
   const main = h("div", { class: "detail-main" },
     ctx.flash ? h("div", { class: "banner", "data-tone": "info", role: "status" }, h("strong", null, ctx.flash)) : null,
-    h("p", null, badge(info.label, info.tone), " ", info.text),
+    h("p", { class: "review-headline" }, badge(status.label, status.tone), " ", h("strong", null, info.label)),
+    h("p", null, info.text),
     fingerprintDrift ? banner("blocked", "Evidence changed while this page loaded.", "Reload before recording anything.") : null,
-    assessmentSection(detail.evidenceAssessment),
-    explanationSection(detail.decisionExplanation, detail.evidenceAssessment),
-    drillSection(detail, evidence, approvals.items, drillCatalog),
+    section("Lifecycle", stepper(lifecycleStages(c, decisions.items, now))),
     section("What blocks this candidate",
       banners.length ? h("ul", { class: "banner-list" }, banners.map((b) => h("li", null,
         h("div", { class: "banner", "data-tone": b.tone }, h("strong", null, b.headline),
@@ -64,6 +67,11 @@ export async function candidate(ctx) {
       classification ? h("p", { class: "muted" }, "Judged under ", classification.policy.name ? [h("strong", null, classification.policy.name), " "] : null,
         badge(classification.policy.label, classification.policy.recorded ? "info" : "caution"),
         ` at ${fmtTime(classification.classifiedAt)} (server clock).`) : null),
+    nextStepSection(nextStep(c, now), plan),
+    readinessSection(evidenceReadiness(detail.evidenceAssessment), classification),
+    assessmentSection(detail.evidenceAssessment),
+    explanationSection(detail.decisionExplanation, detail.evidenceAssessment),
+    drillSection(detail, evidence, approvals.items, drillCatalog),
     section("Decision summary", summaryFacts(c, evidence, deps, group, classification, now, detail.quarantine, refs)),
     section("Classification reasons", reasonsTable(classification, refs)),
     section("Dependency coverage",
@@ -74,13 +82,67 @@ export async function candidate(ctx) {
     section("Evidence timestamps", evidenceTable(evidence, classification, now)),
     section("Decision history", decisionsTable(decisions.items, detail.policy)),
     section("Approvals", approvalsTable(approvals.items, detail.policy)),
-    section("Dry-run jobs", jobsTable(jobs.items)),
+    section("Dry-run plans", jobsTable(jobs.items)),
     audit ? section("Audit trail", auditTable(audit.items)) : null,
   );
 
   ctx.view.append(h("div", { class: "detail-layout" }, main,
     h("aside", { "aria-labelledby": "actions-heading" },
       actionsPanel(ctx, detail, plan, fingerprintDrift))));
+}
+
+// --- the operator's reading (OGWA-UI-REVIEW-01) -------------------------------------------------
+
+// A mark per stage status, hidden from assistive technology: the status is always written out too.
+const STEP_MARK = { done: "✓", current: "●", waiting: "◷", blocked: "✕", closed: "■", future: "○", "not-reached": "–" };
+const STEP_TONE = { done: "neutral", current: "caution", waiting: "caution", blocked: "blocked", closed: "terminal",
+  future: "neutral", "not-reached": "neutral" };
+
+/** The lifecycle as a list of stages: a reading of the state machine, which stays authoritative. */
+function stepper(life) {
+  return [h("p", { class: "stepper-summary" }, life.summary),
+    h("ol", { class: "stepper", "aria-label": "Lifecycle stages" }, life.stages.map((s) => h("li", {
+      class: "step", "data-status": s.status, "data-tone": STEP_TONE[s.status], "aria-current": s.note ? "step" : null },
+    h("span", { class: "step-mark", "aria-hidden": "true" }, STEP_MARK[s.status]),
+    h("span", { class: "step-label" }, s.label),
+    h("span", { class: "step-status" }, s.statusText),
+    s.note ? h("span", { class: "step-note" }, s.note) : null,
+    s.until ? h("span", { class: "step-note" }, `until ${fmtTime(s.until)}`) : null))),
+    h("p", { class: "muted" }, "Stages ahead are not guaranteed: each needs its own evidence checks and, where it records a change, a named person's approval.")];
+}
+
+function nextStepSection(step, plan) {
+  const open = [
+    ...plan.approvals.filter((a) => a.permitted).map((a) => `Approve or decline: ${STAGE_LABEL[a.stage] || a.stage}`),
+    ...plan.transitions.map((t) => TRANSITION_FORMS[t.action].label),
+    plan.dryRun ? `Run dry-run: ${STAGE_LABEL[plan.dryRun.kind]}` : null,
+    plan.recordDryRun ? "Record the dry-run step" : null,
+  ].filter(Boolean);
+  return section("Next step",
+    facts([
+      ["Needs", h("strong", null, step.required)],
+      ["What happens next", step.text],
+      ["Who", step.who],
+      ...(step.deadline ? [["Deadline", [step.deadline.label ? [badge(step.deadline.label, step.deadline.past ? "caution" : "neutral"), " "] : null,
+        `until ${fmtTime(step.deadline.at)}`]]] : []),
+    ], "Next step"),
+    h("p", null, anonymous() ? "This public demo is read-only: nothing can be recorded here."
+      : open.length ? `Open to you now, under Record a decision: ${open.join("; ")}. The server checks each one again.`
+        : "No decision is open to you on this candidate in its current state."));
+}
+
+function readinessSection(readiness, classification) {
+  if (!readiness) {
+    return section("Evidence readiness", banner("blocked", "No evidence assessment is available.", "Treat every source as unknown."));
+  }
+  const all = readiness.required > 0 && readiness.usable === readiness.required;
+  return section("Evidence readiness",
+    // A sentence, so it wraps (a badge does not) and the page never scrolls sideways on a phone.
+    h("p", null, h("strong", { class: "state-label", "data-tone": all ? "neutral" : readiness.required ? "blocked" : "caution" },
+      readiness.required ? `${readiness.usable} of ${readiness.required} required sources complete and current` : "No source is marked required")),
+    readiness.problems.length ? h("p", null, "Not complete and current: ", readiness.problems.join(", "), ".") : null,
+    h("p", { class: "muted" }, classification ? `Evaluated at ${fmtTime(classification.classifiedAt)} on the server's clock, when this page loaded. ` : "",
+      "Complete and current is not a safety verdict; each source's state and bearing are below."));
 }
 
 // --- synthetic remediation drill (OGWA-DEMO-03) ------------------------------------------------
@@ -480,10 +542,10 @@ function approvalsTable(items, inForce) {
 }
 
 function jobsTable(items) {
-  return table("Dry-run jobs", [
-    { label: "Job", rowHeader: true, render: (j) => jobLink(j.id) },
+  return table("Dry-run plans", [
+    { label: "Plan", rowHeader: true, render: (j) => jobLink(j.id) },
     { label: "Kind", render: (j) => STAGE_LABEL[j.kind] || j.kind, sort: (j) => STAGE_LABEL[j.kind] || j.kind },
-    { label: "Status", render: (j) => badge(humanize(j.status), j.status === "FAILED" ? "blocked" : "neutral"), sort: (j) => humanize(j.status) },
+    { label: "Status", render: (j) => { const st = planStatus(j); return badge(st.label, st.tone); }, sort: (j) => planStatus(j).label },
     { label: "Executed", render: (j) => (j.executed ? badge("Yes", "blocked") : "No"), sort: (j) => Number(j.executed) },
     { label: "Mode", render: (j) => mono(j.executionMode), sort: (j) => j.executionMode },
     { label: "Requested", render: (j) => `${fmtTime(j.requestedAt)} by ${actorText(j.requestedBy)}`, sort: (j) => j.requestedAt },

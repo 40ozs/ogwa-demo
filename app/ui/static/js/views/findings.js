@@ -1,14 +1,16 @@
-// Findings: dependency checks and governance findings, as two tabs of one page. The two
-// datasets stay separate: each tab keeps its own columns, filters, and API.
+// Findings: Impact & Blockers (the dependency checks, OGWA-UI-REVIEW-01) and governance findings,
+// as two tabs of one page. The two datasets stay separate: each tab keeps its own columns,
+// filters, and API. The Impact & Blockers tab keeps its address, ?tab=dependency.
 import { get } from "../api.js";
 import { KIND_LABEL } from "../assess.js";
 import { badge, h, link, mono, section, table } from "../dom.js";
 import { activeTab, collectIds, employeeTerms, hashFor } from "../present.js";
+import { impactOf, ruleLabel } from "../review.js";
 import { HEALTH_LABEL, filterLinks, healthBadge } from "./directory.js";
 import { identity, lede, listing, pageParams, resolveRefs, tabs } from "./common.js";
 import { provenanceCells } from "./inventory.js";
 
-const FINDING_TABS = [{ id: "dependency", text: "Dependency" }, { id: "governance", text: "Governance" }];
+const FINDING_TABS = [{ id: "dependency", text: "Impact & Blockers" }, { id: "governance", text: "Governance" }];
 const GOVERNANCE_FILTERS = ["severity", "code", "subjectKind"];
 
 export async function findings(ctx) {
@@ -21,21 +23,28 @@ export async function findings(ctx) {
   ctx.view.append(tabs("/findings", "Findings", FINDING_TABS, tab, panel));
 }
 
-// --- dependency checks ----------------------------------------------------------------------
+// --- impact and blockers (the dependency checks) ----------------------------------------------
+
+function impactCell(d) {
+  const i = impactOf(d);
+  return [h("strong", null, i.categoryLabel), h("div", null, badge(i.effect, i.tone)),
+    i.incompleteNote ? h("div", { class: "muted" }, i.incompleteNote) : null];
+}
 
 async function dependencyTab(query) {
   const data = await get("/dependency-findings", pageParams(query, null, { key: "dependencyKind", dir: "asc" }));
   const refs = await resolveRefs(collectIds(data.items, "subjectId"));
   return [
-    lede("Each dependency check and what it found. A check that found nothing is only meaningful if it completed and is decision-grade; an unchecked kind is never clear."),
-    listing("/findings", query, data, "Dependency checks", [
-      { label: "Kind", rowHeader: true, render: (d) => KIND_LABEL[d.dependencyKind] || d.dependencyKind, sort: "dependencyKind" },
-      { label: "Subject", render: (d) => identity(refs[d.subjectId], d.subjectId), sort: "subject" },
-      { label: "Findings", sort: "findings", render: (d) => (d.findings.length
+    lede("What each dependency check means for the lifecycle: what is affected, whether it blocks, and why. A blocking finding stops every forward lifecycle step for its group. \"Not established\" means OGWA could not determine whether a dependency exists: a check that did not complete, or is not decision-grade, is never treated as clear."),
+    listing("/findings", query, data, "Impact and blockers", [
+      { label: "Affected", rowHeader: true, render: (d) => identity(refs[d.subjectId], d.subjectId), sort: "subject" },
+      { label: "Impact", render: impactCell, sort: "findings" },
+      { label: "What was found", render: (d) => (d.findings.length
         ? h("ul", { class: "plain-list" }, d.findings.map((f) => h("li", null,
           f.blocking ? badge("Blocking", "blocked") : badge("Informational", "neutral"), " ", f.description,
           f.code ? [" ", mono(`(${f.code})`)] : null)))
-        : (d.provenance.resultStatus === "COMPLETE" && d.provenance.decisionGrade ? "None found (complete check)" : badge("No result usable", "caution"))) },
+        : h("span", { class: "muted" }, impactOf(d).established ? "Nothing (complete check)" : "No usable result")) },
+      { label: "Check", render: (d) => [KIND_LABEL[d.dependencyKind] || d.dependencyKind, h("div", { class: "muted" }, mono(d.dependencyKind))], sort: "dependencyKind" },
       ...provenanceCells(),
     ], "No dependency checks are recorded.", { key: "dependencyKind", dir: "asc" }),
     h("p", { class: "muted" }, "Per-candidate coverage, including kinds that were never checked, is on each candidate's page."),
@@ -65,7 +74,8 @@ async function governanceTab(query) {
     filterLinks("/findings", query, "severity", ["ACTIONABLE", "QUESTIONABLE", "INFO"], HEALTH_LABEL),
     section("Findings by rule",
       table("How many findings each rule produced", [
-        { label: "Rule", rowHeader: true, render: (r) => link(hashFor("/findings", {}, { tab: "governance", code: r.code }), r.code), sort: (r) => r.code },
+        { label: "Rule", rowHeader: true, render: (r) => [link(hashFor("/findings", {}, { tab: "governance", code: r.code }), ruleLabel(r.code)),
+          h("div", { class: "muted" }, mono(r.code))], sort: (r) => ruleLabel(r.code) },
         { label: "Severity", render: (r) => healthBadge(r.severity), sort: (r) => ["INFO", "QUESTIONABLE", "ACTIONABLE"].indexOf(r.severity) },
         { label: "Findings", num: true, render: (r) => String(r.n), sort: (r) => r.n },
       ], rows, "No findings: this store has no directory snapshot.")),
@@ -73,7 +83,7 @@ async function governanceTab(query) {
       listing("/findings", query, data, "Findings", [
         { label: "Subject", rowHeader: true, render: subject, sort: "subjectName" },
         { label: "Severity", render: (f) => healthBadge(f.severity), sort: "severity" },
-        { label: "Rule", render: (f) => mono(f.code), sort: "code" },
+        { label: "Rule", render: (f) => [ruleLabel(f.code), h("div", { class: "muted" }, mono(f.code))], sort: "code" },
         { label: "What was found", render: (f) => employeeTerms(f.summary) },
         { label: "Suggested review", render: (f) => employeeTerms(f.recommendation) },
       ], "No findings match these filters.", defaultSort)),

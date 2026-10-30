@@ -1,6 +1,7 @@
 """OGWA-UI-IA-01 in a real headless browser, over Null Meridian (opt-in, UI_BROWSER_TESTS=1).
 
-The docked side navigation, the tabbed pages (Company Directory, Okta, Findings), shared table
+The docked side navigation (grouped into Inventory, Review, and Operations since
+OGWA-UI-REVIEW-01), the tabbed pages (Groups, Applications, Findings), shared table
 sorting and paging, identity links (common names first, AD groups opening their canonical page,
 Back returning to the investigation), "Deactivated" wording, and the dashboard. With
 UI_BROWSER_TARGET it runs against an already-serving demo, such as the deployed Worker.
@@ -14,8 +15,11 @@ from tests.browser.harness import Browser, SyntheticServer, browser_path
 from tests.browser.test_operator_workflows import BrowserCase, skip_reason
 
 RAW_ID = re.compile(r"^(adg|ogrp|oapp|dgrp)_[0-9a-f]{32}$")
-NAV = ("#/", "#/people", "#/directory", "#/okta", "#/mappings", "#/findings", "#/candidates", "#/approvals",
-       "#/scenarios", "#/jobs", "#/collectors", "#/audit")
+NAV = ("#/", "#/scenarios", "#/people", "#/inventory/groups", "#/inventory/applications", "#/mappings", "#/review",
+       "#/findings", "#/decisions", "#/jobs", "#/collectors", "#/audit")
+NAV_GROUPS = [["Inventory", ["People", "Groups", "Applications", "Identity mappings"]],
+              ["Review", ["Review queue", "Findings", "Decisions"]],
+              ["Operations", ["Plans & simulations", "Collection health", "Audit"]]]
 
 
 @unittest.skipIf(skip_reason(), skip_reason() or "")
@@ -72,8 +76,13 @@ class InformationArchitectureTests(BrowserCase):
         self.nav("#/")
         hrefs = b.evaluate("[...document.querySelectorAll('#primary-nav a')].map(a => a.getAttribute('href'))")
         self.assertEqual(tuple(hrefs), NAV, "one entry per destination; the superseded entries are gone")
-        for gone in ("#/directory-groups", "#/applications", "#/groups", "#/dependencies"):
+        for gone in ("#/directory-groups", "#/applications", "#/groups", "#/dependencies", "#/directory", "#/okta",
+                     "#/candidates", "#/approvals"):
             self.assertNotIn(gone, hrefs)
+        # OGWA-UI-REVIEW-01: each group is a list named by its visible label.
+        groups = b.evaluate("""[...document.querySelectorAll('#primary-nav ul[aria-labelledby]')].map(u =>
+            [document.getElementById(u.getAttribute('aria-labelledby')).textContent, [...u.querySelectorAll('a')].map(a => a.textContent.trim())])""")
+        self.assertEqual(groups, NAV_GROUPS)
         labels = b.evaluate("[...document.querySelectorAll('#primary-nav a')].map(a => [a.dataset.label, a.textContent.trim()])")
         self.assertTrue(all(label == text for label, text in labels), labels)
         toggle = "document.getElementById('nav-toggle')"
@@ -83,42 +92,63 @@ class InformationArchitectureTests(BrowserCase):
         self.assertEqual(b.evaluate(f"{toggle}.getAttribute('aria-expanded')"), "false")
         narrow = b.evaluate("document.getElementById('primary-nav').getBoundingClientRect().width")
         self.assertLess(narrow, wide / 2, "collapsed shows icons only")
-        self.assertEqual(b.evaluate("getComputedStyle(document.querySelector('#primary-nav .nav-label')).width"), "1px",
-                         "labels are hidden visually but stay the links' accessible names")
-        self.assertEqual(b.evaluate("document.querySelector('#primary-nav a[href=\"#/okta\"]').textContent.trim()"), "Okta")
+        for selector in ("#primary-nav .nav-label", "#primary-nav .nav-group-label"):
+            self.assertEqual(b.evaluate(f"getComputedStyle(document.querySelector({json.dumps(selector)})).width"), "1px",
+                             "labels are hidden visually but stay the links' and groups' accessible names")
+        self.assertEqual(b.evaluate("document.querySelector('#primary-nav a[href=\"#/inventory/groups\"]').textContent.trim()"), "Groups")
         b.screenshot("ia-01-collapsed")
         self.assert_accessible("collapsed navigation")
         # Navigating keeps the choice, and detail pages light up their section.
-        self.click("#primary-nav a[href='#/okta']", "Okta")
+        self.click("#primary-nav a[href='#/inventory/applications']", "Applications")
         self.assertTrue(b.evaluate("document.body.classList.contains('nav-collapsed')"))
         self.click("#tab-panel table a", None)
         self.assertTrue(b.title().startswith("Application: "))
-        self.assertEqual(b.evaluate("document.querySelector('#primary-nav a[aria-current=page]').getAttribute('href')"), "#/okta")
-        self.nav("#/directory?tab=groups")
+        current = "document.querySelector('#primary-nav a[aria-current=page]').getAttribute('href')"
+        self.assertEqual(b.evaluate(current), "#/inventory/applications")
+        self.nav("#/inventory/groups?tab=okta")
         self.click("#tab-panel table a")
-        self.assertEqual(b.evaluate("document.querySelector('#primary-nav a[aria-current=page]').getAttribute('href')"),
-                         "#/directory")
+        self.assertTrue(b.title().startswith("Okta group: "), b.title())
+        self.assertEqual(b.evaluate(current), "#/inventory/groups")
+        self.nav("#/inventory/groups")
+        self.click("#tab-panel table a")
+        self.assertTrue(b.title().startswith("AD group: "), b.title())
+        self.assertEqual(b.evaluate(current), "#/inventory/groups")
+        for page, section in (("#/candidates", "#/review"), ("#/directory", "#/people")):
+            self.nav(page)
+            self.assertEqual(b.evaluate(current), section, page)
         b.evaluate(f"{toggle}.click()")
         self.assertEqual(b.evaluate(f"{toggle}.getAttribute('aria-expanded')"), "true")
 
     def test_b_old_addresses_arrive_on_their_tab(self):
         b = self.browser
-        for old, title, tab in (("#/directory-groups?health=ACTIONABLE", "Company Directory", "Groups"),
-                                ("#/applications", "Okta", "Applications"), ("#/groups", "Okta", "Groups"),
-                                ("#/dependencies", "Findings", "Dependency"),
-                                ("#/findings?severity=ACTIONABLE", "Findings", "Governance")):
+        for old, title, tab in (("#/directory-groups?health=ACTIONABLE", "Groups", "Directory groups"),
+                                ("#/directory?tab=groups&era=modern", "Groups", "Directory groups"),
+                                ("#/directory?tab=applications", "Applications", "Directory applications"),
+                                ("#/applications?sort=label&order=desc", "Applications", "Okta applications"),
+                                ("#/groups", "Groups", "Okta groups"), ("#/okta?tab=groups", "Groups", "Okta groups"),
+                                ("#/okta", "Applications", "Okta applications"),
+                                ("#/dependencies", "Findings", "Impact & Blockers"),
+                                ("#/findings?severity=ACTIONABLE", "Findings", "Governance"),
+                                ("#/approvals", "Review queue", None),
+                                ("#/approvals?sort=decidedAt&order=asc", "Decisions", None)):
             with self.subTest(old=old):
                 self.nav(old, expect_title=title)
-                self.assertEqual(self.selected_tab(), tab)
-                if "?" in old:
-                    self.assertIn(old.split("?")[1], b.evaluate("location.hash"), "filters survive the move")
+                if tab:
+                    self.assertEqual(self.selected_tab(), tab)
+                kept = [kv for kv in (old.split("?")[1].split("&") if "?" in old else []) if not kv.startswith("tab=")]
+                for kv in kept:
+                    self.assertIn(kv, b.evaluate("location.hash"), "filters survive the move")
+                self.history("back")
+                self.assertNotEqual(b.evaluate("location.hash"), old,
+                                    "the old address was replaced, so Back does not bounce through it")
 
     # --- tabs ---------------------------------------------------------------------------------
 
     def test_c_tabs_switch_without_a_reload_and_follow_history(self):
         b = self.browser
-        for page, tabs in (("#/directory", ("Departments", "Groups", "Applications")), ("#/okta", ("Applications", "Groups")),
-                           ("#/findings", ("Dependency", "Governance"))):
+        for page, tabs in (("#/inventory/groups", ("Directory groups", "Okta groups")),
+                           ("#/inventory/applications", ("Directory applications", "Okta applications")),
+                           ("#/findings", ("Impact & Blockers", "Governance"))):
             with self.subTest(page=page):
                 self.nav(page)
                 b.evaluate("window.__sameDocument = 'yes'")
@@ -172,17 +202,17 @@ class InformationArchitectureTests(BrowserCase):
         names = self.rows(0)
         self.assertEqual(names, sorted(names, key=str.casefold, reverse=True))
         # The final, partial page of a listing, and an empty one.
-        self.nav("#/directory?tab=groups&cursor=bzo0MDA")
+        self.nav("#/inventory/groups?tab=directory&cursor=bzo0MDA")
         self.assertEqual(b.text(".pager-status"), "Rows 401–401 of 401")
         self.assertEqual(b.evaluate("[...document.querySelectorAll('nav.pager a')].map(a => a.textContent)"), ["Previous page"])
         self.nav("#/people?q=nobody-is-called-this")
         self.assertIn("Nobody matches these filters.", b.text())
-        self.nav("#/directory?tab=groups&cursor=bzo1MDAw")
+        self.nav("#/inventory/groups?tab=directory&cursor=bzo1MDAw")
         self.assertIn("This page is past the end of the list.", b.text())
 
     def test_e_local_sorting_and_paging(self):
         b = self.browser
-        self.nav("#/directory?tab=applications")
+        self.nav("#/inventory/applications?tab=directory")
         self.assertEqual(b.text("#tab-panel .pager-status"), "Rows 1–25 of 81")
         sort = "[...document.querySelectorAll('#tab-panel th button.sort')].find(x => x.textContent.startsWith('People with access'))"
         b.evaluate(f"{sort}.click()")
@@ -219,9 +249,9 @@ class InformationArchitectureTests(BrowserCase):
         self.assertEqual(b.title(), "Identity mappings")
         self.assertIn("sort=adGroup", b.evaluate("location.hash"), "Back returns to the same investigation")
         self.nav("#/findings?tab=dependency&sort=findings&order=desc")
-        subject = b.evaluate("document.querySelector('main tbody td:nth-child(2)').innerText")
+        subject = b.evaluate("document.querySelector('main tbody th').innerText")
         self.assertFalse(RAW_ID.match(subject.strip()), subject)
-        self.click("main tbody td:nth-child(2) a")
+        self.click("main tbody th a")
         self.assertTrue(b.title().startswith("AD group: "), b.title())
 
     def test_g_access_paths_link_each_group_to_its_page(self):
@@ -245,14 +275,14 @@ class InformationArchitectureTests(BrowserCase):
 
     def test_h_shared_names_are_told_apart_and_sids_find_groups(self):
         b = self.browser
-        self.nav("#/directory?tab=groups&q=finance-rw&source=AD")
+        self.nav("#/inventory/groups?tab=directory&q=finance-rw&source=AD")
         qualifiers = b.evaluate("[...document.querySelectorAll('#tab-panel tbody .ref-qualifier')].map(q => q.textContent)")
         self.assertEqual(len(qualifiers), 2)
         self.assertNotEqual(qualifiers[0], qualifiers[1])
         sid = b.evaluate("""fetch('/api/v1/directory-groups?q=all-staff', {credentials: 'same-origin'}).then(r => r.json())
             .then(j => fetch('/api/v1/directory-groups/' + j.items[0].id, {credentials: 'same-origin'})).then(r => r.json())
             .then(j => j.group.adSid)""")
-        self.nav(f"#/directory?tab=groups&q={sid}")
+        self.nav(f"#/inventory/groups?tab=directory&q={sid}")
         self.assertEqual(self.rows(0, "#tab-panel"), ["All-Staff"])
 
     # --- wording, dashboard, widths -------------------------------------------------------------
@@ -281,6 +311,9 @@ class InformationArchitectureTests(BrowserCase):
     def test_j_dashboard_figures_charts_and_links(self):
         b = self.browser
         self.nav("#/", expect_title="Dashboard")
+        # OGWA-UI-REVIEW-01: what needs attention comes first, key figures after it.
+        sections = b.evaluate("[...document.querySelectorAll('#view section h2')].map(h => h.textContent)")
+        self.assertEqual(sections[:4], ["Needs attention", "Review queue", "Find", "Key figures"])
         figures = b.evaluate("[...document.querySelectorAll('.kpi')].map(k => k.querySelector('.kpi-label').textContent)")
         self.assertEqual(figures, ["Active employees", "Deactivated employees", "Departments", "AD groups", "Okta groups",
                                    "Okta applications", "Open findings", "Actionable or blocking"])
@@ -312,7 +345,9 @@ class InformationArchitectureTests(BrowserCase):
                     self.assertNotEqual(b.evaluate("getComputedStyle(document.getElementById('nav-list')).display"), "none")
                     self.click("#primary-nav a[href='#/findings']", "Findings")
                     self.assertTrue(b.evaluate("document.body.classList.contains('nav-collapsed')"), "the menu closes after use")
-                    for page in ("#/", "#/directory?tab=groups", "#/okta?tab=groups", "#/findings?tab=governance", "#/mappings"):
+                    for page in ("#/", "#/inventory/groups", "#/inventory/groups?tab=okta", "#/findings?tab=governance",
+                                 "#/findings?tab=dependency", "#/mappings", "#/review", "#/review?status=all", "#/decisions",
+                                 "#/jobs"):
                         self.nav(page)
                         overflow = b.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
                         self.assertLessEqual(overflow, 0, f"{page} scrolls sideways at {width}px")

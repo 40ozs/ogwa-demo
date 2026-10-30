@@ -47,7 +47,7 @@ try {
     }
     else {
         Write-Host "Browser: $found"
-        python -m unittest tests.browser.test_operator_workflows tests.browser.test_null_meridian_views tests.browser.test_demo_null_meridian_ui tests.browser.test_genesee_press_ui tests.browser.test_hosted_demo_ui tests.browser.test_ui_ia tests.browser.test_candidate_tables tests.browser.test_remediation_drill_ui -v 2>&1 | Tee-Object -Variable lines
+        python -m unittest tests.browser.test_operator_workflows tests.browser.test_null_meridian_views tests.browser.test_demo_null_meridian_ui tests.browser.test_genesee_press_ui tests.browser.test_hosted_demo_ui tests.browser.test_ui_ia tests.browser.test_candidate_tables tests.browser.test_remediation_drill_ui tests.browser.test_review_workflow -v 2>&1 | Tee-Object -Variable lines
         $failed = $LASTEXITCODE
         $text = ($lines | Out-String)
         $skipped = [regex]::Matches($text, '\.\.\. skipped').Count

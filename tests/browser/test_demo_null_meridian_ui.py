@@ -16,8 +16,8 @@ import unittest
 from tests.browser.harness import Browser, DemoServer, browser_path
 from tests.browser.test_operator_workflows import BrowserCase, skip_reason
 
-NM_VIEWS = {"#/directory": "Company Directory", "#/scenarios": "Portfolio scenarios",
-            "#/findings": "Findings", "#/people": "People", "#/okta": "Okta"}
+NM_VIEWS = {"#/inventory/groups": "Groups", "#/scenarios": "Portfolio scenarios", "#/findings": "Findings",
+            "#/people": "People", "#/inventory/applications": "Applications", "#/review": "Review queue"}
 NOT_RENDERED = ("Something went wrong", "Not found", "Not permitted", "Loading")
 
 INDICATOR_STATE = """(() => {
@@ -139,7 +139,7 @@ class DemoNullMeridianUiTests(BrowserCase):
         self.assert_accessible(person)
         self.assert_indicator_visible(person)
         b.screenshot("demo-nm-05-person-access-paths")
-        self.nav("#/directory-groups?q=sg-okta-warehouse-readonly", expect_title="Company Directory")
+        self.nav("#/directory-groups?q=sg-okta-warehouse-readonly", expect_title="Groups")
         group = b.evaluate("document.querySelector('#tab-panel table a').getAttribute('href')")
         self.nav(group)
         self.assertIn("DEEP_NESTING", b.text())

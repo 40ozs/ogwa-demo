@@ -2,8 +2,10 @@ import { checkedId, get } from "../api.js";
 import { coverageText, KIND_LABEL, mappingInfo } from "../assess.js";
 import { badge, banner, facts, fmtTime, h, humanize, mono, section, table, yesNo, actorText } from "../dom.js";
 import { activeTab, collectIds, employeeTerms } from "../present.js";
+import { nextStep } from "../review.js";
 import { appLink, groupLink, identity, lede, listing, mappingLink, pageParams, resolveRefs, tabs } from "./common.js";
-import { directoryGroupLink, healthBadge, personLink } from "./directory.js";
+import { directoryApplications, directoryGroupLink, directoryGroups, healthBadge, personLink } from "./directory.js";
+import { reviewCell } from "./review.js";
 
 /** Observed and Result columns of an evidence listing; sortable on the server. */
 export function provenanceCells() {
@@ -37,22 +39,36 @@ function appStatusBadge(status) {
 
 // --- Okta: applications and groups ---------------------------------------------------------
 
-const OKTA_TABS = [{ id: "applications", text: "Applications" }, { id: "groups", text: "Groups" }];
+// Inventory › Groups and Inventory › Applications (OGWA-UI-REVIEW-01): one page each, with a tab
+// per source. The sources stay separate: each tab keeps its own columns, filters, and API, and
+// nothing is merged across them.
+const GROUP_TABS = [{ id: "directory", text: "Directory groups" }, { id: "okta", text: "Okta groups" }];
+const APPLICATION_TABS = [{ id: "directory", text: "Directory applications" }, { id: "okta", text: "Okta applications" }];
 
-export async function okta(ctx) {
-  ctx.setTitle("Okta");
-  const tab = activeTab(ctx.query, OKTA_TABS.map((t) => t.id));
+export async function inventoryGroups(ctx) {
+  ctx.setTitle("Groups");
+  const tab = activeTab(ctx.query, GROUP_TABS.map((t) => t.id));
   const query = { ...ctx.query, tab };
-  const panel = tab === "groups" ? await oktaGroups(query) : await oktaApplications(query);
-  ctx.view.append(tabs("/okta", "Okta", OKTA_TABS, tab, panel));
+  const route = "/inventory/groups";
+  const panel = tab === "okta" ? await oktaGroups(query, route) : await directoryGroups(query, route);
+  ctx.view.append(tabs(route, "Groups by source", GROUP_TABS, tab, panel));
 }
 
-async function oktaApplications(query) {
+export async function inventoryApplications(ctx) {
+  ctx.setTitle("Applications");
+  const tab = activeTab(ctx.query, APPLICATION_TABS.map((t) => t.id));
+  const query = { ...ctx.query, tab };
+  const route = "/inventory/applications";
+  const panel = tab === "okta" ? await oktaApplications(query, route) : await directoryApplications();
+  ctx.view.append(tabs(route, "Applications by source", APPLICATION_TABS, tab, panel));
+}
+
+async function oktaApplications(query, route) {
   const defaultSort = { key: "label", dir: "asc" };
   const data = await get("/applications", pageParams(query, null, defaultSort));
   return [
     lede("Okta applications as last observed. Status and usage come from Okta's read-only APIs."),
-    listing("/okta", query, data, "Okta applications", [
+    listing(route, query, data, "Okta applications", [
       { label: "Application", rowHeader: true, render: (a) => appLink(a.id, a.label), sort: "label" },
       { label: "Status", render: (a) => appStatusBadge(a.status), sort: "status" },
       { label: "Sign-on mode", render: (a) => a.signOnMode, sort: "signOnMode" },
@@ -61,7 +77,7 @@ async function oktaApplications(query) {
   ];
 }
 
-async function oktaGroups(query) {
+async function oktaGroups(query, route) {
   const defaultSort = { key: "name", dir: "asc" };
   const data = await get("/groups", pageParams(query, null, defaultSort));
   const refs = await resolveRefs(collectIds(data.items, "id"));
@@ -71,7 +87,7 @@ async function oktaGroups(query) {
   };
   return [
     lede("Okta groups as last observed. An AD group is shown only where an exact identity mapping names it. The directory SID that Okta reports is unverified metadata and never establishes a mapping."),
-    listing("/okta", query, data, "Okta groups", [
+    listing(route, query, data, "Okta groups", [
       { label: "Okta group", rowHeader: true, render: (g) => identity(refs[g.id], g.id), sort: "name" },
       { label: "Type", render: (g) => humanize(g.groupType), sort: "groupType" },
       { label: "Mapped AD group (exact)", render: mapped },
@@ -169,7 +185,9 @@ export async function group(ctx) {
   const data = await get(`/groups/${id}`);
   const g = data.group;
   const info = mappingInfo(data.mapping, g);
-  const refs = await resolveRefs([...collectIds(data.assignments, "applicationId"), data.adGroup && data.adGroup.id]);
+  const [refs, candidates] = await Promise.all([
+    resolveRefs([...collectIds(data.assignments, "applicationId"), data.adGroup && data.adGroup.id]),
+    Promise.all(data.candidateIds.map((c) => get(`/candidates/${checkedId(c)}`).then((d) => d.candidate)))]);
   ctx.setTitle(`Okta group: ${g.name}`);
   ctx.view.append(
     facts([
@@ -196,8 +214,11 @@ export async function group(ctx) {
         { label: "Result", render: (a) => resultBadge(a.provenance) },
       ], data.assignments, "No application assignments are recorded.")),
     section("Lifecycle candidates",
-      data.candidateIds.length ? h("ul", { class: "plain-list" }, data.candidateIds.map((c) => h("li", null, h("a", { href: `#/candidates/${c}` }, `Candidate for ${g.name}`), " ", mono(c))))
-        : h("p", { class: "muted" }, "No candidate exists for this group.")));
+      candidates.length ? table("Lifecycle candidates for this group", [
+        { label: "Candidate", rowHeader: true, render: (c) => [h("a", { href: `#/candidates/${c.id}` }, `Candidate for ${g.name}`), h("div", { class: "muted" }, mono(c.id))] },
+        { label: "Review status", render: (c) => reviewCell(c.state) },
+        { label: "Next step", render: (c) => nextStep(c, null).text },
+      ], candidates) : h("p", { class: "muted" }, "No candidate exists for this group.")));
 }
 
 // --- identity mappings ----------------------------------------------------------------------
@@ -279,7 +300,7 @@ export function coverageTable(coverage) {
 // --- collectors -----------------------------------------------------------------------------
 
 export async function collectors(ctx) {
-  ctx.setTitle("Collector health");
+  ctx.setTitle("Collection health");
   const data = await get("/collector-runs", pageParams(ctx.query));
   const s = data.summary || {};
   ctx.view.append(

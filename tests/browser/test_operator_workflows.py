@@ -161,8 +161,10 @@ class ReadOnlyReviewTests(BrowserCase):
         b = self.browser
         if b.title() == "Sign in":
             self.sign_in("synthetic.viewer.one")
-        views = ["#/", "#/candidates", "#/candidates?state=NEEDS_REVIEW", "#/approvals", "#/applications", "#/groups",
-                 "#/mappings", "#/dependencies", "#/collectors", "#/jobs", "#/audit"]
+        # The old addresses (#/approvals, #/applications, #/groups, #/dependencies) arrive on their new pages.
+        views = ["#/", "#/review", "#/review?status=all", "#/decisions", "#/candidates", "#/candidates?state=NEEDS_REVIEW",
+                 "#/approvals", "#/applications", "#/groups", "#/inventory/groups", "#/mappings", "#/dependencies",
+                 "#/collectors", "#/jobs", "#/audit"]
         for hash_path in views:
             with self.subTest(view=hash_path):
                 self.nav(hash_path)
@@ -172,7 +174,8 @@ class ReadOnlyReviewTests(BrowserCase):
                 self.assert_no_dangerous_control(hash_path)
         # Details reached by following links, as an operator would.
         for listing, selector in (("#/applications", "main table a"), ("#/groups", "main table a"),
-                                  ("#/mappings", "main table a"), ("#/jobs", "main table a")):
+                                  ("#/mappings", "main table a"), ("#/jobs", "main table a"),
+                                  ("#/review", "main table a"), ("#/decisions", "main table a")):
             with self.subTest(detail_from=listing):
                 self.nav(listing)
                 href = b.evaluate(f"document.querySelector({json.dumps(selector)}).getAttribute('href')")
@@ -236,7 +239,8 @@ class ReadOnlyReviewTests(BrowserCase):
             self.sign_in("synthetic.viewer.one")
         b.viewport(375, 812, mobile=True)
         try:
-            for hash_path in ("#/", "#/candidates", f"#/candidates/{self.server.scenarios['S12']}", "#/collectors", "#/jobs"):
+            for hash_path in ("#/", "#/review", "#/candidates", f"#/candidates/{self.server.scenarios['S12']}",
+                              f"#/candidates/{self.server.scenarios['S16']}", "#/collectors", "#/jobs", "#/decisions"):
                 with self.subTest(view=hash_path):
                     self.nav(hash_path)
                     overflow = b.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
@@ -306,20 +310,20 @@ class ReadOnlyReviewTests(BrowserCase):
         self.sign_in("synthetic.viewer.one")
         b.hold("*/api/v1/candidates*")
         try:
-            b.focus("#primary-nav a[href='#/candidates']")
+            b.focus("#primary-nav a[href='#/review']")
             b.key("Enter")
             data = b.held()
             b.key("Tab")  # while the page loads, the reader moves on
             moved = b.active()
-            self.assertEqual(moved["text"], "Approvals and holds")
+            self.assertEqual(moved["text"], "Findings")
             b.release(data)
-            b.wait_title("Lifecycle candidates")
+            b.wait_title("Review queue")
             self.assertEqual(b.active(), moved, "the late render did not take focus back")
-            b.wait_for("document.getElementById('announcer').textContent === 'Lifecycle candidates'",
+            b.wait_for("document.getElementById('announcer').textContent === 'Review queue'",
                        message="the new page is announced instead")
             # A page whose data fails: focus goes to the heading, which says so, with the explanation below it.
-            self.nav("#/", expect_title="Dashboard")
-            b.focus("#primary-nav a[href='#/candidates']")
+            self.nav("#/collectors", expect_title="Collection health")
+            b.focus("#primary-nav a[href='#/review']")
             b.key("Enter")
             b.release(b.held(), fail=True)
             b.wait_title("Something went wrong")
@@ -413,7 +417,7 @@ class DecisionWorkflowTests(BrowserCase):
         self.press_button("Record dry-run step")
         b.wait_for("document.body.innerText.includes('Recorded: Okta dry run recorded')", message="record flash")
         self.assertIn("Okta dry run recorded", b.text(".detail-main"))
-        self.nav("#/jobs", expect_title="Execution jobs")
+        self.nav("#/jobs", expect_title="Plans & simulations")
         page = b.text()
         self.assertIn("Dry-run planning only.", page)
         self.assertNotRegex(page, r"\tYes\t", "no job shows Executed: Yes")
@@ -475,11 +479,13 @@ class DecisionWorkflowTests(BrowserCase):
         b.key("Enter")
         b.wait_for("document.body.innerText.includes('Recorded: Revalidation required → Held by an operator')",
                    message="hold flash")
-        self.nav("#/approvals", expect_title="Approvals and holds")
-        held = b.evaluate("""(() => { const t = [...document.querySelectorAll('table')]
-            .find(x => x.querySelector('caption').textContent === 'Held by an operator (BLOCKED)');
-            return t ? t.innerText : ''; })()""")
+        # OGWA-UI-REVIEW-01: a held candidate waits in the Review queue as blocked, never among the decisions.
+        self.nav("#/review?status=blocked", expect_title="Review queue")
+        held = b.text("main table")
         self.assertIn("Held by an operator", held)
+        self.assertIn("Hold to be lifted", held)
+        self.nav("#/decisions", expect_title="Decisions")
+        self.assertNotIn("Held by an operator", b.text("#view"))
 
     def test_f_exclusion_needs_an_explicit_confirmation(self):
         b = self.browser
@@ -547,7 +553,7 @@ class DecisionWorkflowTests(BrowserCase):
         self.press_button("Record dry-run step")
         b.wait_for("document.body.innerText.includes('Recorded: AD deletion dry run recorded')", message="record flash")
         self.assertIn("AD deletion dry run recorded", b.text(".detail-main"))
-        self.nav("#/jobs", expect_title="Execution jobs")
+        self.nav("#/jobs", expect_title="Plans & simulations")
         self.assertNotRegex(b.text(), r"\tYes\t", "no job shows Executed: Yes")
         self.assert_no_dangerous_control("jobs after the deletion dry run")
 

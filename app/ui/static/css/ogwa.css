@@ -163,7 +163,11 @@ a { color: var(--link); text-underline-offset: 0.15em; }
   display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.45rem 0.6rem;
   background: none; border-color: transparent; color: var(--muted); text-align: left;
 }
-.nav-list { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; gap: 0.15rem; }
+.nav-list, .nav-list ul { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; gap: 0.15rem; }
+/* OGWA-UI-REVIEW-01: Inventory, Review, Operations. Each group is a list named by its label. */
+.nav-group { margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }
+.nav-group-label { display: block; padding: 0 0.6rem; color: var(--muted); font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase; }
 .nav-list a {
   position: relative; display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.6rem;
   border-radius: var(--radius); text-decoration: none; border: 1px solid transparent;
@@ -173,10 +177,9 @@ a { color: var(--link); text-underline-offset: 0.15em; }
   background: var(--info-bg); color: var(--info-fg); border-color: var(--info-border); font-weight: 700;
   box-shadow: inset 4px 0 0 var(--info-border);
 }
-.nav-group-start { margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border); }
 
 body.nav-collapsed #primary-nav { width: 3.75rem; overflow: visible; }
-body.nav-collapsed .nav-label, body.nav-collapsed .nav-toggle-label {
+body.nav-collapsed .nav-label, body.nav-collapsed .nav-toggle-label, body.nav-collapsed .nav-group-label {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
@@ -191,8 +194,8 @@ body.nav-collapsed .nav-list a:hover::after, body.nav-collapsed .nav-list a:focu
   #primary-nav, body.nav-collapsed #primary-nav {
     position: static; width: auto; max-height: none; border-right: 0; border-bottom: 1px solid var(--border);
   }
-  .nav-list { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
-  .nav-group-start { margin-top: 0; padding-top: 0; border-top: 0; }
+  .nav-list ul { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+  .nav-list > li:not(.nav-group) { display: inline-block; min-width: 11rem; }
   body.nav-collapsed .nav-list { display: none; }
   body.nav-collapsed .nav-toggle-label { position: static; width: auto; height: auto; margin: 0; clip: auto; overflow: visible; }
 }
@@ -413,6 +416,28 @@ button, .nav-list a { transition: background-color 120ms ease, border-color 120m
 
 @media print {
   #primary-nav, .actions-panel, .skip-link { display: none; }
+}
+
+/* --- operator review (OGWA-UI-REVIEW-01) ---------------------------------------------------
+   The lifecycle stepper: every stage writes its status in words, the mark beside it is hidden
+   from assistive technology, and future stages are dashed and muted, never shown as reached. */
+
+.review-headline { font-size: 1.1rem; }
+.stepper { list-style: none; margin: 0.5rem 0; padding: 0; display: grid; gap: 0.4rem;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); }
+.step {
+  display: grid; gap: 0.1rem; align-content: start; padding: 0.4rem 0.6rem; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--tone-border, var(--border));
+}
+.step[aria-current="step"] { background: var(--tone-bg); color: var(--tone-fg); border-color: var(--tone-border); }
+.step[data-status="future"], .step[data-status="not-reached"] { color: var(--muted); border-style: dashed; }
+.step-mark { font-size: 1rem; line-height: 1; }
+.step-label { font-weight: 700; overflow-wrap: anywhere; }
+.step-status, .step-note { font-size: 0.85rem; overflow-wrap: anywhere; }
+.status-filters ul { list-style: none; margin: 0.5rem 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; }
+.status-filters a { display: inline-block; padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: 999px; }
+.status-filters a[aria-current="true"] {
+  background: var(--info-bg); color: var(--info-fg); border-color: var(--info-border); font-weight: 700; text-decoration: none;
 }
 
 /* --- synthetic remediation drill (OGWA-DEMO-03) ------------------------------------------
