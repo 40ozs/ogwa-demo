@@ -100,7 +100,7 @@ value sorts last in both directions. An unknown field or order is `400`. Fields:
 | `/dependency-findings` | `dependencyKind`, `subject` (by resolved name), `findings` (blocking, then all), `observedAt`, `result` |
 | `/candidates` | `oktaGroup`, `state`, `holdUntil`, `createdAt`, `updatedAt` |
 | `/review-queue` | `oktaGroup`, `updatedAt` (time waiting), `deadline` (a hold's end); without `sort`, review priority (below) |
-| `/approvals` | `stage`, `decision`, `decidedAt`, `expiresAt`, `candidate` |
+| `/approvals` | `stage`, `decision`, `decidedAt`, `expiresAt`, `candidate` (also under a `usability=` filter; ties keep the listing's order: newest decision, then id) |
 | `/execution-jobs` | `kind`, `status`, `requestedAt`, `candidate` |
 | `/collector-runs` | `collector`, `startedAt`, `outcome`, `records` |
 | `/audit-events` | `sequence` only: the chain is served in chain order, either way round |
@@ -182,7 +182,7 @@ All need `READ_INVENTORY` unless stated otherwise. Paged endpoints are marked *(
 | `GET /execution-jobs` *(paged)* | P09. Every job, newest first, with its status history, and `executionAvailable: false` |
 | `GET /candidates/{candidateId}/remediation-dry-runs` | P10. The candidate's recorded remediation dry runs, oldest first, each checked against its audit digest: operation, outcome, adapter, target and identity digest, approval, fingerprint, `executed: false`; since OGWA-DEMO-04 also `policy` (the reference its event recorded, as recorded; `null` for a record made before) and `chain` (policy, decision, approval, operation id); plus `executionAvailable: false` |
 | `GET /remediation-drill-scenarios` | OGWA-DEMO-03. The synthetic drill's closed fault-scenario catalog (key, title, description, scripted submissions, expected final state), its modes, every execution state's label, `maxSubmissions` (2), `maxVerificationReads` (2), and the drill notice |
-| `GET /approvals` *(paged)* | P09. Every approval and rejection, newest first, with `expired` and (OGWA-REVIEW-QUEUE-API-01) `usability` |
+| `GET /approvals` *(paged; `usability=`)* | P09. Every approval and rejection, newest first, with `expired` and (OGWA-REVIEW-QUEUE-API-01) `usability`; since OGWA-APPROVAL-ATTENTION-01 filtered by `usability` (`all`, `valid`, `expiring-soon`, `expired`) with `counts` over every approval: see [Approvals that need attention](#approvals-that-need-attention-ogwa-approval-attention-01) |
 | `GET /dependency-findings` *(paged)* | P09. Every dependency check (latest observation) with its findings and provenance |
 | `GET /collector-runs` *(paged)* | Collector runs, newest first, with outcome and error code; plus a summary |
 | `GET /policy` | The policy in force (`RECORDED_VERSION`, or in a SYNTHETIC store only `UNRECORDED_SYNTHETIC_DEMO` with `label: "DEMO POLICY — UNRECORDED"`) and recorded versions. Since OGWA-DEMO-02 the policy in force carries `versionSequence`, `policyId`, `version`, `name`, and `release` (null when no release carries its rules); each version its `release`; and a SYNTHETIC store's demo dataset lists its synthetic `releases` (identity, purpose, and the full document). `editableViaApi: false` |
@@ -302,6 +302,39 @@ Usability is a reading: it changes nothing and authorizes nothing (tests: a usab
 still refused to a person without the planning permission; an expired one draws the planner's own
 `APPROVAL_INVALID … expired`). The evidence fingerprint is read only for approvals that pass every
 other rule, so the listing stays cheap.
+
+## Approvals that need attention (OGWA-APPROVAL-ATTENTION-01)
+
+`usability.expiringSoon` (on both approval listings) is `true` only for a `USABLE` approval whose
+`expiresAt` is no later than **48 hours** after the server's clock (`EXPIRING_SOON_WITHIN` in
+`app/api/review_queue.py`). The 48 hours are a **presentation threshold**, not an approval rule:
+they change no approval's validity, and an expiring approval stays `USABLE` until its own expiry.
+They are not the holds' 7 days on purpose: an approval is valid for at most the policy's
+`approvalMaxTtlHours` (168 by default), so a 7-day window would mark every approval "expiring soon"
+from the moment it was given. Like `USABLE`, `expiringSoon` says nothing about the step the
+approval backs, which has its own checks (a dry run needs evidence under 24 hours old).
+
+`GET /approvals` takes `usability`:
+
+| `usability` | Rows | How |
+| --- | --- | --- |
+| `all` (default) | Every approval and rejection | SQL, paged as before |
+| `valid` | Approvals the server judges `USABLE` | The server's own `ApprovalUsability` over every **unexpired** approval, then paged |
+| `expiring-soon` | `USABLE` and `expiringSoon` | As `valid` |
+| `expired` | Approvals (not rejections) past `expiresAt`: the server's own `expired` fact | SQL, paged |
+
+Only an unexpired approval can be `USABLE`, and none is given for longer than 14 days
+(`MAX_APPROVAL_HOURS`), so `valid` and `expiring-soon` judge a bounded set — the approvals of the
+last two weeks at most — before paging, never one page. The response adds `usability` (the filter),
+`counts` (`all`, `valid`, `expiringSoon`, `expired`: over every approval, whatever the filter or
+page), `expiringSoonWithinHours` (48), `generatedAt` (the server's clock), and `note`. An unknown
+`usability` is `400 MALFORMED_REQUEST`. `sort`/`order` apply under every filter; ties fall to the
+listing's order (newest decision, then id), so pages never repeat or skip a row.
+
+**Not offered, on purpose.** Filtering by `EPOCH_SUPERSEDED` or the other reasons an approval does
+not count, and sorting by usability: telling them apart needs every approval ever recorded judged on
+each request (the status is a headline over several rules, `EXPIRED` first). Each row names its
+status, so they stay visible in every listing.
 
 ## Directory group → candidate (OGWA-REVIEW-QUEUE-API-01)
 

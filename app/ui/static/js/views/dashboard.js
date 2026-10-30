@@ -1,6 +1,7 @@
 // The dashboard answers "what needs attention now?" first (OGWA-UI-REVIEW-01): what waits for a
 // decision, what is blocked, evidence and collection problems, holds near their end, and the
-// head of the review queue. Then key figures and small charts. Each number links to the
+// head of the review queue; then (OGWA-APPROVAL-ATTENTION-01) valid approvals near their expiry,
+// after every blocker and finding. Then key figures and small charts. Each number links to the
 // filtered Review queue or the list that explains it. The technical posture (policy, store,
 // audit head) is kept, folded away under "System details".
 import { get } from "../api.js";
@@ -23,8 +24,10 @@ const sum = (values) => values.reduce((a, b) => a + (b || 0), 0);
 
 export async function dashboard(ctx) {
   ctx.setTitle("Dashboard");
-  const [data, directory, governance] = await Promise.all([
-    get("/dashboard"), get("/directory"), get("/governance-findings", { limit: 1 })]);
+  // `expiring` is for its counts: approvals the server judges valid and expiring soon, over every approval.
+  const [data, directory, governance, expiring] = await Promise.all([
+    get("/dashboard"), get("/directory"), get("/governance-findings", { limit: 1 }),
+    get("/approvals", { usability: "expiring-soon", limit: 1 })]);
   const dir = directory.available ? directory : null;
   const bySeverity = Object.fromEntries(Object.entries(governance.counts || {}).map(([s, codes]) => [s, sum(Object.values(codes))]));
   const deps = data.dependencyFindings || {};
@@ -44,7 +47,7 @@ export async function dashboard(ctx) {
       link("#/scenarios", "Start the five-minute reviewer walkthrough"),
       `: evidence quality on ${walkthroughKey(dir, 10)}, then a verified synthetic remediation on ${walkthroughKey(dir, 11)}. ` +
       "All data is synthetic.") : null,
-    attention(data, queue, dir, bySeverity, deps),
+    attention(data, queue, dir, bySeverity, deps, expiring),
     section("Review queue",
       queueTable("Next in the review queue", preview, refs, queue.generatedAt || null, "Nothing is waiting for review, blocked, or in progress."),
       h("p", null, link("#/review", "Open the review queue"))),
@@ -105,13 +108,16 @@ function keyFigures(data, dir, bySeverity, governanceTotal, deps) {
 const review = (status) => hashFor("/review", {}, { status });
 const cands = (n) => (n === 1 ? "candidate" : "candidates");
 
-function attention(data, queue, dir, bySeverity, deps) {
+function attention(data, queue, dir, bySeverity, deps, expiring) {
   const byState = data.candidatesByState || {};
   const collectors = data.collectors || {};
   const recent = dir && dir.deactivations;
   // Holds that ended or end within 7 days on the server's clock, counted by the server over every candidate.
   const holds = queue.holdsEndingWithin7Days || 0;
   const evidence = (byState.STALE_EVIDENCE || 0) + (byState.EVIDENCE_INCOMPLETE || 0);
+  // Approvals the server judges valid for their stage and expiring soon: after every blocker and finding.
+  const soon = (expiring.counts || {}).expiringSoon || 0;
+  const soonText = `${soon === 1 ? "approval" : "approvals"} expiring within ${expiring.expiringSoonWithinHours} hours (valid for ${soon === 1 ? "its" : "their"} stage until then)`;
   const items = [
     [queue.counts["needs-review"], "caution", "Decision", `${cands(queue.counts["needs-review"])} waiting for a person's decision`, review("needs-review")],
     [queue.counts.blocked, "blocked", "Blocked", `${cands(queue.counts.blocked)} blocked`, review("blocked")],
@@ -121,13 +127,14 @@ function attention(data, queue, dir, bySeverity, deps) {
     [queue.counts["in-progress"], "caution", "Dry run", `${cands(queue.counts["in-progress"])} approved for a future step (dry run only)`, review("in-progress")],
     [bySeverity.ACTIONABLE, "blocked", "Actionable", "actionable governance findings", hashFor("/findings", {}, { tab: "governance", severity: "ACTIONABLE" })],
     [deps.blocking, "blocked", "Blocking", "blocking dependency findings", hashFor("/findings", {}, { tab: "dependency", sort: "findings", order: "desc" })],
+    [soon, "caution", "Expiring", soonText, hashFor("/decisions", {}, { usability: "expiring-soon" })],
     [recent ? recent.last90Days : 0, "info", "Recent", `people deactivated in the 90 days to ${recent ? recent.asOf : ""}`,
       hashFor("/people", {}, { status: "TERMINATED", sort: "terminationDate", order: "desc" })],
   ].filter(([n]) => n);
   return section("Needs attention",
     items.length ? h("ul", { class: "attention" }, items.map(([n, tone, tag, text, href]) => h("li", null,
       badge(tag, tone), " ", link(href, `${count(n)} ${text}`))))
-      : h("p", { class: "muted" }, "No waiting decision, blocked candidate, hold, actionable finding, or collector problem is recorded."));
+      : h("p", { class: "muted" }, "No waiting decision, blocked candidate, hold, actionable finding, collector problem, or approval expiring soon is recorded."));
 }
 
 // --- find ------------------------------------------------------------------------------------------

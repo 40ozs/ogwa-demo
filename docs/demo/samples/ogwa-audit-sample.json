@@ -1027,6 +1027,7 @@
           "reason": "synthetic review of NM-C11-okta complete",
           "stage": "OKTA_UNASSIGN",
           "usability": {
+            "expiringSoon": false,
             "problems": [],
             "status": "USABLE",
             "usable": true

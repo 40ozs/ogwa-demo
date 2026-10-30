@@ -166,6 +166,15 @@ PAGED: dict[str, tuple[str, str, dict[str, tuple[str, ...]]]] = {
 }
 
 
+def _order(listing: str, sort: Sort | None) -> str:
+    """A listing's ORDER BY: the ``sort`` field first (a missing value last either way), then the listing's order."""
+    _, order, sorts = PAGED[listing]
+    if sort is None:
+        return order
+    direction = "DESC" if sort.descending else "ASC"
+    return ", ".join(f"{value} {direction} NULLS LAST" for value in sorts[sort.key]) + ", " + order
+
+
 def iso(value: datetime | None) -> str | None:
     return value.isoformat() if value is not None else None
 
@@ -395,13 +404,15 @@ class ReadModel:
                  params: tuple = ()) -> tuple[list[str], bool]:
         """One page of a listing's ids: filtered (``where``, this module's constants), sorted, then
         paged, in one query. A missing value sorts last either way; ties keep the listing's order."""
-        source, order, sorts = PAGED[listing]
-        if sort is not None:
-            direction = "DESC" if sort.descending else "ASC"
-            order = ", ".join(f"{value} {direction} NULLS LAST" for value in sorts[sort.key]) + ", " + order
-        rows = self._conn.execute(f"SELECT a.id FROM {source} {where} ORDER BY {order} LIMIT ? OFFSET ?",
-                                  (*params, page.limit + 1, page.offset)).fetchall()
+        rows = self._conn.execute(f"SELECT a.id FROM {PAGED[listing][0]} {where} ORDER BY {_order(listing, sort)} "
+                                  "LIMIT ? OFFSET ?", (*params, page.limit + 1, page.offset)).fetchall()
         return [r["id"] for r in rows[: page.limit]], len(rows) > page.limit
+
+    def all_ids(self, listing: str, sort: Sort | None, where: str, params: tuple) -> list[str]:
+        """Every id ``where`` selects, in the listing's order, unpaged: only for a ``where`` that bounds
+        the rows by itself (unexpired approvals, OGWA-APPROVAL-ATTENTION-01)."""
+        rows = self._conn.execute(f"SELECT a.id FROM {PAGED[listing][0]} {where} ORDER BY {_order(listing, sort)}", params)
+        return [r["id"] for r in rows]
 
     def page_of(self, listing: str, page: Page, sort: Sort | None = None) -> tuple[list[Evidence], bool]:
         ids, more = self.page_ids(listing, page, sort)
@@ -484,11 +495,15 @@ class ReadModel:
         return {"checks": row["checks"], "checksWithFindings": row["with_findings"], "findings": row["findings"],
                 "blocking": row["blocking"]}
 
-    def approvals(self, page: Page, sort: Sort | None = None) -> tuple[list[ApprovalRecord], bool]:
-        """Every approval and rejection, newest first (P09: the approvals view)."""
-        ids, more = self.page_ids("approvals", page, sort)
+    def approvals(self, page: Page, sort: Sort | None = None, where: str = "",
+                  params: tuple = ()) -> tuple[list[ApprovalRecord], bool]:
+        """Every approval and rejection (or those ``where`` selects), newest first (P09: the approvals view)."""
+        ids, more = self.page_ids("approvals", page, sort, where, params)
+        return self.load_approvals(ids), more
+
+    def load_approvals(self, ids: list[str]) -> list[ApprovalRecord]:
         records = [self._store.load_approval(i) for i in ids]
-        return [r for r in records if r is not None], more
+        return [r for r in records if r is not None]
 
     def execution_job_ids(self, page: Page, sort: Sort | None = None) -> tuple[list[str], bool]:
         """Every execution job id, newest first (P09: the execution jobs view)."""

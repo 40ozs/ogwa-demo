@@ -18,6 +18,10 @@ here writes (``assert_clean``).
 OGWA-REVIEW-QUEUE-API-01 (tests j-m): the queue served by GET /review-queue (server paging,
 filters, counts, order), "Evidence now" beside every row's lifecycle state, approval usability on
 Decisions, and an AD group page that opens its lifecycle candidate directly.
+
+OGWA-APPROVAL-ATTENTION-01 (test n): the dashboard's "approvals expiring soon" item appears exactly when
+the server counts one (otherwise the zero state), and the Decisions filters carry the server's counts,
+whatever the dataset's clock; nothing is worded ready or executable.
 """
 
 import json
@@ -416,6 +420,30 @@ class GeneseePressUiTests(BrowserCase):
                                       ".flatMap(s => [...s.querySelectorAll('tbody th a')].map(a => a.getAttribute('href')))")
         self.assertIn(f"#/candidates/{cand['id']}", hrefs)
         self.assertIn("Exact identity mapping", self.page_text())
+
+    def test_n_approvals_expiring_soon_match_the_server(self):
+        self.viewer()
+        b = self.browser
+        served = self.api("/approvals?usability=expiring-soon&limit=50")
+        soon, hours = served["counts"]["expiringSoon"], served["expiringSoonWithinHours"]
+        self.nav("#/", expect_title="Dashboard")
+        links = b.evaluate("[...document.querySelectorAll('ul.attention a')].map(a => [a.textContent, a.getAttribute('href')])")
+        expiring = [text for text, href in links if href == "#/decisions?usability=expiring-soon"]
+        if soon:
+            self.assertEqual(len(expiring), 1)
+            self.assertTrue(expiring[0].startswith(f"{soon} approval"), expiring)
+        else:
+            self.assertEqual(expiring, [], "the zero state: no item")
+        self.nav("#/decisions?usability=expiring-soon", expect_title="Decisions")
+        labels = dict(re.findall(r"^(.+) \((\d+)\)$", b.text("main nav.status-filters"), re.M))
+        self.assertEqual({k: int(v) for k, v in labels.items()},
+                         {"All": served["counts"]["all"], "Valid for its stage": served["counts"]["valid"],
+                          "Expiring soon": soon, "Expired": served["counts"]["expired"]})
+        rows = b.evaluate("[...document.querySelectorAll('main table tbody tr')].map(r => r.innerText)")
+        self.assertEqual(len(rows), len(served["items"]))
+        if not soon:
+            self.assertIn(f"No valid approval expires within {hours} hours.", self.page_text())
+        self.assertNotRegex(self.page_text(), r"\b(Ready|Executable|Approved to delete)\b")
 
     def test_z_nothing_left_the_origin_and_nothing_failed(self):
         self.assert_clean()

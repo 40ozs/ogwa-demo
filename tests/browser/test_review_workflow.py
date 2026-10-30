@@ -5,11 +5,17 @@ filters by keyboard with focus kept, waiting never shown as blocked, nothing sho
 candidate page's lifecycle stepper and its text equivalent, the next step, evidence readiness,
 Impact & Blockers ("none found" apart from "not established"), Decisions apart from holds, Plans &
 simulations wording, the dashboard's attention links, and find by id.
+
+OGWA-APPROVAL-ATTENTION-01: with no approval expiring soon, no dashboard item (the seeded world);
+with one (``ApprovalAttentionTests``, the world's clock five days on), the dashboard's count and its
+link, the Decisions filters and their counts against the API, the warning beside the approval on the
+candidate page below evidence readiness and the next step, and nothing worded ready or executable.
 """
 
 import json
 import re
 import unittest
+from datetime import timedelta
 
 from tests.browser.harness import Browser, SyntheticServer, browser_path
 from tests.browser.test_operator_workflows import BrowserCase, skip_reason
@@ -322,6 +328,136 @@ class ReviewWorkflowTests(BrowserCase):
         self.assertTrue(all("own checks" in r for r in valid), "valid is never presented as ready")
         self.assertTrue(any("Expired" in r for r in rows))
         self.assertNotRegex(b.text("#view"), r"\b(Ready|Usable now)\b")
+
+    # --- OGWA-APPROVAL-ATTENTION-01 ----------------------------------------------------------
+
+    def test_m_no_approval_expiring_soon_is_no_dashboard_item(self):
+        b = self.browser
+        self.assertEqual(self.api("/approvals?usability=expiring-soon&limit=1")["counts"]["expiringSoon"], 0)
+        self.nav("#/", expect_title="Dashboard")
+        hrefs = b.evaluate("[...document.querySelectorAll('ul.attention a')].map(a => a.getAttribute('href'))")
+        self.assertNotIn("#/decisions?usability=expiring-soon", hrefs)
+        self.assertNotIn("expiring within", b.text("#view"))
+        self.nav("#/decisions?usability=expiring-soon", expect_title="Decisions")
+        self.assertIn("No valid approval expires within 48 hours.", b.text("#view"))
+        self.assertIn("Expiring soon (0)", b.text("main nav.status-filters"))
+
+    def test_z_nothing_left_the_origin_and_nothing_failed(self):
+        self.assert_clean()
+
+
+@unittest.skipIf(skip_reason(), skip_reason() or "")
+class ApprovalAttentionTests(BrowserCase):
+    """OGWA-APPROVAL-ATTENTION-01 on the classic world with its clock five days on: S14's approval is
+    valid for its stage and expires within 48 hours, and its evidence is older than 24 hours, so the
+    dry run it backs would still be refused (its own check). Nothing may read it as ready."""
+
+    NEVER = r"\b(Ready|Executable|Approved to delete)\b|Ready to execute"
+
+    @classmethod
+    def setUpClass(cls):
+        reason = skip_reason()
+        if reason:
+            raise unittest.SkipTest(reason)
+        cls.server = SyntheticServer(refresh=(), advance=timedelta(days=5)).start_and_wait()
+        try:
+            cls.browser = Browser(browser_path())
+        except Exception:
+            cls.server.stop()
+            raise
+
+    signed_in = False
+
+    def setUp(self):
+        if not type(self).signed_in:
+            self.sign_in("synthetic.viewer.one")
+            type(self).signed_in = True
+
+    def api(self, path: str):
+        return self.browser.evaluate(f"fetch('/api/v1{path}', {{credentials: 'same-origin'}}).then(r => r.json())")
+
+    def click_and_render(self, selector: str, title: str) -> None:
+        b = self.browser
+        b.evaluate("document.getElementById('view').dataset.old = '1'")
+        b.evaluate(f"document.querySelector({json.dumps(selector)}).click()")
+        b.wait_for(f"!document.getElementById('view').dataset.old && document.getElementById('page-title').textContent === {json.dumps(title)}",
+                   message=selector)
+
+    def test_a_the_dashboard_counts_them_after_every_blocker_and_links_to_them(self):
+        b = self.browser
+        served = self.api("/approvals?usability=expiring-soon&limit=50")
+        self.assertEqual(served["counts"]["expiringSoon"], 1, "the fixture: S14's approval")
+        self.nav("#/", expect_title="Dashboard")
+        items = b.evaluate("[...document.querySelectorAll('ul.attention li')].map(li => [li.querySelector('.badge').textContent, "
+                           "li.querySelector('a').textContent, li.querySelector('a').getAttribute('href')])")
+        tags = [tag for tag, _, _ in items]
+        self.assertIn("Expiring", tags)
+        tag, text, href = items[tags.index("Expiring")]
+        self.assertEqual(text, "1 approval expiring within 48 hours (valid for its stage until then)")
+        self.assertEqual(href, "#/decisions?usability=expiring-soon")
+        serious = [t for t in tags if t in ("Blocked", "Evidence", "Collection", "Actionable", "Blocking")]
+        self.assertTrue(all(tags.index(t) < tags.index("Expiring") for t in serious), tags)
+        self.assertNotRegex(b.text("ul.attention"), self.NEVER)
+        self.click_and_render("ul.attention a[href='#/decisions?usability=expiring-soon']", "Decisions")
+        shown = b.evaluate("[...document.querySelectorAll('main table tbody tr')].map(r => r.innerText)")
+        self.assertEqual(len(shown), len(served["items"]))
+        self.assertEqual(b.evaluate("document.querySelector('main nav.status-filters a[aria-current=true]').textContent"),
+                         "Expiring soon (1)")
+        self.assert_accessible("decisions, expiring soon")
+
+    def test_b_decisions_filter_on_the_server_and_say_valid_not_ready(self):
+        b = self.browser
+        for key, field in (("all", "all"), ("valid", "valid"), ("expiring-soon", "expiringSoon"), ("expired", "expired")):
+            with self.subTest(filter=key):
+                self.nav("#/decisions" + ("" if key == "all" else f"?usability={key}"), expect_title="Decisions")
+                served = self.api(f"/approvals?usability={key}&limit=50")
+                self.assertEqual(served["page"]["total"], served["counts"][field])
+                rows = b.evaluate("[...document.querySelectorAll('main table tbody tr')].filter(r => !r.querySelector('td[colspan]'))"
+                                  ".map(r => r.innerText)")
+                self.assertEqual(len(rows), len(served["items"]))
+                labels = dict(re.findall(r"^(.+) \((\d+)\)$", b.text("main nav.status-filters"), re.M))
+                self.assertEqual({k: int(v) for k, v in labels.items()},
+                                 {"All": served["counts"]["all"], "Valid for its stage": served["counts"]["valid"],
+                                  "Expiring soon": served["counts"]["expiringSoon"], "Expired": served["counts"]["expired"]})
+                for row, a in zip(rows, served["items"]):
+                    self.assertEqual("Expiring soon" in row, a["usability"]["expiringSoon"], a["id"])
+                    if a["usability"]["usable"]:
+                        self.assertIn("own checks", row, "valid is never presented as ready")
+                self.assertNotRegex(b.text("#view"), self.NEVER)
+                self.assert_no_dangerous_control(f"decisions {key}")
+        self.assertEqual(b.evaluate("document.querySelector('main nav.status-filters').getAttribute('aria-label')"), "Approval rules now")
+        # Expiring soon reads soonest first by default.
+        self.nav("#/decisions?usability=expiring-soon", expect_title="Decisions")
+        self.assertTrue(b.evaluate("document.querySelector('main th[aria-sort]').innerText.trim()").startswith("Expires"))
+
+    def test_c_the_candidate_page_warns_beside_the_approval_below_evidence_and_next_step(self):
+        b = self.browser
+        self.nav(f"#/candidates/{self.server.scenarios['S14']}", prefix="Candidate: ")
+        headings = b.evaluate("[...document.querySelectorAll('.detail-main > section > h2')].map(h => h.textContent)")
+        for first in ("Lifecycle", "What blocks this candidate", "Next step", "Evidence readiness"):
+            self.assertLess(headings.index(first), headings.index("Approvals"), first)
+        cell = b.evaluate("""(() => { const t = [...document.querySelectorAll('main table')].find(t => t.caption &&
+            t.caption.textContent.startsWith('Approvals and rejections')); return [...t.querySelectorAll('tbody tr')]
+            .map(r => r.innerText).find(x => x.includes('Valid for its stage')); })()""")
+        self.assertIn("Expiring soon", cell)
+        self.assertIn("It stops counting for its stage at", cell)
+        self.assertIn("own checks", cell)
+        self.assertNotIn("Expiring soon", b.text(".review-headline"), "the headline stays the lifecycle reading")
+        self.assertNotRegex(b.text("#view"), self.NEVER)
+        self.assert_no_dangerous_control("candidate with an expiring approval")
+        self.assert_accessible("candidate with an expiring approval")
+
+    def test_d_phone_width_has_no_sideways_scroll(self):
+        b = self.browser
+        b.viewport(320, 740, mobile=True)
+        try:
+            for page in ("#/", "#/decisions?usability=expiring-soon", f"#/candidates/{self.server.scenarios['S14']}"):
+                with self.subTest(page=page):
+                    self.nav(page)
+                    self.assertLessEqual(b.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth"), 0, page)
+        finally:
+            b.send("Emulation.clearDeviceMetricsOverride")
+            b.viewport(1280, 900)
 
     def test_z_nothing_left_the_origin_and_nothing_failed(self):
         self.assert_clean()

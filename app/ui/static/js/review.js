@@ -280,16 +280,28 @@ export const USABLE_NOTE = "The step it backs has its own checks (for a dry run,
 
 /**
  * Whether a recorded approval still passes the lifecycle's approval rules, as the server judged it
- * (`usability` on GET /approvals and GET /candidates/{id}/approvals): {usable, label, tone,
- * problems, note}. Only the server's `usable: true` with status USABLE reads as valid; a missing
+ * (`usability` on GET /approvals and GET /candidates/{id}/approvals): {usable, expiringSoon, label,
+ * tone, problems, note}. Only the server's `usable: true` with status USABLE reads as valid; a missing
  * or unknown answer is not usable. Valid is never "ready": `note` says the step is checked too.
+ * `expiringSoon` (OGWA-APPROVAL-ATTENTION-01) is the server's flag, and only on a valid approval:
+ * nothing here works out validity or nearness from dates.
  */
 export function approvalUsability(u) {
   const usable = Boolean(u && u.usable === true && u.status === "USABLE");
   const known = u && USABILITY[u.status];
   const words = usable ? USABILITY.USABLE : known && u.status !== "USABLE" ? known : USABILITY.NOT_USABLE;
-  return { usable, ...words, problems: (u && u.problems) || [], note: usable ? USABLE_NOTE : null };
+  return { usable, expiringSoon: usable && u.expiringSoon === true, ...words, problems: (u && u.problems) || [],
+    note: usable ? USABLE_NOTE : null };
 }
+
+// The Decisions filters (OGWA-APPROVAL-ATTENTION-01): GET /approvals `usability`, applied by the server
+// over every approval before paging; `count` names the response's `counts` field.
+export const APPROVAL_FILTERS = Object.freeze([
+  { key: "all", label: "All", count: "all" },
+  { key: "valid", label: "Valid for its stage", count: "valid" },
+  { key: "expiring-soon", label: "Expiring soon", count: "expiringSoon" },
+  { key: "expired", label: "Expired", count: "expired" },
+]);
 
 // --- evidence readiness -------------------------------------------------------------------------
 

@@ -132,9 +132,27 @@ classified as behaviour or fixture content.
 | probe → `test_ui_ia` | grouped navigation, 375 px menu toggle | behaviour | already covered by `test_ui_ia` a and k, which now run on Genesee |
 | probe | no write request | behaviour | folded into `assert_clean` for every hosted module |
 
-## Hosted checks still to add
+## Checks for OGWA-REVIEW-QUEUE-API-01's features
 
-When OGWA-REVIEW-QUEUE-API-01's features are deployed (see the TODO in `tests/browser/test_genesee_press_ui.py`):
-the queue served by `GET /review-queue` (its counts equal the derived ones; paging keeps the filter), the
-"Evidence now" verdict beside every row's lifecycle state, Decisions' approval usability, and an AD group page
-linking its candidate directly. Until then nothing here asserts them.
+`tests/browser/test_genesee_press_ui.py` tests j–m (deployed and passing against workers.dev, Worker
+`75ef55ef`): `GET /review-queue` paged in small pages equals one large page, per-status totals equal its
+`counts`, the UI's caption and pager agree with `page.total`, and the browser keeps the server's order;
+"Evidence now" beside every row's "Lifecycle: …", agreeing with the row's `evidenceVerdict`; Decisions'
+"Approval rules now" on every approval row, "Valid for its stage" exactly where `usability.usable`; an AD
+group found through an exact identity mapping (from the API, never by name) opens its candidate. Each asserts
+behaviour against the target's own API, not fixture counts.
+
+## Checks for OGWA-APPROVAL-ATTENTION-01's features
+
+`tests/browser/test_genesee_press_ui.py` test n: the dashboard's "approvals expiring soon" item is
+present exactly when the target's `GET /approvals?usability=expiring-soon` counts one (and then starts
+with that count), otherwise absent (the zero state); the Decisions filters' labels equal the response's
+`counts`; the "Expiring soon" listing has the API's rows, or says "No valid approval expires within 48
+hours."; nothing is worded Ready, Executable, or Approved to delete. Behaviour against the target's own
+API, no fixture count.
+
+**Fixture fact, not asserted:** the hosted Genesee Press store's clock is fixed at
+`2026-10-01T14:20:50Z`, and its one valid approval (GP-C11's Okta approval) expires
+`2026-10-08T07:00:00Z`, about 6.7 days later, so with the 48-hour window the hosted demo shows the zero
+state. The expiring case is covered locally (`test_review_workflow.ApprovalAttentionTests`, a synthetic
+world whose clock is moved on); D1 is never changed to manufacture one.

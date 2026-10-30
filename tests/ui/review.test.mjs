@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import {
-  approvalUsability, evidenceReadiness, impactOf, lifecycleStages, nextStep, OPEN_STATUSES, planStatus, queueOrder,
+  APPROVAL_FILTERS, approvalUsability, evidenceReadiness, impactOf, lifecycleStages, nextStep, OPEN_STATUSES, planStatus, queueOrder,
   REVIEW_STATUS, reviewStatus, ruleLabel, STAGES, stageLabel, statesOf, statusCounts, verdictReading,
 } from "../../app/ui/static/js/review.js";
 
@@ -306,4 +306,32 @@ test("a missing, contradictory, or unknown usability answer is not usable", () =
   assert.equal(approvalUsability({ status: "SOMETHING_NEW", usable: false, problems: [] }).label, "Not usable");
   assert.equal(approvalUsability({ status: "EPOCH_SUPERSEDED", usable: false, problems: ["e"] }).label,
     "Superseded: the candidate re-entered review");
+});
+
+// --- OGWA-APPROVAL-ATTENTION-01 -------------------------------------------------------------------
+
+const NEVER = /\b(ready|executable|approved to delete)\b|ready to execute/i;
+
+test("expiring soon is the server's flag, and only on a valid approval", () => {
+  const soon = approvalUsability({ status: "USABLE", usable: true, problems: [], expiringSoon: true });
+  assert.equal(soon.expiringSoon, true);
+  assert.equal(soon.label, "Valid for its stage");
+  assert.match(soon.note, /own checks/, "an expiring approval still says its step has its own checks");
+  assert.equal(approvalUsability({ status: "USABLE", usable: true, problems: [] }).expiringSoon, false, "no flag, no warning");
+  for (const u of [{ status: "EXPIRED", usable: false, problems: ["x"], expiringSoon: true },
+    { status: "EPOCH_SUPERSEDED", usable: false, problems: ["e"], expiringSoon: true },
+    { status: "USABLE", usable: false, problems: ["x"], expiringSoon: true }, undefined]) {
+    assert.equal(approvalUsability(u).expiringSoon, false, JSON.stringify(u));
+  }
+});
+
+test("no approval reading or filter is worded ready or executable", withFixtures, () => {
+  for (const a of fx.approvals) {
+    for (const expiringSoon of [false, true]) {
+      const u = approvalUsability({ ...a.usability, expiringSoon });
+      assert.doesNotMatch(`${u.label} ${u.note || ""}`, NEVER, a.id);
+    }
+  }
+  assert.deepEqual(APPROVAL_FILTERS.map((f) => f.key), ["all", "valid", "expiring-soon", "expired"]);
+  for (const f of APPROVAL_FILTERS) assert.doesNotMatch(f.label, NEVER);
 });

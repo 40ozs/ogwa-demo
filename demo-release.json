@@ -1,10 +1,10 @@
 {
   "schema": "genesee-press-demo-release/1",
   "application": "ogwa",
-  "release_id": "genesee-press-2.1.0-94d3122fc98a",
+  "release_id": "genesee-press-2.1.0-3f69b2567709",
   "application_repository": "40ozs/ogwa",
   "source_branch": "main",
-  "application_upstream_sha": "94d3122fc98a3801ac1d05f1f3b1f65d0621ab59",
+  "application_upstream_sha": "3f69b2567709c1d9ef3c050300aab5eefc414ee7",
   "synthetic_enterprise_repository": "40ozs/synthetic-enterprise",
   "synthetic_enterprise_sha": "ce7c0c7d9fbc82c67e596dde95cf5e2432acf450",
   "synthetic_enterprise_branch": "integration/SYNTH-CROSSAPP-01",
@@ -27,7 +27,7 @@
   },
   "demo_repository": "40ozs/ogwa-demo",
   "demo_branch": "main",
-  "generated_at": "2026-10-30T20:18:14Z",
+  "generated_at": "2026-10-30T21:28:25Z",
   "generated_at_note": "Input of the export, recorded here; reproduction re-uses it, so the tree is byte-identical.",
   "exporter": {
     "repository": "40ozs/synthetic-enterprise",
@@ -36,13 +36,13 @@
     "tool_sha256": "662788415d5f2aa7141e48ff60d3d9f1debabc670b47ce375dc299526fd8c5a4",
     "verifier_sha256": "799e4ee88d4af2f1d6de490c6f522f1c6daab2a618d75c02facde22f6202a681",
     "spec": "tools/cutover/specs/ogwa.json",
-    "spec_sha256": "e56e286156a96168ccc4a075b04eb0f8305f97cbb33bcbd8094ad47dc4ace478"
+    "spec_sha256": "89a3d1023a97d4b68b47a36635c4750c62be190f814c9ba977a79b5604a8a3b3"
   },
   "selection": {
-    "source_files": 464,
-    "released_files": 400,
-    "excluded_files": 64,
-    "excluded_sha256": "731f25160c5dec690ddc366bcf5bd0370dff8a1ad02fe4055d0bf4725ba9011c"
+    "source_files": 482,
+    "released_files": 401,
+    "excluded_files": 81,
+    "excluded_sha256": "6badbbb91a2b9e5985c5cbc9d904516584a3fd6b0bf211db7db5daa24fa49440"
   },
   "sanitization": {
     "redactions": [],

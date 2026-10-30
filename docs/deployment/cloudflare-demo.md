@@ -413,6 +413,8 @@ These steps keep D1 and all evidence intact:
 
 - **Previous Worker version:** `npx wrangler versions list --name ogwa-demo`, then
   `npx wrangler rollback <version-id> --name ogwa-demo`. D1 is not touched by a rollback.
+  To undo OGWA-REVIEW-QUEUE-API-01 (live version `75ef55ef-06de-42b8-ac68-d12c66f3e3eb`, the server-side Review queue, same D1):
+  `npx wrangler rollback 6e4eed09-ab19-440c-8195-a10b9aa84483 --name ogwa-demo`, the previous release on `ogwa-demo-3`.
   To undo OGWA-UI-REVIEW-02 (live version `6e4eed09-ab19-440c-8195-a10b9aa84483`, the operator review UI, same D1):
   `npx wrangler rollback a4bd4702-d356-4459-904e-855145c3a2fc --name ogwa-demo`, the previous UI on `ogwa-demo-3`.
   To undo the Genesee Press cutover (live version `a4bd4702-d356-4459-904e-855145c3a2fc`, D1 `ogwa-demo-3`):

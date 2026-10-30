@@ -17,6 +17,7 @@ import { conditionRank, evidenceLabels, explanationAnswers, policyAgainstInForce
 import { approvalUsability, evidenceReadiness, lifecycleStages, nextStep, planStatus, reviewStatus } from "../review.js";
 import { appLink, errorBox, groupLink, identity, jobLink, mappingLink, resolveRefs } from "./common.js";
 import { coverageTable, resultBadge } from "./inventory.js";
+import { usabilityCell } from "./review.js";
 
 const MAX_REASON = 1000;
 const STAGE_LABEL = { OKTA_UNASSIGN: "Okta unassignment", AD_QUARANTINE: "AD quarantine", AD_DELETION: "AD deletion",
@@ -532,7 +533,7 @@ function approvalsTable(items, inForce) {
   return table("Approvals and rejections", [
     { label: "Stage", rowHeader: true, render: (a) => STAGE_LABEL[a.stage] || a.stage, sort: (a) => STAGE_LABEL[a.stage] || a.stage },
     { label: "Decision", render: (a) => (a.decision === "APPROVE" ? badge("Approved for future action", "caution") : badge("Rejected", "neutral")), sort: (a) => a.decision },
-    { label: "Approval rules now", render: (a) => { const u = approvalUsability(a.usability); return [h("strong", { class: "state-label", "data-tone": u.tone }, u.label), h("div", { class: "muted" }, u.usable ? u.note : u.problems[0] || null)]; }, sort: (a) => approvalUsability(a.usability).label },
+    { label: "Approval rules now", render: usabilityCell, sort: (a) => approvalUsability(a.usability).label },
     { label: "By", render: (a) => actorText(a.operator), sort: (a) => actorText(a.operator) },
     { label: "Decided", render: (a) => fmtTime(a.decidedAt), sort: (a) => a.decidedAt },
     { label: "Expires", render: (a) => [fmtTime(a.expiresAt), a.expired ? [" ", badge("Expired", "neutral")] : null], sort: (a) => a.expiresAt },

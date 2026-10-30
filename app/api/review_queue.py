@@ -11,9 +11,11 @@ Both are readings for an operator, never decisions:
   ``approval_problems``, through ``LifecycleService.stage_approval_problems``, the call a dry run's
   planning makes) to the record as it stands, plus the remediation's policy binding. Usable means
   the approval would pass those checks now; the server checks everything again when it is used.
+  ``expiringSoon`` (OGWA-APPROVAL-ATTENTION-01) marks a usable approval that expires within
+  ``EXPIRING_SOON_WITHIN``: a presentation threshold for drawing a person's attention, not a rule.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from app.api.authorization import ACCEPTED_BINDINGS, BINDING_TEXT, binding
@@ -96,6 +98,12 @@ POLICY_NOT_IN_FORCE = "POLICY_NOT_IN_FORCE"  # judged by a policy other than the
 NO_POLICY = "NO_POLICY"  # no candidate policy is in force (D52), so nothing can be judged
 NOT_USABLE = "NOT_USABLE"  # any other rule the lifecycle applies
 
+# OGWA-APPROVAL-ATTENTION-01: how close to its expiry a usable approval is "expiring soon". A
+# presentation threshold, not an approval rule: it changes no approval's validity. Not the holds'
+# 7 days: approvals are valid for at most the policy's approval_max_ttl (7 days by default), so a
+# 7-day window would mark every approval expiring soon from the moment it was given.
+EXPIRING_SOON_WITHIN = timedelta(hours=48)
+
 
 class ApprovalUsability:
     """``usability`` for the approvals of one response, at one instant and under one policy. Each
@@ -121,6 +129,11 @@ class ApprovalUsability:
         return self._fingerprints[c.id]
 
     def of(self, a: ApprovalRecord, recorded: PolicyRef | None) -> dict[str, Any]:
+        judged = self._judge(a, recorded)
+        # Only a usable approval can be expiring soon: an unusable one already says why it does not count.
+        return {**judged, "expiringSoon": judged["usable"] and a.expires_at <= self._now + EXPIRING_SOON_WITHIN}
+
+    def _judge(self, a: ApprovalRecord, recorded: PolicyRef | None) -> dict[str, Any]:
         if a.decision is not ApprovalDecision.APPROVE:
             return {"status": NOT_AN_APPROVAL, "usable": False, "problems": ["a rejection authorizes nothing"]}
         if a.stage in LEGACY_APPROVAL_STAGES:

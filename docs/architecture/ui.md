@@ -1,6 +1,6 @@
 # Operator UI
 
-Status: P09; restructured as an operator review workflow in OGWA-UI-REVIEW-01; server-side Review queue, evidence verdicts, approval usability, and the AD group → candidate link in OGWA-REVIEW-QUEUE-API-01. The UI is a restrained review console over the [operator API](api.md). It runs
+Status: P09; restructured as an operator review workflow in OGWA-UI-REVIEW-01; server-side Review queue, evidence verdicts, approval usability, and the AD group → candidate link in OGWA-REVIEW-QUEUE-API-01; approvals expiring soon (dashboard, Decisions filters, candidate warning) in OGWA-APPROVAL-ATTENTION-01. The UI is a restrained review console over the [operator API](api.md). It runs
 only where the API runs: `LOCAL_SYNTHETIC`, a SYNTHETIC store, and synthetic sign-in. It has
 no delete, unassign, or execute action.
 
@@ -49,7 +49,7 @@ model: Dashboard and Portfolio scenarios, then **Inventory**, **Review**, and **
 
 | Group | View | Route | Source |
 | --- | --- | --- | --- |
-| — | Dashboard | `#/` | `GET /dashboard`, `GET /directory`, `GET /governance-findings` (counts), `GET /review-queue?limit=5` (the queue's head, its counts, and holds ending within 7 days) |
+| — | Dashboard | `#/` | `GET /dashboard`, `GET /directory`, `GET /governance-findings` (counts), `GET /review-queue?limit=5` (the queue's head, its counts, and holds ending within 7 days), `GET /approvals?usability=expiring-soon&limit=1` (its `counts.expiringSoon`) |
 | — | Portfolio scenarios | `#/scenarios` | `GET /demo-scenarios`; opens with the dataset's five-minute reviewer walkthrough (OGWA-DEMO-04), linked from the dashboard when the synthetic directory is present |
 | Inventory | People | `#/people[?department=&status=&q=]`, `#/people/{id}` | `GET /people`; the detail view shows history and every access route |
 | Inventory | Company Directory (profile and departments; reached from People and the dashboard) | `#/directory` | `GET /directory` |
@@ -61,7 +61,7 @@ model: Dashboard and Portfolio scenarios, then **Inventory**, **Review**, and **
 | Review | Every candidate by lifecycle state (linked from the queue) | `#/candidates[?state=]` | `GET /candidates` |
 | Review | Candidate detail | `#/candidates/{id}` | candidate, evidence, dependencies, decisions, approvals, jobs, group; audit events with `READ_AUDIT` |
 | Review | Findings: Impact & Blockers, Governance | `#/findings?tab=dependency\|governance[&severity=&code=]` | `GET /dependency-findings`, `GET /governance-findings` |
-| Review | Decisions | `#/decisions` | `GET /approvals` (with each approval's `usability`), `GET /dashboard` (server clock, policy in force) |
+| Review | Decisions | `#/decisions` | `GET /approvals` (with each approval's `usability`; `?usability=` filters and `counts` since OGWA-APPROVAL-ATTENTION-01), `GET /dashboard` (policy in force) |
 | Operations | Plans & simulations | `#/jobs[/{id}]` | `GET /execution-jobs`, `GET /execution-jobs/{id}` |
 | Operations | Collection health | `#/collectors` | `GET /collector-runs` |
 | Operations | Audit | `#/audit[?subjectId=]` | `GET /audit-events` (`READ_AUDIT`) |
@@ -209,6 +209,35 @@ waiting work in the Review queue and on the candidate page. The candidate page's
 has the same column, and the dry-run and drill forms offer only approvals the server judges valid
 (`assess.usableApprovals` no longer re-derives validity from expiry and epoch in the browser).
 
+Since OGWA-APPROVAL-ATTENTION-01 Decisions has filters, a `nav` labelled "Approval rules now" like the
+Review queue's: **All**, **Valid for its stage**, **Expiring soon**, **Expired**, each with the server's
+count over every approval (`#/decisions?usability=…`). The server filters before paging
+([api.md](api.md#approvals-that-need-attention-ogwa-approval-attention-01)); the browser filters
+nothing. "Expiring soon" sorts soonest expiry first by default; the others newest decision first;
+every sortable column still sorts on the server. Superseded approvals and the other reasons an
+approval does not count are named on each row, not offered as filters (the server would have to judge
+every approval ever recorded on each request).
+
+### Approval usability: how it is presented (OGWA-APPROVAL-ATTENTION-01)
+
+- Only the server's answer is shown: `usability.status`/`usable` for validity, `usability.expiringSoon`
+  for nearness. `review.approvalUsability` maps them to words; nothing in the browser works out
+  validity or "soon" from dates (the relative "2 days remaining" in Expires is only a reading of the
+  server's `expiresAt` against its clock).
+- Valid is worded **"Valid for its stage"** with "The step it backs has its own checks …" beneath.
+  A valid approval near its expiry adds an **"Expiring soon"** badge and "It stops counting for its
+  stage at <time>." beside it (`views/review.js usabilityCell`, used by Decisions and the candidate
+  page). Never "Ready", "Ready to execute", "Executable", or "Approved to delete"; tests pin it.
+- "Expiring soon" means valid **and** expiring within 48 hours of the server's clock: a
+  presentation threshold, not a rule (why 48 hours and not the holds' 7 days:
+  [api.md](api.md#approvals-that-need-attention-ogwa-approval-attention-01)). Expired, superseded, or
+  otherwise unusable approvals are never "expiring soon"; they already say why they do not count.
+- On the candidate page an approval stays secondary: the warning is inside the Approvals table,
+  below Lifecycle, What blocks this candidate, Next step, and Evidence readiness, and never in the
+  headline.
+- On the dashboard it is the last "Needs attention" item before recent deactivations: after every
+  decision, blocker, evidence and collection problem, hold, dry run, and finding.
+
 ### Plans & simulations
 
 The visible name of `#/jobs` is **Plans & simulations**. A recorded job's status is worded so it
@@ -222,8 +251,11 @@ where to run one instead of listing them.
 "Needs attention" comes first: candidates waiting for a person's decision, blocked, blocked on
 stale or incomplete evidence, collector runs incomplete or unfinished, holds that ended or end
 within 7 days (counted by the server over every candidate, on its clock), candidates approved for a future step, actionable
-governance findings, blocking dependency findings, and recent deactivations. Each links to the
-filtered Review queue or the list behind it. Then the head of the review queue (five rows),
+governance findings, blocking dependency findings, (OGWA-APPROVAL-ATTENTION-01) approvals expiring
+within 48 hours that are valid for their stage ("1 approval expiring within 48 hours (valid for its
+stage until then)", linked to `#/decisions?usability=expiring-soon`; counted by the server over every
+approval), and recent deactivations. Each links to the filtered Review queue or the list behind it.
+An item with nothing to count is not shown; with none at all, one line says so. Then the head of the review queue (five rows),
 **Find** (open an object by its OGWA id or AD objectSid through `GET /identities`; anything else
 is offered as a server-side people or group search, never matched by name in the browser), key
 figures, the charts, and System details.
@@ -413,7 +445,7 @@ lists stack and wide tables scroll inside their own keyboard-focusable region.
 | `tests/test_ui_static.py` | No HTML sinks, storage, external URLs, or execute path; the six write paths (OGWA-DEMO-03 added the drill, which records nothing); the P09 action set; no green; contrast; focus and reduced motion; module imports resolve |
 | `tests/test_ui_present.py` → `tests/ui/present.test.mjs` | `present.js` against the real API over Null Meridian: common names for SIDs and AD evidence ids, two groups of one name told apart, unresolved ids shown, access-path order, Active/Deactivated and the date, sort and page arithmetic, tab keys |
 | `tests/test_ui_ia.py` | The API side: totals and both-way cursors on every listing, sorting across pages in both directions, stable ties, missing values last, final partial page, empty and past-the-end pages, validation; the resolver (SID and AD evidence id → name and canonical page, shared names, unresolved ids, names never accepted as keys, exact mappings only, renamed groups); SID search; the dashboard and deactivation summaries |
-| `tests/test_ui_review.py` → `tests/ui/review.test.mjs` | OGWA-UI-REVIEW-01: `review.js` against the real API over the classic world (and one candidate excluded through the API): every lifecycle state has one review status (and the Python side pins it against `LifecycleState`), holds wait and are not blocked, no status is ready, the stepper for initial review, approval, both holds, revalidation, quarantine, deletion proposal, dependency, stale, incomplete, ambiguous, held, protected, excluded, and retired candidates, next steps, queue order, evidence readiness, impact categories (blocking, informational, none found only after a complete check, not established otherwise), every governance rule worded (pinned against `RULES`), and plan wording that never implies execution |
+| `tests/test_ui_review.py` → `tests/ui/review.test.mjs` | OGWA-UI-REVIEW-01: `review.js` against the real API over the classic world (and one candidate excluded through the API): every lifecycle state has one review status (and the Python side pins it against `LifecycleState`), holds wait and are not blocked, no status is ready, the stepper for initial review, approval, both holds, revalidation, quarantine, deletion proposal, dependency, stale, incomplete, ambiguous, held, protected, excluded, and retired candidates, next steps, queue order, evidence readiness, impact categories (blocking, informational, none found only after a complete check, not established otherwise), every governance rule worded (pinned against `RULES`), and plan wording that never implies execution; since OGWA-APPROVAL-ATTENTION-01 `expiringSoon` read only from the server and only on a valid approval, and no approval reading or Decisions filter worded ready, executable, or approved to delete |
 | `tests/test_ui_assess.py` → `tests/ui/assess.test.mjs` | `assess.js` against fixtures produced by the real API over a seeded synthetic world (D97, D98, tones, action plans, evidence conditions, the server's approval limit). Part of the standard check: `scripts/check.ps1` requires Node, and the test fails without it |
 | `tests/test_browser_gate_guards.py` | Keeps the browser gate honest without a browser: the host-blocking flags, the clean-page and CSP assertions, and the gate's exit codes cannot be removed |
 | `tests/test_listing_scale.py` | OGWA-UI-IA-02: every sortable field of every store-backed listing, both ways, across every page, against an order computed from the served items and resolved names, on both demo worlds and a synthetic tenant ten times larger (`tests/scale_fixtures.py`); a filter before paging; ties broken by stable id; missing values last; first, last, single, empty, and past-the-end pages; a sorted page loads only its own records; the audit trail's sequence continuity across pages |
@@ -423,8 +455,9 @@ lists stack and wide tables scroll inside their own keyboard-focusable region.
 | `tests/test_ui_drill.py` → `tests/ui/drill.test.mjs` | OGWA-DEMO-03: `drill.js` against real drill output (Null Meridian NM-C11 and a classic AD deletion, every scenario): dry run and execution never share wording, only a verified drill whose record agrees gets the best (info) tone, a self-contradicting or unknown result is blocked |
 | `tests/browser/test_remediation_drill_ui.py` | Opt-in: NM-C11's drill by keyboard (dry run, timeout → verify → retry → verify, verification failure, unverifiable outcome), focus on the result (and on Run drill after a failed request), accessibility audit, no sideways scroll from 320 to 1920 px (NM-C11 after a drill, NM-C10, the walkthrough), a viewer cannot run it, nothing leaves the origin |
 | `tests/test_review_queue_api.py` | OGWA-REVIEW-QUEUE-API-01, no browser: the server's status table equals `review.js`'s; the queue's SQL filter and order on an unknown state; counts, filters, and every status over the classic world; the served order equals `review.js queueOrder` (run under Node); sorts and paging validation; holds ending soon; reads change nothing (audit head and `total_changes`); authorization (401, 403 for a role without `READ_INVENTORY` whatever the filter); the verdict equals the candidate page's, agreement, disagreement, evidence gone stale, terminal and unavailable, and authorizes nothing; approval usability (usable, expired, new epoch, rejection, stage passed) against what the dry-run planner then does; the directory link only through exact mappings (`KB-Admins`, `WikiV1-Users`, the three `Finance-RW` groups); and a 1,100-candidate tenant: every page, no gap or repeat, final partial page, ties, filters before paging, a middle page |
-| `tests/browser/test_genesee_press_ui.py` | Opt-in, the canonical hosted-gate module (OGWA-UI-REVIEW-02's probe folded in by OGWA-REVIEW-QUEUE-API-01): every page at 1280/768/320 px, the Review queue against the API (statuses, counts, no "Ready", keyboard filters), one candidate per lifecycle state, Decisions, Plans, dashboard, Find, and (tests j–m) server paging and filters of `GET /review-queue`, Evidence now beside every lifecycle state, approval usability on Decisions, and an AD group opening its candidate. Runs locally and against `UI_BROWSER_TARGET` ([../deployment/hosted-demo-fixtures.md](../deployment/hosted-demo-fixtures.md)) |
-| `tests/browser/test_review_workflow.py` | Opt-in, OGWA-UI-REVIEW-01: the Review queue (statuses with their lifecycle states, priority order, a filter by keyboard keeping focus, Back), waiting apart from blocked, nothing ready, the stepper's text equivalent on four candidates, the candidate page's section order, Impact & Blockers against the API (every coverage gap says OGWA could not tell), a rejection recorded through the UI on Decisions with expiry wording, plans that never say executed or succeeded, the dashboard's attention links into the filtered queue, find by id, phone width; since OGWA-REVIEW-QUEUE-API-01 also Evidence now against the API, the server's order, counts, and sorts kept by the browser, the Decisions column, and (a Null Meridian class) the AD group → candidate link, Back, unproven mappings and shared names linking nothing |
+| `tests/test_approval_attention_api.py` | OGWA-APPROVAL-ATTENTION-01, no browser: `expiringSoon` for a valid approval far from and near its expiry, the 48-hour boundary to the second (and at expiry: expired, not expiring), expired and superseded (inside the window) never expiring soon, an expiring approval whose dry run is still refused for stale evidence and to people without the permission (reading changes nothing), `?usability=` filters and `counts` over every approval whatever the page, deterministic order with ties, paging past the end, `400`/`401`/`403`/`405` |
+| `tests/browser/test_genesee_press_ui.py` | Opt-in, the canonical hosted-gate module (OGWA-UI-REVIEW-02's probe folded in by OGWA-REVIEW-QUEUE-API-01): every page at 1280/768/320 px, the Review queue against the API (statuses, counts, no "Ready", keyboard filters), one candidate per lifecycle state, Decisions, Plans, dashboard, Find, and (tests j–m) server paging and filters of `GET /review-queue`, Evidence now beside every lifecycle state, approval usability on Decisions, an AD group opening its candidate, and (test n, OGWA-APPROVAL-ATTENTION-01) the dashboard's expiring-soon item or its zero state and the Decisions filters' counts against the API. Runs locally and against `UI_BROWSER_TARGET` ([../deployment/hosted-demo-fixtures.md](../deployment/hosted-demo-fixtures.md)) |
+| `tests/browser/test_review_workflow.py` | Opt-in, OGWA-UI-REVIEW-01: the Review queue (statuses with their lifecycle states, priority order, a filter by keyboard keeping focus, Back), waiting apart from blocked, nothing ready, the stepper's text equivalent on four candidates, the candidate page's section order, Impact & Blockers against the API (every coverage gap says OGWA could not tell), a rejection recorded through the UI on Decisions with expiry wording, plans that never say executed or succeeded, the dashboard's attention links into the filtered queue, find by id, phone width; since OGWA-REVIEW-QUEUE-API-01 also Evidence now against the API, the server's order, counts, and sorts kept by the browser, the Decisions column, and (a Null Meridian class) the AD group → candidate link, Back, unproven mappings and shared names linking nothing; since OGWA-APPROVAL-ATTENTION-01 the zero state (no dashboard item, an empty "Expiring soon" filter) and `ApprovalAttentionTests` (the classic world five days on, so S14's approval is valid and expiring soon while its evidence is stale): the dashboard's count, wording, place after every blocker and finding, and link; every Decisions filter's rows and counts against the API, soonest first, valid never ready; the candidate page's warning beside the approval below evidence readiness and the next step; no dangerous control; accessibility; 320 px |
 | `tests/browser/test_operator_workflows.py` | Opt-in (`pwsh scripts/browser-check.ps1`): headless Chrome or Edge over DevTools, keyboard sign-in, every view, accessibility audit, phone width, focus visibility, reduced motion, light/dark, approval, refusal, dry run, hold, exclusion, refused revalidation, sign-out, slow and failed pages (heading, content and focus change together; a moved focus stays), opened forms on screen at laptop sizes and zoom, focus after a failed decision, no request leaves the origin, no console error or CSP violation |
 
 The browser harness serves a fresh in-memory synthetic world (never `var/`), uses a throw-away

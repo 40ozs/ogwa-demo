@@ -3,12 +3,14 @@
 // are waiting work, so they are in the queue, never among the decisions.
 // OGWA-REVIEW-QUEUE-API-01: the queue is filtered, ordered, counted, and paged on the server
 // (GET /review-queue), and each row carries the classifier's current evidence verdict.
+// OGWA-APPROVAL-ATTENTION-01: Decisions filters by the server's approval usability (valid, expiring
+// soon, expired), and a valid approval near its expiry says so beside its usability.
 import { get } from "../api.js";
 import { stateInfo } from "../assess.js";
 import { actorText, badge, fmtTime, focusAfterRoute, h, link, table } from "../dom.js";
 import { policyAgainstInForce, policyName } from "../policy.js";
 import { collectIds, deadlineText, hashFor, span } from "../present.js";
-import { approvalUsability, nextStep, REVIEW_STATUS, reviewStatus, stageLabel, verdictReading } from "../review.js";
+import { APPROVAL_FILTERS, approvalUsability, nextStep, REVIEW_STATUS, reviewStatus, stageLabel, verdictReading } from "../review.js";
 import { candidateName } from "./candidates.js";
 import { identity, lede, listing, pageParams, resolveRefs } from "./common.js";
 
@@ -114,23 +116,58 @@ function expiryCell(a, now) {
   return [words ? badge(words, a.expired ? "neutral" : "caution") : null, h("div", { class: "muted" }, fmtTime(a.expiresAt))];
 }
 
-/** Whether an approval can be used now, as the server judged it (never re-derived here). */
+/**
+ * Whether an approval can be used now, as the server judged it (never re-derived here), and, when the
+ * server marks a valid one expiring soon, a warning beside it. Valid stays secondary: the note says
+ * the step it backs has its own checks.
+ */
 export function usabilityCell(a) {
   const u = approvalUsability(a.usability);
   return [h("strong", { class: "state-label", "data-tone": u.tone }, u.label),
+    u.expiringSoon ? h("div", { class: "expiring" }, badge("Expiring soon", "caution"), " ",
+      h("span", { class: "muted" }, `It stops counting for its stage at ${fmtTime(a.expiresAt)}.`)) : null,
     h("div", { class: "muted" }, u.usable ? u.note : u.problems[0] || null)];
+}
+
+function filterText(key, hours) {
+  return {
+    valid: "Approvals that pass the lifecycle's approval rules now, as the server judged them. Valid is not ready: the step each one backs has its own checks.",
+    "expiring-soon": `Valid approvals that expire within ${hours} hours of the server's clock, soonest first. ${hours} hours is when OGWA starts pointing them out, not an approval rule: each stays valid until its own expiry.`,
+    expired: "Approvals past their expiry on the server's clock: they no longer count for any step.",
+  }[key] || null;
+}
+
+function emptyText(key, hours) {
+  return {
+    valid: "No approval is valid for its stage now.",
+    "expiring-soon": `No valid approval expires within ${hours} hours.`,
+    expired: "No approval has expired.",
+  }[key] || "No approvals or rejections are recorded.";
 }
 
 export async function decisions(ctx) {
   ctx.setTitle("Decisions");
-  const defaultSort = { key: "decidedAt", dir: "desc" };
-  const [list, dash] = await Promise.all([get("/approvals", pageParams(ctx.query, null, defaultSort)), get("/dashboard")]);
-  const now = dash.generatedAt || null;
+  const filter = APPROVAL_FILTERS.find((f) => f.key === ctx.query.usability) || APPROVAL_FILTERS[0];
+  // Expiring soon reads soonest first; everything else newest decision first.
+  const defaultSort = filter.key === "expiring-soon" ? { key: "expiresAt", dir: "asc" } : { key: "decidedAt", dir: "desc" };
+  const extra = filter.key === "all" ? null : { usability: filter.key };
+  const [list, dash] = await Promise.all([get("/approvals", pageParams(ctx.query, extra, defaultSort)), get("/dashboard")]);
+  const now = list.generatedAt || dash.generatedAt || null;
+  const hours = list.expiringSoonWithinHours;
+  const counts = list.counts || {};
+  const total = list.page.total;
   const refs = await resolveRefs(collectIds(list.items, "candidateId"));
   ctx.view.append(
     lede("The approvals and rejections people recorded. An approval records a decision for a future, separately executed step: it is not execution, and it changes nothing in Okta or Active Directory. An approval stops counting when it expires, its candidate re-enters review (a new epoch), the evidence it was given on changes, or the candidate is past its stage. “Approval rules now” is the server's answer under the lifecycle's own approval rules; valid is not ready, because the step it backs has its own checks, and the server applies them all again when it is requested."),
     h("p", null, "Holds are not decisions. Candidates waiting in a hold, or for a decision, are in the ", link("#/review", "Review queue"), "."),
-    listing("/decisions", ctx.query, list, "Approvals and rejections", [
+    h("nav", { class: "filters status-filters", "aria-label": "Approval rules now" },
+      h("ul", null, APPROVAL_FILTERS.map((f) => h("li", null, h("a", {
+        href: hashFor("/decisions", {}, { usability: f.key === "all" ? null : f.key }), "data-focus-key": `usability:${f.key}`,
+        "aria-current": f.key === filter.key ? "true" : null, on: { click: () => { focusAfterRoute.key = `usability:${f.key}`; } },
+      }, `${f.label} (${counts[f.count] || 0})`))))),
+    filterText(filter.key, hours) ? h("p", null, filterText(filter.key, hours)) : null,
+    listing("/decisions", ctx.query, list,
+      filter.key === "all" ? "Approvals and rejections" : `${filter.label}: ${total} approval${total === 1 ? "" : "s"}`, [
       { label: "Candidate", rowHeader: true, render: (a) => identity(refs[a.candidateId], a.candidateId), sort: "candidate" },
       { label: "Stage", render: (a) => STAGE_LABEL[a.stage] || a.stage, sort: "stage" },
       { label: "Decision", render: (a) => (a.decision === "APPROVE" ? badge("Approved for future action", "caution") : badge("Rejected", "neutral")), sort: "decision" },
@@ -140,5 +177,6 @@ export async function decisions(ctx) {
       { label: "Expires", render: (a) => expiryCell(a, now), sort: "expiresAt" },
       { label: "Judged by policy", render: (a) => policyCell(a.policy, dash.policy) },
       { label: "Reason", render: (a) => a.reason },
-    ], "No approvals or rejections are recorded.", defaultSort));
+    ], emptyText(filter.key, hours), defaultSort),
+    h("p", { class: "muted" }, "Counts cover every approval. Superseded approvals, and the other reasons an approval does not count, are named on each row."));
 }

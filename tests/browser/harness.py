@@ -36,6 +36,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from datetime import timedelta
 import time
 import unittest
 import urllib.request
@@ -160,9 +161,10 @@ class SyntheticServer(threading.Thread):
     """A seeded synthetic world served as UI + API on 127.0.0.1, entirely inside this thread."""
 
     def __init__(self, refresh: tuple[str, ...] = ("S07", "S14"), dataset: str = "classic",
-                 any_dataset: bool = False) -> None:
+                 any_dataset: bool = False, advance: timedelta | None = None) -> None:
         super().__init__(daemon=True)
         self.dataset = dataset
+        self.advance = advance  # moves the world's clock on after seeding, before any refresh
         self.any_dataset = any_dataset  # the module asserts no dataset-specific content: any target's demo will do
         self.walkthrough = walkthrough_parts(dataset)
         self.port = free_port()
@@ -177,6 +179,8 @@ class SyntheticServer(threading.Thread):
         world = None
         try:
             world = World(dataset=self.dataset)
+            if self.advance:
+                world.clock.advance(self.advance)
             for key in self.refresh:  # fresh enough for execution-grade checks (24 h), facts unchanged
                 world.refresh_evidence(world.candidate(key))
             self.scenarios = {s.key: s.candidate_id for s in world.summary.scenarios}

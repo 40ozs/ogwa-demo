@@ -38,7 +38,7 @@ from app.api.readmodel import (
     review_registry_json,
     review_status,
 )
-from app.api.review_queue import ApprovalUsability, queue_item
+from app.api.review_queue import EXPIRING_SOON_WITHIN, ApprovalUsability, queue_item
 from app.api.services import (
     LIFECYCLE_WRITE_PERMISSIONS,
     MAX_APPROVAL_HOURS,
@@ -69,6 +69,7 @@ from app.domain.remediation_execution import MAX_SUBMISSIONS, MAX_VERIFICATION_R
 from app.remediation.drill import DRILL_NOTICE, DrillMode
 from app.remediation.synthetic_provider import SCENARIOS
 from app.governance.analysis import RULES as GOVERNANCE_RULES
+from app.store.codec import ts
 from app.store.environment import DatabaseEnvironment
 
 P = Permission
@@ -458,14 +459,53 @@ def dependency_findings(ctx: Context) -> Response:
     return _listing(ctx, "dependencies", dependency_json)
 
 
+# Decisions' filters (OGWA-APPROVAL-ATTENTION-01). Only an unexpired approval can pass the approval
+# rules, and none is given for longer than MAX_APPROVAL_HOURS (14 days), so "valid" and
+# "expiring-soon" judge that bounded set with the server's own usability before paging; "expired" is
+# the server's own `expired` fact, in SQL. Every count is over every approval, never the page.
+# Superseded and the other reasons are not filters: telling them apart needs every approval judged.
+APPROVAL_FILTERS = ("all", "valid", "expiring-soon", "expired")
+_UNEXPIRED = "WHERE a.decision = 'APPROVE' AND a.expires_at > ?"
+_EXPIRED = "WHERE a.decision = 'APPROVE' AND a.expires_at <= ?"
+
+
+def _approval_policies(ctx: Context, records: list) -> dict:
+    refs, ids = {}, [a.id for a in records]
+    for i in range(0, len(ids), 500):  # the store reads at most 500 at a time
+        refs.update(ctx.api.store.recorded_policies(approval_ids=tuple(ids[i:i + 500])))
+    return refs
+
+
 def approvals(ctx: Context) -> Response:
-    page, now = page_from(ctx.request.query), ctx.api.clock()
-    items, more = ctx.api.read.approvals(page, _sort(ctx, "approvals"))
-    refs = ctx.api.store.recorded_policies(approval_ids=tuple(a.id for a in items))
+    q = ctx.request.query
+    which = q.get("usability", "all")
+    if which not in APPROVAL_FILTERS:
+        raise ApiError(400, "MALFORMED_REQUEST", f"usability must be one of: {', '.join(APPROVAL_FILTERS)}.")
+    page, now, sort = page_from(q), ctx.api.clock(), _sort(ctx, "approvals")
+    read, at = ctx.api.read, (ts(now),)
     usability = ApprovalUsability(ctx.api, now)
-    return ok(page.envelope([{**approval_json(a, now), "policy": _judged_by(ctx, refs, f"approval:{a.id}"),
-                              "usability": usability.of(a, refs.get(f"approval:{a.id}"))}
-                             for a in items], more=more, total=ctx.api.read.count("approvals")))
+    unexpired = read.load_approvals(read.all_ids("approvals", sort, _UNEXPIRED, at))
+    refs = _approval_policies(ctx, unexpired)
+    judged = {a.id: usability.of(a, refs.get(f"approval:{a.id}")) for a in unexpired}
+    valid = [a for a in unexpired if judged[a.id]["usable"]]
+    soon = [a for a in valid if judged[a.id]["expiringSoon"]]
+    if which in ("valid", "expiring-soon"):
+        envelope = page.slice(valid if which == "valid" else soon)
+    else:
+        where, params = (_EXPIRED, at) if which == "expired" else ("", ())
+        items, more = read.approvals(page, sort, where, params)
+        envelope = page.envelope(items, more=more, total=read.count("approvals a", where, params))
+        refs.update(_approval_policies(ctx, [a for a in items if a.id not in judged]))
+    envelope["items"] = [{**approval_json(a, now), "policy": _judged_by(ctx, refs, f"approval:{a.id}"),
+                          "usability": judged.get(a.id) or usability.of(a, refs.get(f"approval:{a.id}"))}
+                         for a in envelope["items"]]
+    return ok({**envelope, "usability": which,
+               "counts": {"all": read.count("approvals a"), "valid": len(valid), "expiringSoon": len(soon),
+                          "expired": read.count("approvals a", _EXPIRED, at)},
+               "expiringSoonWithinHours": int(EXPIRING_SOON_WITHIN.total_seconds() // 3600),
+               "generatedAt": iso(now),
+               "note": "Valid means the approval passes the lifecycle's approval rules now; the step it backs has "
+                       "its own checks. Expiring soon is a presentation threshold, not a rule. Neither authorizes anything."})
 
 
 def execution_jobs(ctx: Context) -> Response:
@@ -789,7 +829,7 @@ ROUTES: tuple[Route, ...] = (
     _r("GET", "/candidates/{candidateId}/execution-jobs", candidate_jobs, "permission", READ),
     _r("GET", "/execution-jobs", execution_jobs, "permission", READ, LISTING),
     _r("GET", "/execution-jobs/{jobId}", execution_job, "permission", READ),
-    _r("GET", "/approvals", approvals, "permission", READ, LISTING),
+    _r("GET", "/approvals", approvals, "permission", READ, LISTING | {"usability"}),
     _r("GET", "/dependency-findings", dependency_findings, "permission", READ, LISTING),
     _r("GET", "/collector-runs", collector_runs, "permission", READ, LISTING),
     _r("GET", "/policy", policy, "permission", READ),
