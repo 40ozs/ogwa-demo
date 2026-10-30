@@ -51,6 +51,9 @@ def review_fixtures() -> dict:
             "dashboard": reader.get(f"{V}/dashboard").json,
             "candidates": reader.get(f"{V}/candidates?limit=200").json["items"],
             "dependencyChecks": reader.get(f"{V}/dependency-findings?limit=200").json["items"],
+            # OGWA-REVIEW-QUEUE-API-01: the server-side queue's rows and the approvals with usability.
+            "queue": reader.get(f"{V}/review-queue?status=all&limit=50").json,
+            "approvals": reader.get(f"{V}/approvals?limit=200").json["items"],
         }
     finally:
         world.close()

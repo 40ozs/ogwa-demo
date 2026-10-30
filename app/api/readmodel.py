@@ -36,6 +36,7 @@ from app.domain.model import (
     OktaGroup,
 )
 from app.domain.policy import EvidenceBundle, LifecyclePolicy, evidence_fingerprint
+from app.store.codec import ts
 from app.store.store import JobStatusEvent, Store
 
 # Anchor tables an API listing may page through, and the evidence type stored in each.
@@ -77,6 +78,56 @@ def _ad_name(ref: str) -> str:
 
 
 _CANDIDATE_NAME = _text(_okta_name("(SELECT group_id FROM candidates WHERE id = a.candidate_id)"))
+
+
+# --- the Review queue (OGWA-REVIEW-QUEUE-API-01) -----------------------------------------------
+#
+# One reading of the lifecycle state for review, the same table as the UI's review.js STATUS_OF
+# (tests/test_review_queue_api.py pins the two together). It groups states for reading only:
+# every row also carries its lifecycle state, which stays the fact. There is no "ready" status,
+# and a state not listed here reads as blocked.
+
+REVIEW_STATUSES = ("needs-review", "blocked", "waiting", "in-progress", "retired", "closed")  # the queue's order
+OPEN_REVIEW_STATUSES = REVIEW_STATUSES[:4]
+_LS = LifecycleState
+REVIEW_STATUS: dict[LifecycleState, str] = {
+    **dict.fromkeys((_LS.NEEDS_REVIEW, _LS.REVALIDATION_REQUIRED, _LS.DELETION_REVALIDATION_REQUIRED,
+                     _LS.DELETION_PROPOSED), "needs-review"),
+    # RETIREMENT_DRY_RUN: the legacy single AD stage (D148), from which only a diversion may follow.
+    **dict.fromkeys((_LS.BLOCKED, _LS.MAPPING_AMBIGUOUS, _LS.DEPENDENCY_BLOCKED, _LS.STALE_EVIDENCE,
+                     _LS.EVIDENCE_INCOMPLETE, _LS.RETIREMENT_DRY_RUN), "blocked"),
+    **dict.fromkeys((_LS.DISCOVERED, _LS.CANDIDATE, _LS.HOLD, _LS.QUARANTINE_HOLD), "waiting"),
+    **dict.fromkeys((_LS.APPROVED, _LS.OKTA_UNASSIGN_DRY_RUN, _LS.QUARANTINE_APPROVED, _LS.QUARANTINE_DRY_RUN,
+                     _LS.DELETION_APPROVED, _LS.DELETION_DRY_RUN), "in-progress"),
+    _LS.RETIRED: "retired",
+    **dict.fromkeys((_LS.EXCLUDED, _LS.REJECTED, _LS.PROTECTED), "closed"),
+}
+
+
+def review_status(state: str) -> str:
+    """The review status of a lifecycle state's value; a state this build does not know reads as blocked."""
+    try:
+        return REVIEW_STATUS[LifecycleState(state)]
+    except (ValueError, KeyError):
+        return "blocked"
+
+
+def review_filter(statuses: tuple[str, ...]) -> tuple[str, tuple]:
+    """``WHERE`` over ``candidates a`` for the rows whose review status is one of ``statuses``. Blocked
+    is everything not grouped otherwise, so an unknown state is never filtered out of it."""
+    if set(statuses) >= set(REVIEW_STATUSES):
+        return "", ()
+    keep = "blocked" in statuses
+    states = tuple(s.value for s, k in REVIEW_STATUS.items() if (k in statuses) is not keep)
+    return f"WHERE a.state {'NOT IN' if keep else 'IN'} ({', '.join('?' * len(states))})", states
+
+
+_REVIEW_RANK = ("CASE a.state " + " ".join(f"WHEN '{s.value}' THEN {REVIEW_STATUSES.index(k)}"
+                                           for s, k in REVIEW_STATUS.items())
+                + f" ELSE {REVIEW_STATUSES.index('blocked')} END")
+# A hold's end is the only deadline the lifecycle records (review.js nextStep: holdUntil, quarantineHoldUntil).
+_DEADLINE = "CASE a.state WHEN 'HOLD' THEN a.hold_until WHEN 'QUARANTINE_HOLD' THEN a.quarantine_hold_until END"
+
 _EVIDENCE_SORTS = {"observedAt": ("o.observed_at",), "result": ("o.result_status",)}
 _FINDINGS = "(SELECT count(*) FROM dependency_findings WHERE observation_id = o.observation_id{})"
 
@@ -99,6 +150,10 @@ PAGED: dict[str, tuple[str, str, dict[str, tuple[str, ...]]]] = {
     "candidates": ("candidates a", "a.created_at, a.id", {
         "oktaGroup": (_text(_okta_name("a.group_id")),), "state": ("a.state",), "holdUntil": ("a.hold_until",),
         "updatedAt": ("a.updated_at",), "createdAt": ("a.created_at",)}),
+    # The Review queue's priority: review status (decisions first), the nearest hold end, the
+    # longest wait (oldest last change), then the stable id. As review.js queueOrder.
+    "queue": ("candidates a", f"{_REVIEW_RANK}, {_DEADLINE} NULLS LAST, a.updated_at, a.id", {
+        "oktaGroup": (_text(_okta_name("a.group_id")),), "updatedAt": ("a.updated_at",), "deadline": (_DEADLINE,)}),
     "approvals": ("approvals a", "a.decided_at DESC, a.id", {
         "stage": ("a.stage",), "decision": ("a.decision",), "decidedAt": ("a.decided_at",),
         "expiresAt": ("a.expires_at",), "candidate": (_CANDIDATE_NAME,)}),
@@ -366,6 +421,38 @@ class ReadModel:
     def state_counts(self) -> dict[str, int]:
         rows = self._conn.execute("SELECT state, count(*) AS n FROM candidates GROUP BY state ORDER BY state")
         return {r["state"]: r["n"] for r in rows}
+
+    def review_queue(self, page: Page, statuses: tuple[str, ...],
+                     sort: Sort | None = None) -> tuple[list[LifecycleCandidate], bool, int]:
+        """One page of the Review queue: filtered by review status, in priority order (or ``sort``),
+        then paged, in one query; with the filtered total. Only the page's candidates are loaded."""
+        where, params = review_filter(statuses)
+        ids, more = self.page_ids("queue", page, sort, where, params)
+        return [self._store.load_candidate(i) for i in ids], more, self.count("candidates a", where, params)
+
+    def review_counts(self) -> dict[str, int]:
+        """Candidates per review status, over every candidate (one GROUP BY, whatever the page)."""
+        counts = dict.fromkeys(REVIEW_STATUSES, 0)
+        for state, n in self.state_counts().items():
+            counts[review_status(state)] += n
+        return counts
+
+    def holds_ending_by(self, at: datetime) -> int:
+        """Candidates in a hold that ended, or ends, no later than ``at``."""
+        return self.count("candidates a", f"WHERE {_DEADLINE} <= ?", (ts(at),))
+
+    def candidates_for_ad_group(self, ad_group_ref: str) -> list[tuple[str, IdentityMapping]]:
+        """Candidates whose Okta group is mapped **exactly** to this AD group, by its OGWA AD evidence
+        id, with the mapping that links them. Only the latest mapping observation counts, and it is
+        re-read through the digest-verifying loader; a name never takes part."""
+        rows = self._conn.execute(
+            f"SELECT a.id FROM {PAGED['mappings'][0]} WHERE o.ad_group_id = ? ORDER BY a.id", (ad_group_ref,))
+        out = []
+        for row in rows.fetchall():
+            m = self._store.latest(IdentityMapping, row["id"])
+            if m is not None and m.is_exact and m.ad_group_id == ad_group_ref:
+                out += [(cid, m) for cid in self.candidates_for_group(m.okta_group_id)]
+        return out
 
     def collector_runs(self, page: Page, sort: Sort | None = None) -> tuple[list[dict[str, Any]], bool]:
         ids, more = self.page_ids("collectors", page, sort)

@@ -1,8 +1,10 @@
 """The synthetic remediation drill in a real headless browser (OGWA-DEMO-03; opt-in like the others).
 
-Serves an in-memory Null Meridian world on loopback and, as an executor, drills NM-C11's
-approved Okta unassignment from its candidate page: a dry run, the timeout / verification /
-retry / verification scenario, and a verification failure. Dry run and execution must be
+Serves an in-memory Null Meridian world on loopback (or, with ``UI_BROWSER_TARGET``, the public demo in
+whatever dataset it serves) and, as an executor, drills the walkthrough's controlled-remediation candidate
+(NM-C11 locally, GP-C11 on the Genesee Press Worker), its approved Okta unassignment, from its
+candidate page: a dry run, the timeout / verification / retry / verification scenario, and a
+verification failure. Dry run and execution must be
 impossible to confuse in a screenshot; the page must stay accessible, keyboard-operable, free
 of sideways scroll at phone width, and request nothing but its own origin.
 
@@ -22,17 +24,21 @@ SECTION = "Remediation: dry run or synthetic drill"
 TIMEOUT_RETRY = ["EXECUTION REQUESTED — SYNTHETIC DEMO", "OUTCOME UNKNOWN — VERIFYING",
                  "VERIFYING — READING SYNTHETIC PROVIDER STATE", "RETRY PERMITTED — VERIFIED NOT APPLIED",
                  "EXECUTION REQUESTED — SYNTHETIC DEMO", "EXECUTED — SYNTHETIC DEMO", "POST-ACTION VERIFIED"]
+# The walkthrough candidates are judged by the dataset's LIFECYCLE-004 v1.2.0 (GP- on Genesee Press, NM- on Null Meridian).
+POLICY = r"\b[A-Z]+-LIFECYCLE-004 v1\.2\.0"
 WIDTHS = (320, 360, 375, 390, 414, 640, 768, 1280, 1440, 1920)
 
 
 @unittest.skipIf(skip_reason(), skip_reason() or "")
 class RemediationDrillUiTests(BrowserCase):
+    deliberate_writes = ("/remediation-drills",)  # a drill records nothing (test_hosted_demo_ui asserts the audit head)
+
     @classmethod
     def setUpClass(cls):
         reason = skip_reason()
         if reason:
             raise unittest.SkipTest(reason)
-        cls.server = SyntheticServer(refresh=(), dataset="null-meridian").start_and_wait()
+        cls.server = SyntheticServer(refresh=(), dataset="null-meridian", any_dataset=True).start_and_wait()
         try:
             cls.browser = Browser(browser_path())
         except Exception:
@@ -43,10 +49,10 @@ class RemediationDrillUiTests(BrowserCase):
 
     def as_user(self, subject: str) -> None:
         if type(self).signed_in_as != subject:
-            # The public demo has no sign-in: its anonymous visitor (a viewer) may drill NM-C11, as an executor may.
+            # The public demo has no sign-in: its anonymous visitor (a viewer) may drill this candidate, as an executor may.
             self.sign_in("synthetic.viewer.one" if self.on_public_demo() else subject)
             type(self).signed_in_as = subject
-        self.nav(f"#/candidates/{self.server.scenarios['NM-C11']}", prefix="Candidate: ")
+        self.nav(f"#/candidates/{self.part('controlled-remediation')[1]}", prefix="Candidate: ")
 
     def on_public_demo(self) -> bool:
         self.browser.goto(self.server.origin + "/#/")
@@ -116,7 +122,8 @@ class RemediationDrillUiTests(BrowserCase):
             o = document.querySelector('.drill-banner');
             return !!(m.compareDocumentPosition(o) & Node.DOCUMENT_POSITION_FOLLOWING); })()"""),
             "the mode banner comes before the outcome")
-        for fact in ("Authorized by", "NM-LIFECYCLE-004 v1.2.0, recorded version 2", "NEEDS_REVIEW → APPROVED",
+        self.assertRegex(text, POLICY + ", recorded version 2")
+        for fact in ("Authorized by", "NEEDS_REVIEW → APPROVED",
                      "Judged by the version in force", "Confirmed: the target is in its planned after-state",
                      "POST-ACTION VERIFIED", "No: a drill records nothing"):
             self.assertIn(fact, text)
@@ -125,7 +132,7 @@ class RemediationDrillUiTests(BrowserCase):
         self.assert_accessible("timeout drill")
         self.browser.screenshot("nm-07-drill-timeout-verify-retry")
         # The drill recorded nothing: the candidate is still approved, with no dry-run job.
-        self.nav(f"#/candidates/{self.server.scenarios['NM-C11']}", prefix="Candidate: ")
+        self.nav(f"#/candidates/{self.part('controlled-remediation')[1]}", prefix="Candidate: ")
         self.assertIn("No dry run has been planned.", self.browser.text())
 
     def test_c_a_verification_failure_is_never_shown_as_success(self):
@@ -151,14 +158,14 @@ class RemediationDrillUiTests(BrowserCase):
         overflow = "document.documentElement.scrollWidth - document.documentElement.clientWidth"
         try:
             b.viewport(320, 640, mobile=True)
-            self.nav(f"#/candidates/{self.server.scenarios['NM-C11']}", prefix="Candidate: ")
+            self.nav(f"#/candidates/{self.part('controlled-remediation')[1]}", prefix="Candidate: ")
             self.run_drill("TIMEOUT_NOT_APPLIED")
             b.screenshot("nm-09-drill-320")
             for width in WIDTHS:  # the drill's steps carry its 36-character operation id
-                with self.subTest(page="NM-C11 after a drill", width=width):
+                with self.subTest(page="the drill candidate after a drill", width=width):
                     b.viewport(width, 800, mobile=width < 1024)
                     self.assertLessEqual(b.evaluate(overflow), 0, f"the drill result scrolls sideways at {width}px")
-            for page in ("#/scenarios", f"#/candidates/{self.server.scenarios['NM-C10']}"):
+            for page in ("#/scenarios", f"#/candidates/{self.part('data-quality')[1]}"):
                 for width in WIDTHS:
                     with self.subTest(page=page, width=width):
                         b.viewport(width, 800, mobile=width < 1024)
@@ -169,7 +176,7 @@ class RemediationDrillUiTests(BrowserCase):
 
     def test_f_a_viewer_sees_the_drill_but_cannot_run_it(self):
         if self.on_public_demo():
-            self.skipTest("the public demo's visitor may drill NM-C11, its only approved candidate; "
+            self.skipTest("the public demo's visitor may drill the walkthrough's drill candidate, its only approved one; "
                           "test_hosted_demo_ui and test_cloudflare_hosted prove it reaches no other")
         self.as_user("synthetic.viewer.one")
         text = self.section_text()
@@ -188,8 +195,8 @@ class RemediationDrillUiTests(BrowserCase):
                        "Failure injection is deterministic", "Part 1 — Data quality", "Part 2 — Controlled remediation"):
             self.assertIn(phrase, text)
         links = b.evaluate("[...document.querySelectorAll('.walkthrough-part a')].map(a => [a.textContent, a.getAttribute('href')])")
-        self.assertEqual(links, [["Open NM-C10", f"#/candidates/{self.server.scenarios['NM-C10']}"],
-                                 ["Open NM-C11", f"#/candidates/{self.server.scenarios['NM-C11']}"]])
+        self.assertEqual(links, [[f"Open {key}", f"#/candidates/{cid}"]
+                                 for key, cid in (self.part("data-quality"), self.part("controlled-remediation"))])
         self.assert_accessible("walkthrough")
         b.screenshot("nm-10-walkthrough")
         type(self).signed_in_as = None

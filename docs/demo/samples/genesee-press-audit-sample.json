@@ -1025,7 +1025,12 @@
             "versionSequence": 1
           },
           "reason": "synthetic review of GP-C11-okta complete",
-          "stage": "OKTA_UNASSIGN"
+          "stage": "OKTA_UNASSIGN",
+          "usability": {
+            "problems": [],
+            "status": "USABLE",
+            "usable": true
+          }
         }
       ],
       "source": "GET /api/v1/candidates/cand_797cf35a5dd5a884f18293d1cc5cd11b/approvals"

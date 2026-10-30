@@ -8,6 +8,10 @@ The walk proves both feature sets survive together: the "DEMO ENVIRONMENT · Syn
 indicator shows before and after sign-in and names the dataset, every Null Meridian view
 renders accessibly with no dangerous control, and the indicator never covers the navigation,
 at desktop or phone width.
+
+Null Meridian content throughout, so with ``UI_BROWSER_TARGET`` it runs only against a target serving Null
+Meridian and skips on the Genesee Press Worker; test_genesee_press_ui covers Genesee Press (its indicator,
+views, and the same navigation check).
 """
 
 import json

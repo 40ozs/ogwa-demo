@@ -4,6 +4,7 @@
 role, so a new route without an explicit access rule cannot be added unnoticed.
 """
 
+from datetime import timedelta
 from typing import Any
 
 from app.api.app import Context, Route
@@ -14,7 +15,9 @@ from app.api.http import Response, expired_cookie, session_cookie
 from app.api.identity import AuthenticationFailed
 from app.api.readmodel import (
     LISTABLE,
+    OPEN_REVIEW_STATUSES,
     PAGED,
+    REVIEW_STATUSES,
     ad_group_json,
     application_json,
     approval_json,
@@ -33,7 +36,9 @@ from app.api.readmodel import (
     policy_ref_json,
     policy_version_json,
     review_registry_json,
+    review_status,
 )
+from app.api.review_queue import ApprovalUsability, queue_item
 from app.api.services import (
     LIFECYCLE_WRITE_PERMISSIONS,
     MAX_APPROVAL_HOURS,
@@ -50,7 +55,7 @@ from app.api.remediation import remediation_record_json
 from app.api.sessions import CSRF_HEADER, SESSION_COOKIE
 from app.api.resolve import ID_RE as REF_ID_RE
 from app.api.resolve import MAX_IDS, IdentityResolver
-from app.api.validation import SORT_QUERY, Body, Sort, page_from, path_id, sort_from
+from app.api.validation import SORT_QUERY, Body, Page, Sort, page_from, path_id, sort_from
 from app.core.build import BUILD_ALLOWS_PRODUCTION_MUTATION
 from app.core.modes import EXTERNAL_MUTATION_SUMMARY, ExecutionMode
 from app.domain.approval import ApprovalDecision, ApprovalStage
@@ -226,7 +231,30 @@ def directory_groups(ctx: Context) -> Response:
 
 
 def directory_group(ctx: Context) -> Response:
-    return ok(ctx.api.directory.group(ctx.request.path_params["directoryGroupId"]))
+    body = ctx.api.directory.group(ctx.request.path_params["directoryGroupId"])
+    return ok({**body, "lifecycleCandidates": _group_candidates(ctx, body["group"])})
+
+
+def _group_candidates(ctx: Context, g: dict[str, Any]) -> list[dict[str, Any]]:
+    """The lifecycle candidates of a directory group, by stable id only (OGWA-REVIEW-QUEUE-API-01).
+    An AD group's come through an exact identity mapping to its OGWA AD evidence id; the snapshot's
+    own Okta link is not a mapping, and a name never takes part. An Okta group is a candidate's own
+    subject, so its candidates are its own."""
+    read = ctx.api.read
+    if g["source"] == "AD":
+        pairs = read.candidates_for_ad_group(g["adEvidenceId"]) if g.get("adEvidenceId") else []
+        links = [(cid, "EXACT_IDENTITY_MAPPING", m) for cid, m in pairs]
+    else:
+        links = [(cid, "OKTA_GROUP", None) for cid in
+                 (read.candidates_for_group(g["oktaEvidenceId"]) if g.get("oktaEvidenceId") else [])]
+    out = []
+    for cid, relationship, m in links:
+        c = ctx.api.store.load_candidate(cid)
+        out.append({"candidateId": c.id, "oktaGroupId": c.okta_group_id, "state": c.state.value,
+                    "reviewStatus": review_status(c.state.value), "holdUntil": iso(c.hold_until),
+                    "quarantineHoldUntil": iso(c.quarantine_hold_until), "relationship": relationship,
+                    "mappingId": m.id if m else None, "mappingConfidence": m.confidence.value if m else None})
+    return out
 
 
 def governance_findings(ctx: Context) -> Response:
@@ -290,6 +318,36 @@ def candidates(ctx: Context) -> Response:
     where, params = ("WHERE state = ?", (state.value,)) if state is not None else ("", ())
     return ok(page.envelope([candidate_json(c) for c in items], more=more,
                             total=ctx.api.read.count("candidates", where, params)))
+
+
+# The Review queue (OGWA-REVIEW-QUEUE-API-01). A row costs one classification, so its pages are
+# smaller than other listings': the hosted Worker has a CPU limit per request.
+QUEUE_FILTERS = {"open": OPEN_REVIEW_STATUSES, **{s: (s,) for s in REVIEW_STATUSES}, "all": REVIEW_STATUSES}
+QUEUE_PAGE_SIZE, QUEUE_MAX_PAGE_SIZE = 25, 50
+HOLDS_ENDING_WITHIN = timedelta(days=7)
+
+
+def review_queue(ctx: Context) -> Response:
+    q = ctx.request.query
+    status = q.get("status", "open")
+    if status not in QUEUE_FILTERS:
+        raise ApiError(400, "MALFORMED_REQUEST", f"status must be one of: {', '.join(QUEUE_FILTERS)}.")
+    page = page_from(q)
+    if "limit" not in q:
+        page = Page(QUEUE_PAGE_SIZE, page.offset)
+    elif page.limit > QUEUE_MAX_PAGE_SIZE:
+        raise ApiError(400, "MALFORMED_REQUEST", f"limit must be 1-{QUEUE_MAX_PAGE_SIZE} for the review queue.")
+    now = ctx.api.clock()
+    read = ctx.api.read
+    rows, more, total = read.review_queue(page, QUEUE_FILTERS[status], _sort(ctx, "queue"))
+    counts = read.review_counts()
+    return ok({**page.envelope([queue_item(ctx.api, c) for c in rows], more=more, total=total),
+               "status": status,
+               "counts": {**counts, "open": sum(counts[k] for k in OPEN_REVIEW_STATUSES), "all": sum(counts.values())},
+               "holdsEndingWithin7Days": read.holds_ending_by(now + HOLDS_ENDING_WITHIN),
+               "generatedAt": iso(now),
+               "note": "A review status is a reading of the lifecycle state, and the evidence verdict is the "
+                       "classifier's current reading of the evidence. Neither authorizes anything."})
 
 
 def _allowed_actions(ctx: Context, candidate: LifecycleCandidate) -> dict[str, Any]:
@@ -375,8 +433,10 @@ def candidate_approvals(ctx: Context) -> Response:
     record = _candidate(ctx)
     now = ctx.api.clock()
     refs = ctx.api.store.recorded_policies(record.id)
+    usability = ApprovalUsability(ctx.api, now)
     return ok({"candidateId": record.id, "items": [
-        {**approval_json(a, now), "policy": _judged_by(ctx, refs, f"approval:{a.id}")}
+        {**approval_json(a, now), "policy": _judged_by(ctx, refs, f"approval:{a.id}"),
+         "usability": usability.of(a, refs.get(f"approval:{a.id}"))}
         for a in ctx.api.store.approvals_for(record.id)]})
 
 
@@ -402,7 +462,9 @@ def approvals(ctx: Context) -> Response:
     page, now = page_from(ctx.request.query), ctx.api.clock()
     items, more = ctx.api.read.approvals(page, _sort(ctx, "approvals"))
     refs = ctx.api.store.recorded_policies(approval_ids=tuple(a.id for a in items))
-    return ok(page.envelope([{**approval_json(a, now), "policy": _judged_by(ctx, refs, f"approval:{a.id}")}
+    usability = ApprovalUsability(ctx.api, now)
+    return ok(page.envelope([{**approval_json(a, now), "policy": _judged_by(ctx, refs, f"approval:{a.id}"),
+                              "usability": usability.of(a, refs.get(f"approval:{a.id}"))}
                              for a in items], more=more, total=ctx.api.read.count("approvals")))
 
 
@@ -718,6 +780,7 @@ ROUTES: tuple[Route, ...] = (
     _r("GET", "/demo-scenarios", demo_scenarios, "permission", READ),
     _r("GET", "/identities", identities, "permission", READ, {"ids"}),
     _r("GET", "/candidates", candidates, "permission", READ, LISTING | {"state"}),
+    _r("GET", "/review-queue", review_queue, "permission", READ, LISTING | {"status"}),
     _r("GET", "/candidates/{candidateId}", candidate, "permission", READ),
     _r("GET", "/candidates/{candidateId}/evidence", candidate_evidence, "permission", READ),
     _r("GET", "/candidates/{candidateId}/dependencies", candidate_dependencies, "permission", READ),

@@ -4,9 +4,12 @@ The docked side navigation (grouped into Inventory, Review, and Operations since
 OGWA-UI-REVIEW-01), the tabbed pages (Groups, Applications, Findings), shared table
 sorting and paging, identity links (common names first, AD groups opening their canonical page,
 Back returning to the investigation), "Deactivated" wording, and the dashboard. With
-UI_BROWSER_TARGET it runs against an already-serving demo, such as the deployed Worker.
+UI_BROWSER_TARGET it runs against an already-serving demo, such as the deployed Worker, in
+whatever dataset it serves: row counts are the API's own ``page.total``, never a fixture's
+(docs/deployment/hosted-demo-fixtures.md).
 """
 
+import base64
 import json
 import re
 import unittest
@@ -29,7 +32,7 @@ class InformationArchitectureTests(BrowserCase):
         reason = skip_reason()
         if reason:
             raise unittest.SkipTest(reason)
-        cls.server = SyntheticServer(refresh=(), dataset="null-meridian").start_and_wait()
+        cls.server = SyntheticServer(refresh=(), dataset="null-meridian", any_dataset=True).start_and_wait()
         try:
             cls.browser = Browser(browser_path())
         except Exception:
@@ -44,6 +47,10 @@ class InformationArchitectureTests(BrowserCase):
             type(self).signed_in = True
 
     # --- helpers ----------------------------------------------------------------------------
+
+    def api(self, path: str):
+        """What the server itself answers (GET), to check the page against."""
+        return self.browser.evaluate(f"fetch('/api/v1{path}', {{credentials: 'same-origin'}}).then(r => r.json())")
 
     def click(self, selector: str, title: str | None = None) -> None:
         """Click an element that navigates, and wait for the new render."""
@@ -190,9 +197,11 @@ class InformationArchitectureTests(BrowserCase):
         self.assertEqual(b.evaluate("document.activeElement.className"), "sort", "focus stays on the header")
         page1 = self.rows(0)
         self.assertEqual(page1, sorted(page1, key=str.casefold))
-        self.assertEqual(b.text(".pager-status"), "Rows 1–50 of 2809")
+        people = self.api("/people?limit=1")["page"]["total"]
+        self.assertGreater(people, 100, "at least two full pages")
+        self.assertEqual(b.text(".pager-status"), f"Rows 1–50 of {people}")
         self.click("nav.pager a:last-child")  # Next page
-        self.assertEqual(b.text(".pager-status"), "Rows 51–100 of 2809")
+        self.assertEqual(b.text(".pager-status"), f"Rows 51–100 of {people}")
         page2 = self.rows(0)
         self.assertLessEqual(page1[-1].casefold(), page2[0].casefold(), "sorted across pages, not within one")
         self.click("nav.pager a:first-child")  # Previous page
@@ -201,9 +210,12 @@ class InformationArchitectureTests(BrowserCase):
         self.assertEqual(b.evaluate("document.querySelector('th[aria-sort]').getAttribute('aria-sort')"), "descending")
         names = self.rows(0)
         self.assertEqual(names, sorted(names, key=str.casefold, reverse=True))
-        # The final, partial page of a listing, and an empty one.
-        self.nav("#/inventory/groups?tab=directory&cursor=bzo0MDA")
-        self.assertEqual(b.text(".pager-status"), "Rows 401–401 of 401")
+        # The final page of a listing, and an empty one. A cursor is the listing's offset ("o:<n>", base64url).
+        groups = self.api("/directory-groups?limit=1")["page"]["total"]
+        self.assertTrue(50 < groups < 5000, groups)
+        last = (groups - 1) // 50 * 50
+        self.nav(f"#/inventory/groups?tab=directory&cursor={base64.urlsafe_b64encode(f'o:{last}'.encode()).decode().rstrip('=')}")
+        self.assertEqual(b.text(".pager-status"), f"Rows {last + 1}–{groups} of {groups}")
         self.assertEqual(b.evaluate("[...document.querySelectorAll('nav.pager a')].map(a => a.textContent)"), ["Previous page"])
         self.nav("#/people?q=nobody-is-called-this")
         self.assertIn("Nobody matches these filters.", b.text())
@@ -213,7 +225,9 @@ class InformationArchitectureTests(BrowserCase):
     def test_e_local_sorting_and_paging(self):
         b = self.browser
         self.nav("#/inventory/applications?tab=directory")
-        self.assertEqual(b.text("#tab-panel .pager-status"), "Rows 1–25 of 81")
+        apps = len(self.api("/directory")["applications"])
+        self.assertGreater(apps, 25, "more than one page")
+        self.assertEqual(b.text("#tab-panel .pager-status"), f"Rows 1–25 of {apps}")
         sort = "[...document.querySelectorAll('#tab-panel th button.sort')].find(x => x.textContent.startsWith('People with access'))"
         b.evaluate(f"{sort}.click()")
         b.evaluate(f"{sort}.click()")
@@ -221,9 +235,10 @@ class InformationArchitectureTests(BrowserCase):
         counts = [int(x) for x in self.rows(7, "#tab-panel")]
         self.assertEqual(counts, sorted(counts, reverse=True))
         nxt = "[...document.querySelectorAll('#tab-panel nav.pager button')].find(x => x.textContent === 'Next page')"
-        for _ in range(3):
+        last = (apps - 1) // 25 * 25
+        for _ in range(last // 25):
             b.evaluate(f"{nxt}.click()")
-        self.assertEqual(b.text("#tab-panel .pager-status"), "Rows 76–81 of 81")
+        self.assertEqual(b.text("#tab-panel .pager-status"), f"Rows {last + 1}–{apps} of {apps}")
         self.assertEqual(b.evaluate(f"{nxt}.getAttribute('aria-disabled')"), "true")
         last = [int(x) for x in self.rows(7, "#tab-panel")]
         self.assertLessEqual(last[0], counts[-1], "local sorting also holds across pages")
@@ -317,7 +332,7 @@ class InformationArchitectureTests(BrowserCase):
         figures = b.evaluate("[...document.querySelectorAll('.kpi')].map(k => k.querySelector('.kpi-label').textContent)")
         self.assertEqual(figures, ["Active employees", "Deactivated employees", "Departments", "AD groups", "Okta groups",
                                    "Okta applications", "Open findings", "Actionable or blocking"])
-        self.assertIn("1,800\nActive employees", b.text())
+        self.assertIn(f"{self.api('/directory')['counts']['activeEmployees']:,}\nActive employees", b.text())
         self.assertTrue(b.evaluate("document.querySelector('svg.columns[role=img]').getAttribute('aria-label').includes('Deactivations per year')"))
         self.assertEqual(b.evaluate("document.querySelectorAll('.chart-table table').length"), 1, "the chart has a table")
         bars = b.evaluate("[...document.querySelectorAll('.bars')[0].querySelectorAll('.bar-row')].map(r => r.innerText.replace(/\\n/g, ' '))")

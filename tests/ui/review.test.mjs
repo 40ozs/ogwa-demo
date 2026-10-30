@@ -6,8 +6,8 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import {
-  evidenceReadiness, impactOf, lifecycleStages, nextStep, OPEN_STATUSES, planStatus, queueOrder, REVIEW_STATUS,
-  reviewStatus, ruleLabel, STAGES, stageLabel, statesOf, statusCounts,
+  approvalUsability, evidenceReadiness, impactOf, lifecycleStages, nextStep, OPEN_STATUSES, planStatus, queueOrder,
+  REVIEW_STATUS, reviewStatus, ruleLabel, STAGES, stageLabel, statesOf, statusCounts, verdictReading,
 } from "../../app/ui/static/js/review.js";
 
 const fixturePath = process.env.UI_REVIEW_FIXTURES;
@@ -245,4 +245,65 @@ test("a plan's status never suggests anything was executed", () => {
   }
   assert.equal(planStatus({ status: "SUCCEEDED", dryRun: true, executed: true }).tone, "blocked");
   assert.equal(planStatus({ status: "SUCCEEDED", dryRun: false, executed: false }).tone, "blocked");
+});
+
+// --- OGWA-REVIEW-QUEUE-API-01: the server-side queue's verdict and approval usability ------------
+
+test("the server's queue rows are in the UI's queue order, with the UI's review status", withFixtures, () => {
+  const rows = fx.queue.items;
+  assert.deepEqual(rows.map((c) => c.id), [...rows].sort(queueOrder(fx.queue.generatedAt)).map((c) => c.id));
+  for (const c of rows) assert.equal(c.reviewStatus, reviewStatus(c.state).key, c.state);
+  assert.deepEqual(Object.fromEntries(Object.keys(REVIEW_STATUS).map((k) => [k, fx.queue.counts[k]])),
+    statusCounts(fx.dashboard.candidatesByState));
+});
+
+test("every row's evidence verdict is worded beside the recorded state, and a disagreement is shown", withFixtures, () => {
+  const readings = fx.queue.items.map((c) => [c, verdictReading(c.evidenceVerdict, c.state)]);
+  for (const [c, v] of readings) {
+    assert.ok(v.label && v.agreement.text, c.id);
+    assert.doesNotMatch(`${v.label} ${v.agreement.text}`, /\bready\b|\bsafe to\b/i);
+  }
+  const differs = readings.filter(([, v]) => v.agreement.key === "DIFFERS");
+  assert.ok(differs.length >= 2, "the classic world has recorded states the evidence no longer supports");
+  for (const [c, v] of differs) {
+    assert.equal(v.agreement.tone, "caution");
+    assert.match(v.agreement.text, /^Differs from the recorded state/);
+    if (c.evidenceVerdict.suggestedState) assert.ok(v.agreement.text.includes("points to"), c.id);
+  }
+  const terminal = readings.find(([c]) => c.state === "PROTECTED")[1];
+  assert.equal(terminal.agreement.key, "NOT_APPLICABLE");
+  assert.ok(readings.some(([, v]) => v.blockers.length && v.blockers.every((b) => typeof b === "string" && b.length)));
+});
+
+test("a missing or unrecognized verdict is never read as agreement", () => {
+  assert.equal(verdictReading(null, "NEEDS_REVIEW").agreement.key, "UNAVAILABLE");
+  assert.equal(verdictReading(null, "NEEDS_REVIEW").tone, "blocked");
+  const odd = verdictReading({ decision: { code: "SOMETHING_NEW", label: "?" }, agreement: "MAYBE", blockingReasons: [] }, "HOLD");
+  assert.equal(odd.agreement.key, "UNKNOWN");
+  assert.equal(odd.agreement.tone, "blocked");
+  assert.equal(odd.tone, "blocked", "an unknown decision is a non-action");
+  const differs = verdictReading({ decision: { code: "INSUFFICIENT_EVIDENCE", label: "No action" }, agreement: "DIFFERS",
+    suggestedState: null, blockingReasons: ["EVIDENCE_STALE", "SOMETHING_NEW"] }, "MAPPING_AMBIGUOUS");
+  assert.match(differs.agreement.text, /no longer suggests/);
+  assert.deepEqual(differs.blockers, ["Evidence stale — revalidation required.", "something new — blocked."]);
+});
+
+test("only the server's USABLE reads as a valid approval, and valid is never ready", withFixtures, () => {
+  const words = fx.approvals.map((a) => [a, approvalUsability(a.usability)]);
+  for (const [a, u] of words) {
+    assert.equal(u.usable, a.usability.status === "USABLE" && a.usability.usable === true, a.id);
+    assert.doesNotMatch(u.label, /\bready\b|usable now/i);
+    if (u.usable) assert.match(u.note, /own checks/);
+    else assert.equal(u.note, null);
+  }
+  assert.ok(words.some(([, u]) => u.usable) && words.some(([, u]) => u.label === "Expired"));
+});
+
+test("a missing, contradictory, or unknown usability answer is not usable", () => {
+  assert.equal(approvalUsability(undefined).usable, false);
+  assert.equal(approvalUsability({ status: "USABLE", usable: false, problems: ["x"] }).usable, false);
+  assert.equal(approvalUsability({ status: "SOMETHING_NEW", usable: true, problems: [] }).usable, false);
+  assert.equal(approvalUsability({ status: "SOMETHING_NEW", usable: false, problems: [] }).label, "Not usable");
+  assert.equal(approvalUsability({ status: "EPOCH_SUPERSEDED", usable: false, problems: ["e"] }).label,
+    "Superseded: the candidate re-entered review");
 });

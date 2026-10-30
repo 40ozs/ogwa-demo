@@ -1,6 +1,6 @@
 # Operator UI
 
-Status: P09; restructured as an operator review workflow in OGWA-UI-REVIEW-01. The UI is a restrained review console over the [operator API](api.md). It runs
+Status: P09; restructured as an operator review workflow in OGWA-UI-REVIEW-01; server-side Review queue, evidence verdicts, approval usability, and the AD group → candidate link in OGWA-REVIEW-QUEUE-API-01. The UI is a restrained review console over the [operator API](api.md). It runs
 only where the API runs: `LOCAL_SYNTHETIC`, a SYNTHETIC store, and synthetic sign-in. It has
 no delete, unassign, or execute action.
 
@@ -49,19 +49,19 @@ model: Dashboard and Portfolio scenarios, then **Inventory**, **Review**, and **
 
 | Group | View | Route | Source |
 | --- | --- | --- | --- |
-| — | Dashboard | `#/` | `GET /dashboard`, `GET /directory`, `GET /governance-findings` (counts), `GET /candidates` (the queue's head) |
+| — | Dashboard | `#/` | `GET /dashboard`, `GET /directory`, `GET /governance-findings` (counts), `GET /review-queue?limit=5` (the queue's head, its counts, and holds ending within 7 days) |
 | — | Portfolio scenarios | `#/scenarios` | `GET /demo-scenarios`; opens with the dataset's five-minute reviewer walkthrough (OGWA-DEMO-04), linked from the dashboard when the synthetic directory is present |
 | Inventory | People | `#/people[?department=&status=&q=]`, `#/people/{id}` | `GET /people`; the detail view shows history and every access route |
 | Inventory | Company Directory (profile and departments; reached from People and the dashboard) | `#/directory` | `GET /directory` |
 | Inventory | Groups | `#/inventory/groups?tab=directory\|okta` | Directory groups: `GET /directory-groups[?era=&health=&source=&q=]` (AD and Okta groups in the snapshot); Okta groups: `GET /groups` (+ `GET /identities` for the exactly mapped AD group). The sources stay separate tabs |
-| Inventory | AD group (canonical group page), Okta group | `#/directory-groups/{id}`, `#/groups/{id}` | `GET /directory-groups/{id}`; `GET /groups/{id}`, and each of its candidates (`GET /candidates/{id}`) with its review status and next step |
+| Inventory | AD group (canonical group page), Okta group | `#/directory-groups/{id}`, `#/groups/{id}` | `GET /directory-groups/{id}` (with `lifecycleCandidates`: an AD group's through an exact identity mapping only); `GET /groups/{id}`, and each of its candidates (`GET /candidates/{id}`) with its review status and next step |
 | Inventory | Applications | `#/inventory/applications?tab=directory\|okta`, `#/applications/{id}` | Directory applications: `GET /directory`; Okta applications: `GET /applications` |
 | Inventory | Identity mappings | `#/mappings[/{groupId}]` | `GET /mappings` (read-only; review history shown, not editable) |
-| Review | Review queue | `#/review[?status=needs-review\|blocked\|waiting\|in-progress\|retired\|closed\|all]` | `GET /dashboard` (per-state counts and the server clock), `GET /candidates` paged through, 200 at a time, up to 1,000 |
+| Review | Review queue | `#/review[?status=needs-review\|blocked\|waiting\|in-progress\|retired\|closed\|all][&sort=&order=&cursor=]` | `GET /review-queue` (OGWA-REVIEW-QUEUE-API-01): 25 rows a page, filtered, ordered, counted, and paged on the server, with the server clock |
 | Review | Every candidate by lifecycle state (linked from the queue) | `#/candidates[?state=]` | `GET /candidates` |
 | Review | Candidate detail | `#/candidates/{id}` | candidate, evidence, dependencies, decisions, approvals, jobs, group; audit events with `READ_AUDIT` |
 | Review | Findings: Impact & Blockers, Governance | `#/findings?tab=dependency\|governance[&severity=&code=]` | `GET /dependency-findings`, `GET /governance-findings` |
-| Review | Decisions | `#/decisions` | `GET /approvals`, `GET /dashboard` (server clock, policy in force) |
+| Review | Decisions | `#/decisions` | `GET /approvals` (with each approval's `usability`), `GET /dashboard` (server clock, policy in force) |
 | Operations | Plans & simulations | `#/jobs[/{id}]` | `GET /execution-jobs`, `GET /execution-jobs/{id}` |
 | Operations | Collection health | `#/collectors` | `GET /collector-runs` |
 | Operations | Audit | `#/audit[?subjectId=]` | `GET /audit-events` (`READ_AUDIT`) |
@@ -84,6 +84,13 @@ Every earlier address still arrives (`present.movedRoute`). The address is repla
 Unchanged: `#/`, `#/people[/{id}]`, `#/directory` (departments), `#/directory-groups/{id}`,
 `#/groups/{id}`, `#/applications/{id}`, `#/mappings[/{id}]`, `#/candidates[?state=]`,
 `#/candidates/{id}`, `#/findings`, `#/scenarios`, `#/jobs[/{id}]`, `#/collectors`, `#/audit`.
+
+The AD group page lists its **lifecycle candidates** (OGWA-REVIEW-QUEUE-API-01) with review status,
+lifecycle state, next step, and "Linked by: Exact identity mapping" (a link to the mapping). The
+server links them only through an exact identity mapping to the group's stable id; the page keeps
+the snapshot's Okta group link as identity context and says plainly when no candidate is linked
+("No lifecycle candidate is linked to this AD group by an exact identity mapping."). An Okta
+directory group lists the candidates whose subject it is ("Its own Okta group").
 
 The directory views are read-only and show the snapshot only when the store holds one (the
 Null Meridian dataset); otherwise they say so. `tests/browser/test_null_meridian_views.py`
@@ -124,16 +131,29 @@ or an observed external change, so nothing is ever presented as ready to proceed
 
 `#/review` replaces the "Approvals and holds" page as the place to find waiting work. It lists
 every candidate in priority order: needs review, then blocked, then waiting, then in progress;
-within a status, the nearest deadline and then the longest wait first (`review.queueOrder`).
-Columns: candidate, review status (with the lifecycle state), stage, what it needs (the required
-decision or the blocker), the next step and who takes it, how long it has waited (since its last
-change), and its deadline (a hold's end). Filters are links (`?status=`) with their counts, from
-`GET /dashboard`'s per-state counts, so they count every candidate even if the list stops short;
-a filter keeps focus after the page re-renders. The queue reads at most 1,000 candidates and says
-so above the table when there are more.
+within a status, the nearest deadline and then the longest wait first. Since
+OGWA-REVIEW-QUEUE-API-01 the **server** filters, orders, counts, and pages it
+(`GET /review-queue`, [api.md](api.md#review-queue-ogwa-review-queue-api-01)): the browser shows
+one page of 25 rows in the server's order, with the usual pager ("Rows 26–50 of 1,100") and
+server-sorted Candidate, Waiting, and Deadline columns. The old 1,000-candidate ceiling is gone.
+The server's order is `review.queueOrder`'s and its status table is `review.reviewStatus`'s
+(tests run both under Node over the served rows). Columns: candidate, review status (with the
+lifecycle state), **Evidence now**, stage, what it needs (the required decision or the blocker),
+the next step and who takes it, how long it has waited (since its last change), and its deadline
+(a hold's end). Filters are links (`?status=`) with the server's counts over every candidate; a
+filter keeps focus after the page re-renders.
 
-The queue words what the lifecycle records; the classifier's current verdict on the evidence is
-on each candidate's page (fetching it for every row would cost one detail request per candidate).
+**Evidence now** (`review.verdictReading`) is the classifier's current reading of the evidence,
+beside the recorded state, never instead of it: the evidence assessment's decision in the
+server's words ("No action: identity not established"), then whether it matches the recorded
+state ("Matches the recorded state.", "Differs from the recorded state: the evidence now points
+to “Blocked: identity not proven”.", or for a terminal candidate "Terminal: nothing further is
+decided."), then the first blocking reason as the candidate page words it. A disagreement is
+shown, never resolved: the lifecycle state stands until the lifecycle records a transition, so a
+candidate recorded as needing review whose evidence has gone stale reads "Needs review ·
+Lifecycle: Needs review" and, beside it, "Differs … points to “Blocked: evidence stale”". A
+missing or unknown verdict reads "Not assessed" or "Unrecognized comparison" (blocked tone), never
+as agreement. The full forensic reading stays on the candidate page.
 
 ### Candidate detail: the operator's reading first
 
@@ -178,10 +198,16 @@ unchanged and still filter (`?code=`).
 ### Decisions and holds
 
 **Decisions** (`#/decisions`) lists the approvals and rejections people recorded: candidate,
-stage, decision, by, decided, expiry (the server's `expired` flag, worded "Expired 3 days ago"
+stage, decision, **Approval rules now** (OGWA-REVIEW-QUEUE-API-01: the server's `usability`, worded
+by `review.approvalUsability`: "Valid for its stage" with "The step it backs has its own checks
+…", or why not: "Expired", "Superseded: the candidate re-entered review", "Not usable in the
+candidate's current state", "Not usable: evidence changed since", "Rejection: authorizes
+nothing"; never "ready"), by, decided, expiry (the server's `expired` flag, worded "Expired 3 days ago"
 or "2 days remaining" with the absolute time beneath), the policy that judged it (marked
 Superseded when it is not the one in force), and the reason. Holds are not decisions: they are
-waiting work in the Review queue and on the candidate page.
+waiting work in the Review queue and on the candidate page. The candidate page's approvals table
+has the same column, and the dry-run and drill forms offer only approvals the server judges valid
+(`assess.usableApprovals` no longer re-derives validity from expiry and epoch in the browser).
 
 ### Plans & simulations
 
@@ -195,7 +221,7 @@ where to run one instead of listing them.
 
 "Needs attention" comes first: candidates waiting for a person's decision, blocked, blocked on
 stale or incomplete evidence, collector runs incomplete or unfinished, holds that ended or end
-within 7 days (on the server's clock), candidates approved for a future step, actionable
+within 7 days (counted by the server over every candidate, on its clock), candidates approved for a future step, actionable
 governance findings, blocking dependency findings, and recent deactivations. Each links to the
 filtered Review queue or the list behind it. Then the head of the review queue (five rows),
 **Find** (open an object by its OGWA id or AD objectSid through `GET /identities`; anything else
@@ -396,7 +422,9 @@ lists stack and wide tables scroll inside their own keyboard-focusable region.
 | `tests/test_ui_api.py` → `tests/ui/api.test.mjs` | `api.js`'s one resend: only a public-demo visitor's POST, only after `UNAUTHENTICATED` or `CSRF_FAILED`, only once; never a read, a signed-in principal's write, another refusal, a server error, or an unknown outcome |
 | `tests/test_ui_drill.py` → `tests/ui/drill.test.mjs` | OGWA-DEMO-03: `drill.js` against real drill output (Null Meridian NM-C11 and a classic AD deletion, every scenario): dry run and execution never share wording, only a verified drill whose record agrees gets the best (info) tone, a self-contradicting or unknown result is blocked |
 | `tests/browser/test_remediation_drill_ui.py` | Opt-in: NM-C11's drill by keyboard (dry run, timeout → verify → retry → verify, verification failure, unverifiable outcome), focus on the result (and on Run drill after a failed request), accessibility audit, no sideways scroll from 320 to 1920 px (NM-C11 after a drill, NM-C10, the walkthrough), a viewer cannot run it, nothing leaves the origin |
-| `tests/browser/test_review_workflow.py` | Opt-in, OGWA-UI-REVIEW-01: the Review queue (statuses with their lifecycle states, priority order, a filter by keyboard keeping focus, Back), waiting apart from blocked, nothing ready, the stepper's text equivalent on four candidates, the candidate page's section order, Impact & Blockers against the API (every coverage gap says OGWA could not tell), a rejection recorded through the UI on Decisions with expiry wording, plans that never say executed or succeeded, the dashboard's attention links into the filtered queue, find by id, phone width |
+| `tests/test_review_queue_api.py` | OGWA-REVIEW-QUEUE-API-01, no browser: the server's status table equals `review.js`'s; the queue's SQL filter and order on an unknown state; counts, filters, and every status over the classic world; the served order equals `review.js queueOrder` (run under Node); sorts and paging validation; holds ending soon; reads change nothing (audit head and `total_changes`); authorization (401, 403 for a role without `READ_INVENTORY` whatever the filter); the verdict equals the candidate page's, agreement, disagreement, evidence gone stale, terminal and unavailable, and authorizes nothing; approval usability (usable, expired, new epoch, rejection, stage passed) against what the dry-run planner then does; the directory link only through exact mappings (`KB-Admins`, `WikiV1-Users`, the three `Finance-RW` groups); and a 1,100-candidate tenant: every page, no gap or repeat, final partial page, ties, filters before paging, a middle page |
+| `tests/browser/test_genesee_press_ui.py` | Opt-in, the canonical hosted-gate module (OGWA-UI-REVIEW-02's probe folded in by OGWA-REVIEW-QUEUE-API-01): every page at 1280/768/320 px, the Review queue against the API (statuses, counts, no "Ready", keyboard filters), one candidate per lifecycle state, Decisions, Plans, dashboard, Find, and (tests j–m) server paging and filters of `GET /review-queue`, Evidence now beside every lifecycle state, approval usability on Decisions, and an AD group opening its candidate. Runs locally and against `UI_BROWSER_TARGET` ([../deployment/hosted-demo-fixtures.md](../deployment/hosted-demo-fixtures.md)) |
+| `tests/browser/test_review_workflow.py` | Opt-in, OGWA-UI-REVIEW-01: the Review queue (statuses with their lifecycle states, priority order, a filter by keyboard keeping focus, Back), waiting apart from blocked, nothing ready, the stepper's text equivalent on four candidates, the candidate page's section order, Impact & Blockers against the API (every coverage gap says OGWA could not tell), a rejection recorded through the UI on Decisions with expiry wording, plans that never say executed or succeeded, the dashboard's attention links into the filtered queue, find by id, phone width; since OGWA-REVIEW-QUEUE-API-01 also Evidence now against the API, the server's order, counts, and sorts kept by the browser, the Decisions column, and (a Null Meridian class) the AD group → candidate link, Back, unproven mappings and shared names linking nothing |
 | `tests/browser/test_operator_workflows.py` | Opt-in (`pwsh scripts/browser-check.ps1`): headless Chrome or Edge over DevTools, keyboard sign-in, every view, accessibility audit, phone width, focus visibility, reduced motion, light/dark, approval, refusal, dry run, hold, exclusion, refused revalidation, sign-out, slow and failed pages (heading, content and focus change together; a moved focus stays), opened forms on screen at laptop sizes and zoom, focus after a failed decision, no request leaves the origin, no console error or CSP violation |
 
 The browser harness serves a fresh in-memory synthetic world (never `var/`), uses a throw-away

@@ -194,6 +194,12 @@ const MAPPING_CODES = new Set(["MAPPING_MISSING", "MAPPING_NAME_ONLY", "MAPPING_
 
 const TONE_ORDER = { blocked: 0, caution: 1, info: 2, neutral: 3, terminal: 4 };
 
+/** A blocking reason code's headline, as the candidate page's banners word it. */
+export function reasonHeadline(code) {
+  const known = REASON_TEXT[code];
+  return known ? known.headline : `${String(code).replace(/_/g, " ").toLowerCase()} — blocked.`;
+}
+
 /**
  * The conditions a reviewer must see first, most severe first, each said once.
  * detail = GET /candidates/{id}; evidence = GET /candidates/{id}/evidence.
@@ -226,7 +232,7 @@ export function candidateBanners(detail, evidence) {
       if (!reason.blocks || MAPPING_CODES.has(reason.code)) continue;
       const known = REASON_TEXT[reason.code];
       if (known) add(known.tone, known.headline, known.detail || reason.detail, reason.code);
-      else add("blocked", `${reason.code.replace(/_/g, " ").toLowerCase()} — blocked.`, reason.detail, reason.code);
+      else add("blocked", reasonHeadline(reason.code), reason.detail, reason.code);
     }
     if (classification.adDeletionProhibited) {
       add("caution", "AD deletion is not permitted on this evidence.",
@@ -404,10 +410,13 @@ const DRY_RUN_TARGET = Object.freeze({
   OKTA_UNASSIGN: "OKTA_UNASSIGN_DRY_RUN", AD_QUARANTINE: "QUARANTINE_DRY_RUN", AD_DELETION: "DELETION_DRY_RUN",
 });
 
-/** Approvals that could back a dry run of `stage` right now (the server re-checks everything). */
-export function usableApprovals(approvals, candidate, stage) {
-  return (approvals || []).filter((a) => a.stage === stage && a.decision === "APPROVE" && !a.expired
-    && a.candidateEpoch === candidate.epoch);
+/**
+ * Approvals that could back a dry run of `stage` right now: those the server's `usability` says
+ * are usable (OGWA-REVIEW-QUEUE-API-01: the lifecycle's own approval rules, judged on the server,
+ * never re-derived here). Without that answer, none. The server re-checks everything.
+ */
+export function usableApprovals(approvals, stage) {
+  return (approvals || []).filter((a) => a.stage === stage && Boolean(a.usability && a.usability.usable === true));
 }
 
 /**
@@ -431,12 +440,12 @@ export function actionPlan(detail, approvals, jobs) {
   }
   const stage = STAGE_FOR_STATE[candidate.state];
   if (allowed.planDryRun && stage) {
-    plan.dryRun = { kind: stage, approvals: usableApprovals(approvals, candidate, stage) };
+    plan.dryRun = { kind: stage, approvals: usableApprovals(approvals, stage) };
   }
   const target = stage && DRY_RUN_TARGET[stage];
   const recordable = (allowed.transitions || []).find((t) => t.target === target && t.permitted && t.operatorAction);
   if (recordable) {
-    const usable = new Set(usableApprovals(approvals, candidate, stage).map((a) => a.id));
+    const usable = new Set(usableApprovals(approvals, stage).map((a) => a.id));
     const succeeded = (jobs || []).filter((j) => j.kind === stage && j.status === "SUCCEEDED" && j.dryRun
       && !j.executed && usable.has(j.approvalId));
     if (succeeded.length) plan.recordDryRun = { target, jobs: succeeded };

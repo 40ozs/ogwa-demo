@@ -45,6 +45,10 @@ class ReviewWorkflowTests(BrowserCase):
         b.wait_for("!document.getElementById('view').dataset.old && "
                    "document.getElementById('page-title').textContent !== 'Loading'", message=step)
 
+    def api(self, path: str):
+        """GET from the page's own origin with its session (the read-only API the UI uses)."""
+        return self.browser.evaluate(f"fetch('/api/v1{path}', {{credentials: 'same-origin'}}).then(r => r.json())")
+
     def statuses(self) -> list[str]:
         """The review status of every row in the queue table (the badge before the lifecycle line)."""
         return self.browser.evaluate("[...document.querySelectorAll('main table tbody tr')]"
@@ -268,6 +272,137 @@ class ReviewWorkflowTests(BrowserCase):
                     overflow = b.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
                     self.assertLessEqual(overflow, 0, f"{page} scrolls sideways at 375px")
             b.screenshot("review-03-phone")
+        finally:
+            b.send("Emulation.clearDeviceMetricsOverride")
+            b.viewport(1280, 900)
+
+    # --- OGWA-REVIEW-QUEUE-API-01: the server-side queue, evidence now, approval rules ---------
+
+    def test_j_evidence_now_sits_beside_the_recorded_state(self):
+        b = self.browser
+        self.nav("#/review?status=all", expect_title="Review queue")
+        headers = b.evaluate("[...document.querySelectorAll('main table thead th')].map(t => t.innerText.trim())")
+        self.assertEqual(headers[1:3], ["Review status", "Evidence now"])
+        cells = b.evaluate("[...document.querySelectorAll('main table tbody tr')].map(r => [r.children[1].innerText, r.children[2].innerText])")
+        served = self.api("/review-queue?status=all&limit=50")["items"]
+        self.assertEqual(len(cells), len(served))
+        for (status, evidence), row in zip(cells, served):
+            self.assertIn("Lifecycle:", status, "the recorded state stays beside every reading")
+            words = {"AGREES": "Matches the recorded state.", "DIFFERS": "Differs from the recorded state",
+                     "NOT_APPLICABLE": "Terminal: nothing further is decided.", "UNAVAILABLE": "Not classified"}
+            self.assertIn(words[row["evidenceVerdict"]["agreement"]], evidence, row["state"])
+            self.assertIn(row["evidenceVerdict"]["decision"]["label"], evidence)
+        self.assertTrue(any("Differs from the recorded state" in e for _, e in cells))
+        self.assertNotRegex(b.text("#view"), r"\bReady\b")
+        self.assert_accessible("review queue with evidence now")
+
+    def test_k_the_queue_is_ordered_counted_and_sorted_on_the_server(self):
+        b = self.browser
+        for query in ("status=all", "status=waiting&sort=deadline&order=desc", "status=open&sort=updatedAt&order=asc"):
+            with self.subTest(query=query):
+                self.nav(f"#/review?{query}", expect_title="Review queue")
+                shown = b.evaluate("[...document.querySelectorAll('main table tbody th a')].map(a => a.getAttribute('href').split('/').pop())")
+                served = self.api(f"/review-queue?{query}&limit=25")
+                self.assertEqual(shown, [r["id"] for r in served["items"]], "the browser keeps the server's order")
+                self.assertIn(f"of {served['page']['total']}", b.text("main .pager"))
+                counts = dict(re.findall(r"^(.+) \((\d+)\)$", "\n".join(
+                    b.evaluate("[...document.querySelectorAll('main nav.status-filters a')].map(a => a.textContent)")), re.M))
+                self.assertEqual(int(counts["All"]), served["counts"]["all"])
+        sorted_by = b.evaluate("document.querySelector('main th[aria-sort]').innerText.trim()")
+        self.assertTrue(sorted_by.startswith("Waiting"), sorted_by)
+
+    def test_l_decisions_say_whether_the_approval_rules_pass(self):
+        b = self.browser
+        self.nav("#/decisions", expect_title="Decisions")
+        rows = b.evaluate("[...document.querySelectorAll('main table tbody tr')].map(r => r.innerText)")
+        served = {a["id"]: a for a in self.api("/approvals?limit=50")["items"]}
+        self.assertEqual(len(rows), len(served))
+        valid = [r for r in rows if "Valid for its stage" in r]
+        self.assertEqual(len(valid), sum(a["usability"]["usable"] for a in served.values()))
+        self.assertTrue(all("own checks" in r for r in valid), "valid is never presented as ready")
+        self.assertTrue(any("Expired" in r for r in rows))
+        self.assertNotRegex(b.text("#view"), r"\b(Ready|Usable now)\b")
+
+    def test_z_nothing_left_the_origin_and_nothing_failed(self):
+        self.assert_clean()
+
+
+@unittest.skipIf(skip_reason(), skip_reason() or "")
+class DirectoryGroupCandidateLinkTests(BrowserCase):
+    """OGWA-REVIEW-QUEUE-API-01: an AD group page opens its lifecycle candidate directly, only through
+    an exact identity mapping, on a world with the directory snapshot and groups that share names."""
+
+    @classmethod
+    def setUpClass(cls):
+        reason = skip_reason()
+        if reason:
+            raise unittest.SkipTest(reason)
+        cls.server = SyntheticServer(refresh=(), dataset="null-meridian").start_and_wait()
+        try:
+            cls.browser = Browser(browser_path())
+        except Exception:
+            cls.server.stop()
+            raise
+
+    signed_in = False
+
+    def setUp(self):
+        if not type(self).signed_in:
+            self.sign_in("synthetic.viewer.one")
+            type(self).signed_in = True
+
+    def group(self, name: str, source: str) -> list[dict]:
+        found = self.browser.evaluate(
+            f"fetch('/api/v1/directory-groups?limit=50&q={name}', {{credentials: 'same-origin'}}).then(r => r.json())")
+        return [g for g in found["items"] if g["name"] == name and g["source"] == source]
+
+    def candidates_section(self) -> str:
+        return self.browser.evaluate("[...document.querySelectorAll('main section')].find(s => "
+                                     "s.querySelector('h2') && s.querySelector('h2').textContent === 'Lifecycle candidates').innerText")
+
+    def test_a_an_exactly_mapped_ad_group_opens_its_candidate_and_back_returns(self):
+        b = self.browser
+        (g,) = self.group("CRM-Sales", "AD")
+        self.nav(f"#/directory-groups/{g['id']}", prefix="AD group: ")
+        section = self.candidates_section()
+        self.assertIn("Exact identity mapping", section)
+        self.assertIn("Lifecycle:", section)
+        self.assert_accessible("AD group with its candidate")
+        b.evaluate("document.getElementById('view').dataset.old = '1'")
+        b.evaluate("[...document.querySelectorAll('main section')].find(s => s.querySelector('h2') && "
+                   "s.querySelector('h2').textContent === 'Lifecycle candidates').querySelector('tbody th a').click()")
+        b.wait_for("!document.getElementById('view').dataset.old && document.getElementById('page-title').textContent.startsWith('Candidate: ')",
+                   message="candidate from its AD group")
+        b.evaluate("document.getElementById('view').dataset.old = '1'")
+        b.evaluate("history.back()")
+        b.wait_for("!document.getElementById('view').dataset.old && document.getElementById('page-title').textContent.startsWith('AD group: ')",
+                   message="back to the AD group")
+        self.assertEqual(b.evaluate("location.hash"), f"#/directory-groups/{g['id']}")
+
+    def test_b_unproven_mappings_and_shared_names_link_nothing(self):
+        for name in ("KB-Admins", "WikiV1-Users"):
+            with self.subTest(group=name):
+                (g,) = self.group(name, "AD")
+                self.nav(f"#/directory-groups/{g['id']}", prefix="AD group: ")
+                self.assertIn("No lifecycle candidate is linked to this AD group by an exact identity mapping.",
+                              self.candidates_section())
+                self.assertIn("Okta group evidence and identity mapping", self.browser.text("#view"),
+                              "the snapshot's Okta link stays, as identity context only")
+        for g in self.group("Finance-RW", "AD"):
+            self.nav(f"#/directory-groups/{g['id']}", prefix="AD group: ")
+            self.assertIn("More than one group is named Finance-RW", self.browser.text("#view"))
+            self.assertIn("No lifecycle candidate is linked", self.candidates_section())
+        (okta,) = self.group("Finance-RW", "OKTA")
+        self.nav(f"#/directory-groups/{okta['id']}", prefix="Directory group: ")
+        self.assertIn("Its own Okta group", self.candidates_section())
+
+    def test_c_phone_width_has_no_sideways_scroll(self):
+        b = self.browser
+        (g,) = self.group("CRM-Sales", "AD")
+        b.viewport(375, 812, mobile=True)
+        try:
+            self.nav(f"#/directory-groups/{g['id']}", prefix="AD group: ")
+            self.assertLessEqual(b.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth"), 0)
         finally:
             b.send("Emulation.clearDeviceMetricsOverride")
             b.viewport(1280, 900)

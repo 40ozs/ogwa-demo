@@ -6,10 +6,9 @@
 import { get } from "../api.js";
 import { stateInfo } from "../assess.js";
 import { badge, facts, fmtTime, h, humanize, link, mono, section, svg, table, uid } from "../dom.js";
-import { collectIds, hashFor, refView, span } from "../present.js";
-import { nextStep, OPEN_STATUSES, reviewStatus } from "../review.js";
+import { collectIds, hashFor, refView } from "../present.js";
 import { resolveRefs } from "./common.js";
-import { loadQueue, queueTable } from "./review.js";
+import { queueTable } from "./review.js";
 
 const STATE_ORDER = ["DISCOVERED", "CANDIDATE", "NEEDS_REVIEW", "APPROVED", "OKTA_UNASSIGN_DRY_RUN", "HOLD",
   "REVALIDATION_REQUIRED", "QUARANTINE_APPROVED", "QUARANTINE_DRY_RUN", "QUARANTINE_HOLD", "DELETION_REVALIDATION_REQUIRED",
@@ -33,8 +32,9 @@ export async function dashboard(ctx) {
   const health = dir ? dir.counts.groupHealth || {} : {};
   const findingsLink = (severity) => hashFor("/findings", {}, { tab: "governance", severity });
   const groupsLink = (value) => hashFor("/inventory/groups", {}, { tab: "directory", health: value });
-  const queue = await loadQueue(data);
-  const preview = queue.items.filter((c) => OPEN_STATUSES.includes(reviewStatus(c.state).key)).slice(0, 5);
+  // The head of the open queue, its counts over every candidate, and its holds ending soon (server-side).
+  const queue = await get("/review-queue", { limit: 5 });
+  const preview = queue.items;
   const refs = await resolveRefs(collectIds(preview, "oktaGroupId"));
 
   ctx.view.append(
@@ -46,7 +46,7 @@ export async function dashboard(ctx) {
       "All data is synthetic.") : null,
     attention(data, queue, dir, bySeverity, deps),
     section("Review queue",
-      queueTable("Next in the review queue", preview, refs, queue.now, "Nothing is waiting for review, blocked, or in progress."),
+      queueTable("Next in the review queue", preview, refs, queue.generatedAt || null, "Nothing is waiting for review, blocked, or in progress."),
       h("p", null, link("#/review", "Open the review queue"))),
     findForm(),
     section("Key figures", keyFigures(data, dir, bySeverity, governanceTotal, deps)),
@@ -102,7 +102,6 @@ function keyFigures(data, dir, bySeverity, governanceTotal, deps) {
 
 // --- what deserves attention ------------------------------------------------------------------
 
-const DAY = 86400000;
 const review = (status) => hashFor("/review", {}, { status });
 const cands = (n) => (n === 1 ? "candidate" : "candidates");
 
@@ -110,19 +109,15 @@ function attention(data, queue, dir, bySeverity, deps) {
   const byState = data.candidatesByState || {};
   const collectors = data.collectors || {};
   const recent = dir && dir.deactivations;
-  // Holds that ended or end within 7 days, on the server's clock; none are counted without it.
-  const holds = queue.now ? queue.items.filter((c) => {
-    const d = nextStep(c, queue.now).deadline;
-    const s = d && span(queue.now, d.at);
-    return s && s.ms <= 7 * DAY;
-  }).length : 0;
+  // Holds that ended or end within 7 days on the server's clock, counted by the server over every candidate.
+  const holds = queue.holdsEndingWithin7Days || 0;
   const evidence = (byState.STALE_EVIDENCE || 0) + (byState.EVIDENCE_INCOMPLETE || 0);
   const items = [
     [queue.counts["needs-review"], "caution", "Decision", `${cands(queue.counts["needs-review"])} waiting for a person's decision`, review("needs-review")],
     [queue.counts.blocked, "blocked", "Blocked", `${cands(queue.counts.blocked)} blocked`, review("blocked")],
     [evidence, "blocked", "Evidence", `${cands(evidence)} blocked on stale or incomplete evidence`, review("blocked")],
     [(collectors.incomplete || 0) + (collectors.unfinished || 0), "blocked", "Collection", "collector runs incomplete or unfinished", "#/collectors"],
-    [holds, "caution", "Hold", `holds ended or ending within 7 days${queue.truncated ? ` (among the first ${count(queue.items.length)} candidates)` : ""}`, review("waiting")],
+    [holds, "caution", "Hold", "holds ended or ending within 7 days", review("waiting")],
     [queue.counts["in-progress"], "caution", "Dry run", `${cands(queue.counts["in-progress"])} approved for a future step (dry run only)`, review("in-progress")],
     [bySeverity.ACTIONABLE, "blocked", "Actionable", "actionable governance findings", hashFor("/findings", {}, { tab: "governance", severity: "ACTIONABLE" })],
     [deps.blocking, "blocked", "Blocking", "blocking dependency findings", hashFor("/findings", {}, { tab: "dependency", sort: "findings", order: "desc" })],

@@ -2,8 +2,11 @@
 
 Opt-in, like the other browser tests (UI_BROWSER_TESTS=1). The server is
 ``tests.browser.harness.HostedDemoServer``: the Worker's own application (``HostedDemo``) on
-loopback, or, with ``UI_BROWSER_TARGET``, the Worker itself (``wrangler dev`` or the deployed
-workers.dev URL).
+loopback over the dataset the Worker is configured with (Genesee Press), or, with ``UI_BROWSER_TARGET``,
+the Worker itself (``wrangler dev`` or the deployed workers.dev URL), whatever dataset it serves. The two
+walkthrough candidates are addressed by their walkthrough part ("data-quality": GP-C10 on Genesee Press;
+"controlled-remediation", the public drill: GP-C11), resolved from the target's own API
+(docs/deployment/hosted-demo-fixtures.md).
 
 OGWA-DEMO-HOSTED-ANON-01: the public demo has no sign-in. Each test starts where a reviewer starts,
 with no session (cookies cleared) at the public URL or a link into it, and fails if a sign-in form
@@ -13,13 +16,14 @@ ever appears:
 - B. a direct link to a reviewer page opens that page, not the dashboard;
 - C. nothing offers a synthetic principal to sign in as;
 - D. an approval or a hold a visitor attempts is refused as read-only, and nothing changes;
-- E. NM-C11's drill grant reaches neither NM-C10 nor any other candidate, borrowed or forged;
-- F. the visitor runs NM-C11's whole recovery drill without choosing an identity;
+- E. the public drill's grant reaches neither the data-quality candidate nor any other, borrowed or forged;
+- F. the visitor runs the public drill candidate's whole recovery drill without choosing an identity;
 - G. a lost or expired session, a hard reload, and a new browser are usable at once, on unchanged data;
 - I. a second tab's drill still runs, once, after another tab replaced the shared session;
 - J. a session lost while the first page loads comes back without a reload; a refused cookie ends in an explanation;
 - K. a drill pressed after the session lapsed runs, once, instead of vanishing;
-- the static UI carries the local server's security headers (CSP, framing, referrer).
+- the static UI carries the local server's security headers (CSP, framing, referrer);
+- no other write leaves the page: the refused attempts of D and E and the drills are the only ones (assert_clean).
 """
 
 import json
@@ -31,6 +35,8 @@ from tests.browser.harness import Browser, HostedDemoServer, Tab, browser_path
 from tests.browser.test_operator_workflows import BrowserCase, skip_reason
 
 READ_ONLY = "This public demo is read-only"
+# The walkthrough candidates are judged by the dataset's LIFECYCLE-004 v1.2.0 (GP- on Genesee Press, NM- on Null Meridian).
+POLICY = r"\b[A-Z]+-LIFECYCLE-004 v1\.2\.0"
 FIXTURES = ("Synthetic subject", "synthetic.viewer.one", "synthetic.securityiam.one", "synthetic.automation.one",
             "synthetic.executor.one", "synthetic.admin.one", "config/synthetic-idp.json")
 # Runs before the page's own scripts: records whether a sign-in form was ever in the document.
@@ -53,6 +59,7 @@ POST = """(async (requests) => {
 class HostedDemoUiTests(BrowserCase):
     server: HostedDemoServer
     canonical: tuple | None = None
+    deliberate_writes = ("/approvals", "/transitions", "/remediation-drills")  # refused (D, E) or a drill (records nothing)
 
     @classmethod
     def setUpClass(cls):
@@ -91,20 +98,19 @@ class HostedDemoUiTests(BrowserCase):
         self.assertNotEqual(b.title(), "Sign in")
         self.assertEqual(b.evaluate("document.cookie"), "", "the session cookie is HttpOnly")
 
-    def scenario(self, key: str) -> str:
-        return self.browser.evaluate(f"""fetch('/api/v1/demo-scenarios', {{credentials: 'same-origin'}})
-            .then(r => r.json()).then(j => j.items.find(s => s.candidateKey === {json.dumps(key)}).candidateId)""")
+    def scenario(self, part: str) -> str:
+        """The candidate id of a walkthrough part, from the server's own GET /demo-scenarios."""
+        return self.part(part)[1]
 
     def state(self, b: Browser | None = None) -> tuple:
-        """What any visitor can see of the canonical data: the dashboard's audit count and head, and NM-C10's
-        and NM-C11's state, decisions, approvals, and jobs."""
+        """What any visitor can see of the canonical data: the dashboard's audit count and head, and both walkthrough
+        candidates' state, decisions, approvals, and jobs."""
         return tuple(json.dumps(x, sort_keys=True) for x in (b or self.browser).evaluate("""(async () => {
             const get = async (p) => (await fetch('/api/v1' + p, {credentials: 'same-origin'})).json();
-            const scenarios = (await get('/demo-scenarios')).items;
+            const parts = (await get('/demo-scenarios')).walkthrough.parts;
             const store = (await get('/dashboard')).store;
             const out = [[store.auditEvents, store.auditHead]];
-            for (const key of ['NM-C10', 'NM-C11']) {
-              const id = scenarios.find(s => s.candidateKey === key).candidateId;
+            for (const id of parts.map(p => p.candidateId)) {
               out.push([(await get(`/candidates/${id}`)).candidate.state, (await get(`/candidates/${id}/decisions`)).items,
                         (await get(`/candidates/${id}/approvals`)).items, (await get(`/candidates/${id}/execution-jobs`)).items]);
             }
@@ -126,7 +132,7 @@ class HostedDemoUiTests(BrowserCase):
                 and e["params"]["response"]["url"].endswith("/remediation-drills")}
 
     def assert_one_timeout_drill(self, text: str) -> None:
-        """The NM-C11 timeout drill ran once, in full: one operation id, verified before its one retry."""
+        """The public drill candidate's timeout drill ran once, in full: one operation id, verified before its one retry."""
         self.assertEqual(self.step_labels(), drill_ui.TIMEOUT_RETRY)
         self.assertIn("Executed against the synthetic provider fixture only (2 submissions, 1 change applied", text)
         operations = self.browser.evaluate("[...document.querySelector('.drill-result').innerText"
@@ -161,7 +167,9 @@ class HostedDemoUiTests(BrowserCase):
         self.assertIn("The public demo does not show the audit trail.", b.text())
         self.nav("#/directory", expect_title="Company Directory")
         b.evaluate("document.querySelector('details.profile').open = true")
-        self.assertIn("Active employees\n1800", b.text())
+        active = b.evaluate("fetch('/api/v1/directory', {credentials: 'same-origin'}).then(r => r.json())"
+                            ".then(j => j.counts.activeEmployees)")
+        self.assertIn(f"Active employees\n{active}", b.text(), "the profile shows the API's own count")
         self.assert_never_signed_in()
 
     # --- B. direct links ------------------------------------------------------------------------------------------
@@ -169,8 +177,8 @@ class HostedDemoUiTests(BrowserCase):
     def test_b_a_direct_link_opens_its_page_after_the_anonymous_session_starts(self):
         b = self.browser
         self.visit("#/")
-        links = {f"#/candidates/{self.scenario('NM-C10')}": "Candidate: ", f"#/candidates/{self.scenario('NM-C11')}":
-                 "Candidate: ", "#/scenarios": "Portfolio scenarios", "#/directory": "Company Directory",
+        links = {f"#/candidates/{self.scenario('data-quality')}": "Candidate: ",
+                 f"#/candidates/{self.scenario('controlled-remediation')}": "Candidate: ", "#/scenarios": "Portfolio scenarios", "#/directory": "Company Directory",
                  "#/findings?tab=governance": "Findings", "#/inventory/groups?tab=okta": "Groups",
                  "#/review": "Review queue", "#/decisions": "Decisions"}
         for link, title in links.items():
@@ -185,8 +193,8 @@ class HostedDemoUiTests(BrowserCase):
     def test_c_nothing_offers_a_synthetic_principal_to_sign_in_as(self):
         b = self.browser
         self.visit("#/")
-        pages = ["#/", "#/scenarios", f"#/candidates/{self.scenario('NM-C10')}", f"#/candidates/{self.scenario('NM-C11')}",
-                 "#/approvals", "#/audit"]
+        pages = ["#/", "#/scenarios", f"#/candidates/{self.scenario('data-quality')}",
+                 f"#/candidates/{self.scenario('controlled-remediation')}", "#/approvals", "#/audit"]
         for page in pages:
             with self.subTest(page=page):
                 self.visit(page)
@@ -207,7 +215,7 @@ class HostedDemoUiTests(BrowserCase):
     def test_d_an_approval_or_a_hold_is_refused_as_read_only_and_nothing_changes(self):
         b = self.browser
         self.visit("#/")
-        c10 = self.scenario("NM-C10")
+        c10 = self.scenario("data-quality")
         self.visit(f"#/candidates/{c10}")
         b.wait_title_prefix("Candidate: ")
         panel = b.text(".actions-panel")
@@ -231,25 +239,25 @@ class HostedDemoUiTests(BrowserCase):
         self.assertEqual(self.state(), before, "nothing was recorded")
         self.assert_canonical()
 
-    # --- E. NM-C10 authorization isolation ------------------------------------------------------------------------
+    # --- E. authorization isolation of the data-quality candidate -------------------------------------------------
 
-    def test_e_nm_c11s_drill_grant_cannot_be_borrowed_or_forged_for_nm_c10(self):
+    def test_e_the_public_drill_grant_cannot_be_borrowed_or_forged_for_another_candidate(self):
         b = self.browser
         self.visit("#/")
-        c10, c11 = self.scenario("NM-C10"), self.scenario("NM-C11")
+        c10, c11 = self.scenario("data-quality"), self.scenario("controlled-remediation")
         self.visit(f"#/candidates/{c10}")
         b.wait_title_prefix("Candidate: ")
         self.assertNotIn("Run drill", b.buttons())
         text = b.text()
-        for fact in ("No action: sources disagree", "Probable, not proven", "Not proven", "Source unavailable",
-                     "NM-LIFECYCLE-004 v1.2.0"):
+        for fact in ("No action: sources disagree", "Probable, not proven", "Not proven", "Source unavailable"):
             self.assertIn(fact, text)
+        self.assertRegex(text, POLICY, "the decision names the policy version in force")
         detail = b.evaluate(f"fetch('/api/v1/candidates/{c10}', {{credentials: 'same-origin'}}).then(r => r.json())")
         approval = b.evaluate(f"""fetch('/api/v1/candidates/{c11}/approvals', {{credentials: 'same-origin'}})
             .then(r => r.json()).then(j => j.items[0].id)""")
         before = self.state()
         requests = []
-        for approval_id in (approval, "apr_" + "0" * 32):  # borrowed from NM-C11, and forged
+        for approval_id in (approval, "apr_" + "0" * 32):  # borrowed from the drill candidate, and forged
             for mode in ({"mode": "DRY_RUN"}, {"mode": "SYNTHETIC_EXECUTION", "scenario": "TIMEOUT_NOT_APPLIED"}):
                 requests.append((f"/candidates/{c10}/remediation-drills", {
                     "operation": "OKTA_GROUP_UNASSIGN", "target": {"assignmentId": detail["candidate"]["assignmentIds"][0]},
@@ -259,12 +267,12 @@ class HostedDemoUiTests(BrowserCase):
         self.assertEqual(self.state(), before, "nothing ran and nothing was recorded")
         self.assert_canonical()
 
-    # --- F. the NM-C11 drill --------------------------------------------------------------------------------------
+    # --- F. the public drill --------------------------------------------------------------------------------------
 
-    def test_f_the_visitor_runs_nm_c11s_recovery_drill_without_choosing_an_identity(self):
+    def test_f_the_visitor_runs_the_public_recovery_drill_without_choosing_an_identity(self):
         b = self.browser
         self.visit("#/")
-        c11 = self.scenario("NM-C11")
+        c11 = self.scenario("controlled-remediation")
         self.visit(f"#/candidates/{c11}")
         b.wait_title_prefix("Candidate: ")
         text = self.run_drill()
@@ -278,8 +286,9 @@ class HostedDemoUiTests(BrowserCase):
                                 ".map(m => m[0])")
         self.assertGreaterEqual(len(operations), 2)
         self.assertEqual(len(set(operations)), 1, "the retry carries the same operation id")
-        for fact in ("NM-LIFECYCLE-004 v1.2.0, recorded version 2", "POST-ACTION VERIFIED", "No: a drill records nothing"):
+        for fact in ("POST-ACTION VERIFIED", "No: a drill records nothing"):
             self.assertIn(fact, text)
+        self.assertRegex(text, POLICY + ", recorded version 2")
         self.assert_accessible("public drill")
         b.screenshot("hosted-04-public-drill")
         self.nav(f"#/candidates/{c11}", prefix="Candidate: ")
@@ -293,7 +302,7 @@ class HostedDemoUiTests(BrowserCase):
     def test_g_a_lost_or_expired_session_a_reload_and_a_new_browser_are_usable_at_once(self):
         b = self.browser
         self.visit("#/")
-        self.visit(f"#/candidates/{self.scenario('NM-C11')}")
+        self.visit(f"#/candidates/{self.scenario('controlled-remediation')}")
         b.wait_title_prefix("Candidate: ")
         # The session is lost mid-visit (cookies cleared), then expires (a cookie no server accepts).
         b.send("Network.clearBrowserCookies")
@@ -321,7 +330,7 @@ class HostedDemoUiTests(BrowserCase):
     def test_i_a_second_tabs_drill_runs_once_after_another_tab_replaced_the_session(self):
         b = self.browser
         self.visit("#/")
-        c11 = self.scenario("NM-C11")
+        c11 = self.scenario("controlled-remediation")
         other = Tab(b)
         try:
             # The session ends (as after 15 idle minutes); another tab starts the next one, with a new CSRF token.
@@ -410,7 +419,7 @@ class HostedDemoUiTests(BrowserCase):
     def test_k_a_drill_pressed_after_the_session_lapsed_runs_once(self):
         b = self.browser
         self.visit("#/")
-        c11 = self.scenario("NM-C11")
+        c11 = self.scenario("controlled-remediation")
         self.visit(f"#/candidates/{c11}")
         b.wait_title_prefix("Candidate: ")
         for lapse in ("lost", "expired"):

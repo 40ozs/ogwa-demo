@@ -413,6 +413,8 @@ These steps keep D1 and all evidence intact:
 
 - **Previous Worker version:** `npx wrangler versions list --name ogwa-demo`, then
   `npx wrangler rollback <version-id> --name ogwa-demo`. D1 is not touched by a rollback.
+  To undo OGWA-UI-REVIEW-02 (live version `6e4eed09-ab19-440c-8195-a10b9aa84483`, the operator review UI, same D1):
+  `npx wrangler rollback a4bd4702-d356-4459-904e-855145c3a2fc --name ogwa-demo`, the previous UI on `ogwa-demo-3`.
   To undo the Genesee Press cutover (live version `a4bd4702-d356-4459-904e-855145c3a2fc`, D1 `ogwa-demo-3`):
   `npx wrangler rollback c6c2036a-0e01-45b2-86b0-9b0e5882715d --name ogwa-demo`, the previous Null Meridian
   version on `ogwa-demo-2`, without sign-in.
@@ -473,16 +475,38 @@ it, with checksums that `verify_applied` checks on every open.
 | Hosted smoke (61 checks over real HTTPS, all as the anonymous visitor: no sign-in, a viewer's permissions only, read-only refusals, a synthetic remediation drill on GP-C11 that must record nothing, its policy/decision/approval chain, verification before the retry under one operation id, the dry-run boundary, GP-C10 staying non-actionable and refusing GP-C11's drill grant, the public walkthrough, and the dashboard's audit head; OGWA-DEMO-HOSTED-ANON-01) | `python scripts/hosted_smoke.py https://ogwa-demo.d-walkes.workers.dev` |
 | CPU per route | `npx wrangler tail ogwa-demo --format json` while the routes are exercised. Every outcome must be `ok`, and `cpuTime` must stay well under `limits.cpu_ms` |
 | Browser gate, local | `pwsh scripts/browser-check.ps1`, which includes `tests.browser.test_hosted_demo_ui` over `HostedDemoServer`, the Worker's own application on loopback |
-| Browser gate against the Worker | `UI_BROWSER_TESTS=1 UI_BROWSER_TARGET=<origin> python -m unittest tests.browser.test_demo_null_meridian_ui tests.browser.test_null_meridian_views tests.browser.test_hosted_demo_ui tests.browser.test_ui_ia tests.browser.test_candidate_tables tests.browser.test_remediation_drill_ui -v` (NM-C10, NM-C11's drill, and the walkthrough address candidates by this build's seeded ids, so a stale Worker fails them) |
+| Browser gate against the Worker (hosted gate) | `UI_BROWSER_TESTS=1 UI_BROWSER_TARGET=<origin> UI_BROWSER=<Chrome> python -m unittest tests.browser.test_genesee_press_ui tests.browser.test_hosted_demo_ui tests.browser.test_remediation_drill_ui tests.browser.test_ui_ia tests.browser.test_candidate_tables tests.browser.test_null_meridian_views tests.browser.test_demo_null_meridian_ui -v`. Against Genesee Press the last two, and the classic-world class of `test_candidate_tables`, skip by design (they assert Null Meridian or classic content). What the gate relies on in the dataset, and what it deliberately does not assert: [hosted-demo-fixtures.md](hosted-demo-fixtures.md) |
 | Wrangler config | `npx wrangler deploy --dry-run` in `cloudflare/worker` |
 | Hosted D1 | `pwsh scripts/cloudflare-demo.ps1 -Verify` |
 
-`UI_BROWSER_TARGET` points the browser at an already-serving demo. The browser can then resolve
-that one host besides `127.0.0.1`, and nothing else. On macOS, also set `UI_BROWSER` to Chrome's
-binary (`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`); otherwise every browser
-test skips. `test_operator_workflows` exercises the
-classic world and recorded decisions, which the hosted demo does not serve, so it skips there and
-stays in the local gate.
+`UI_BROWSER_TARGET` points the browser at an already-serving public demo: the deployed Worker, the
+release's Worker application on loopback (`tests.browser.harness.HostedDemoServer`, served until stopped), or
+`pywrangler dev` on `http://127.0.0.1:8787`. The browser can then resolve that one host besides `127.0.0.1`,
+and nothing else. The harness reads the target's dataset (`GET /health`) and its scenario and walkthrough
+candidate ids (`GET /demo-scenarios`, as the anonymous visitor) from the target itself, so no id is assumed
+from a local seed; a module that asserts another dataset's content skips with the reason. During the run
+nothing may write to the demo: `assert_clean` fails on any POST, PUT, PATCH, or DELETE except those a module
+sends on purpose (`test_hosted_demo_ui`'s refused approval, hold, and borrowed or forged drill grant, each
+asserted refused with the audit count and head unchanged, and the synthetic drill, which records nothing).
+On macOS, also set `UI_BROWSER` to Chrome's binary (`/Applications/Google Chrome.app/Contents/MacOS/Google
+Chrome`); otherwise every browser test skips and the run still says OK, so check the skipped count. For an
+https origin, python.org's Python 3.12 on macOS also needs `SSL_CERT_FILE=/etc/ssl/cert.pem` (the harness
+reads the target's API over HTTPS):
+
+```sh
+export SSL_CERT_FILE=/etc/ssl/cert.pem UI_BROWSER_TESTS=1 UI_BROWSER_TARGET=https://ogwa-demo.d-walkes.workers.dev
+export UI_BROWSER="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+python -m unittest tests.browser.test_genesee_press_ui tests.browser.test_hosted_demo_ui tests.browser.test_remediation_drill_ui \
+  tests.browser.test_ui_ia tests.browser.test_candidate_tables tests.browser.test_null_meridian_views \
+  tests.browser.test_demo_null_meridian_ui -v
+```
+
+Expected against Genesee Press: everything passes, with 4 skips (`RemediationDrillUiTests.test_f`, because the
+public visitor may drill; `PagedCandidateTableTests`, `NullMeridianViewTests`, `DemoNullMeridianUiTests`). Run
+the same command without `UI_BROWSER_TARGET` for the local gate over each module's own world.
+
+`test_operator_workflows` and `test_review_workflow` exercise the classic world and recorded decisions,
+which the hosted demo does not serve, so they skip there and stay in the local gate.
 
 ## Known limitations
 

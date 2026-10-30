@@ -99,6 +99,7 @@ value sorts last in both directions. An unknown field or order is `400`. Fields:
 | `/mappings` | `oktaGroup`, `adGroup` (by resolved name), `confidence` (strongest first), `observedAt`, `result` |
 | `/dependency-findings` | `dependencyKind`, `subject` (by resolved name), `findings` (blocking, then all), `observedAt`, `result` |
 | `/candidates` | `oktaGroup`, `state`, `holdUntil`, `createdAt`, `updatedAt` |
+| `/review-queue` | `oktaGroup`, `updatedAt` (time waiting), `deadline` (a hold's end); without `sort`, review priority (below) |
 | `/approvals` | `stage`, `decision`, `decidedAt`, `expiresAt`, `candidate` |
 | `/execution-jobs` | `kind`, `status`, `requestedAt`, `candidate` |
 | `/collector-runs` | `collector`, `startedAt`, `outcome`, `records` |
@@ -171,16 +172,17 @@ All need `READ_INVENTORY` unless stated otherwise. Paged endpoints are marked *(
 | `GET /groups` *(paged)*, `GET /groups/{groupId}` | Okta groups; the detail view adds assignments, the identity mapping, the mapped AD group, and candidate ids |
 | `GET /mappings` *(paged)*, `GET /mappings/{groupId}` | Identity-mapping evidence; the detail view adds the AD group or ambiguous candidates and the review registry (`currentApprovalId`, `pendingSelectionId`) |
 | `GET /candidates` *(paged; `state=`)* | The candidate queue, oldest first, each loaded with history verification |
+| `GET /review-queue` *(paged, 1–50 rows, default 25; `status=`)* | OGWA-REVIEW-QUEUE-API-01: the Review queue, filtered, ordered, counted, and paged on the server, each row with its review status and the current evidence verdict. See [Review queue](#review-queue-ogwa-review-queue-api-01) |
 | `GET /candidates/{candidateId}` | The candidate (since P10B also `quarantineApprover`, `quarantineHoldUntil`, `deletionProposer`, `deletionProposedAt`), its `evidenceFingerprint`, its classification (`isApproval: false`), `quarantine` (the mapped AD group's domain, that domain's quarantine OU from deployment configuration, and whether the group is in it; read-only, D136), `allowedActions` for the signed-in principal, and (OGWA-DEMO-01) `evidenceAssessment`: each source's evidence state, conflicts, the identity mapping's state, the next approval step with the lifecycle guard's answer, the decision OGWA can safely make, and the evidence still needed (`isApproval: false`, `autoRemediationEligible: false`; see [evidence-assessment.md](evidence-assessment.md)). Since OGWA-DEMO-02 the assessment names the `policy` that produced its decision, and `decisionExplanation` explains it under that exact version: the policy, each condition as that version states it with its status and the evidence it read, whether evidence forced manual review, and what would change ([evidence-assessment.md](evidence-assessment.md#decision-explanation-ogwa-demo-02)) |
 | `GET /candidates/{candidateId}/evidence` | The full evidence bundle with provenance and digests |
 | `GET /candidates/{candidateId}/dependencies` | Dependency findings (with `FindingCode`, blocking flag) and the per-kind coverage report |
 | `GET /candidates/{candidateId}/decisions` | Lifecycle decisions, oldest first; each with the `policy` it recorded (OGWA-DEMO-02: `policyId`, `version`, `name`, digests, recorded version, and `publishedRelease`), or `null` if it recorded none. Never the policy in force now. Approvals (per candidate and the `/approvals` listing) carry their `policy` the same way |
-| `GET /candidates/{candidateId}/approvals` | Approvals and rejections, with `expired` |
+| `GET /candidates/{candidateId}/approvals` | Approvals and rejections, with `expired` and (OGWA-REVIEW-QUEUE-API-01) `usability`: see [Approval usability](#approval-usability-ogwa-review-queue-api-01) |
 | `GET /candidates/{candidateId}/execution-jobs`, `GET /execution-jobs/{jobId}` | Jobs with their full status history |
 | `GET /execution-jobs` *(paged)* | P09. Every job, newest first, with its status history, and `executionAvailable: false` |
 | `GET /candidates/{candidateId}/remediation-dry-runs` | P10. The candidate's recorded remediation dry runs, oldest first, each checked against its audit digest: operation, outcome, adapter, target and identity digest, approval, fingerprint, `executed: false`; since OGWA-DEMO-04 also `policy` (the reference its event recorded, as recorded; `null` for a record made before) and `chain` (policy, decision, approval, operation id); plus `executionAvailable: false` |
 | `GET /remediation-drill-scenarios` | OGWA-DEMO-03. The synthetic drill's closed fault-scenario catalog (key, title, description, scripted submissions, expected final state), its modes, every execution state's label, `maxSubmissions` (2), `maxVerificationReads` (2), and the drill notice |
-| `GET /approvals` *(paged)* | P09. Every approval and rejection, newest first, with `expired` |
+| `GET /approvals` *(paged)* | P09. Every approval and rejection, newest first, with `expired` and (OGWA-REVIEW-QUEUE-API-01) `usability` |
 | `GET /dependency-findings` *(paged)* | P09. Every dependency check (latest observation) with its findings and provenance |
 | `GET /collector-runs` *(paged)* | Collector runs, newest first, with outcome and error code; plus a summary |
 | `GET /policy` | The policy in force (`RECORDED_VERSION`, or in a SYNTHETIC store only `UNRECORDED_SYNTHETIC_DEMO` with `label: "DEMO POLICY — UNRECORDED"`) and recorded versions. Since OGWA-DEMO-02 the policy in force carries `versionSequence`, `policyId`, `version`, `name`, and `release` (null when no release carries its rules); each version its `release`; and a SYNTHETIC store's demo dataset lists its synthetic `releases` (identity, purpose, and the full document). `editableViaApi: false` |
@@ -194,6 +196,9 @@ All need `READ_INVENTORY` unless stated otherwise. Paged endpoints are marked *(
 | `GET /governance-findings` *(paged; `severity=`, `code=`, `subjectKind=`)* | Governance findings (`app/governance/analysis.py`), most serious first, plus counts by severity and rule. Evidence for review; none authorizes a change |
 | `GET /demo-scenarios` | The dataset's portfolio scenarios with their groups, applications, and lifecycle candidate; and `walkthrough` (OGWA-DEMO-04): the dataset's guided reviewer walkthrough (title, disclosures, two parts with their steps and resolved `candidateId`), or `null` for a dataset without one |
 | `GET /identities?ids=a,b,…` | OGWA-UI-IA-01 (`app/api/resolve.py`): for up to 50 OGWA ids or AD domain objectSids, each one's kind, common name, canonical page (`route`, `routeId`), and a `qualifier` (an AD distinguished name or an Okta group id) with `ambiguous` (whether the snapshot has another group of that name; `null` when unknown). An Okta group with an exact mapping adds `mappedAdGroup`. An id that names nothing comes back `resolved: false`. Lookups go by stable id only: a name is never accepted (`400`), and a renamed group resolves to its new name under the same id |
+
+`GET /directory-groups/{directoryGroupId}` adds `lifecycleCandidates` (OGWA-REVIEW-QUEUE-API-01): see
+[Directory group → candidate](#directory-group--candidate-ogwa-review-queue-api-01).
 
 `GET /applications/{applicationId}` adds `profile` (the snapshot's view of the application:
 category, provisioning, owner, every group and individual assignment, findings) and
@@ -211,6 +216,110 @@ again when the action is requested.
                 "separationOfDutiesConflicts": ["you submitted this candidate for OKTA_UNASSIGN approval"]}],
  "planDryRun": false}
 ```
+
+## Review queue (OGWA-REVIEW-QUEUE-API-01)
+
+`GET /review-queue` replaces the browser's old way of building the queue (reading up to 1,000
+candidates through `GET /candidates` and sorting them itself). `GET /candidates` is unchanged.
+
+**Query.** `status` = `open` (the default: needs review, blocked, waiting, in progress),
+`needs-review`, `blocked`, `waiting`, `in-progress`, `retired`, `closed`, or `all`; `limit` 1–50
+(default **25**: a row costs one classification, and the hosted Worker has a per-request CPU
+limit); `cursor`; `sort` and `order` (above). Anything else is `400`. Filtering happens in the same
+SQL statement as ordering and paging (`ReadModel.review_queue`, `PAGED["queue"]`), so filters
+apply before paging and a page loads only its own candidates.
+
+**Review status.** `readmodel.REVIEW_STATUS` groups lifecycle states exactly as the UI's
+`review.js` (`tests/test_review_queue_api.py` pins the two tables together): needs review
+(`NEEDS_REVIEW`, `REVALIDATION_REQUIRED`, `DELETION_REVALIDATION_REQUIRED`, `DELETION_PROPOSED`),
+blocked (`BLOCKED`, `MAPPING_AMBIGUOUS`, `DEPENDENCY_BLOCKED`, `STALE_EVIDENCE`,
+`EVIDENCE_INCOMPLETE`, `RETIREMENT_DRY_RUN`), waiting (`DISCOVERED`, `CANDIDATE`, `HOLD`,
+`QUARANTINE_HOLD`), in progress (the six approved and dry-run states), retired (`RETIRED`), closed
+(`EXCLUDED`, `REJECTED`, `PROTECTED`). A state the build does not know reads as **blocked**, in
+the filter (`status=blocked` is "every state not grouped otherwise") and in the order. There is no
+"ready" status.
+
+**Order.** Without `sort`: review status (needs review, blocked, waiting, in progress, retired,
+closed), then the nearest hold end (`holdUntil` in `HOLD`, `quarantineHoldUntil` in
+`QUARANTINE_HOLD`; rows without one after), then the oldest last change (`updatedAt`), then the
+stable candidate id. This is `review.js queueOrder`, which the tests run under Node over the served
+rows. With `sort`, the field first and that order breaks ties. Ties never fall to a name.
+
+**Response.** The standard envelope (`items`, `page` with `total` = the filtered count), plus
+`status`, `counts` (per review status, `open`, and `all`, from one `GROUP BY` over **every**
+candidate, never from the page), `holdsEndingWithin7Days` (holds that ended or end within 7 days of
+`generatedAt`, counted in SQL over every candidate), `generatedAt` (the server's clock), and
+`note`. Each item is `candidate_json` (as `GET /candidates`: ids, `state`, `epoch`, timestamps,
+holds, approvers, `blockedFrom`, `reasonCodes`) plus:
+
+| Field | Meaning |
+| --- | --- |
+| `reviewStatus` | The review status of the recorded state (above) |
+| `evidenceVerdict.classification` | The classifier's current classification of the evidence, or `null` when it cannot run (no policy in force, or no assignment evidence) |
+| `evidenceVerdict.suggestedState` | The lifecycle state the classifier would divert the candidate to now (`lifecycleDiversion`), or `null` |
+| `evidenceVerdict.decision` | The evidence assessment's decision (`code`, `label`, `eligibleForHumanApproval`): what OGWA can safely conclude now. Never an approval |
+| `evidenceVerdict.agreement` | `AGREES`, `DIFFERS` (the classifier would park the candidate elsewhere, or no longer finds the evidence condition its state records), `NOT_APPLICABLE` (terminal state), or `UNAVAILABLE` (no classification) |
+| `evidenceVerdict.blockingReasons` | The classifier's blocking reason codes, distinct, in order |
+| `evidenceVerdict.assessedAt`, `isApproval: false`, `autoRemediationEligible: false` | As on the candidate page |
+
+The verdict is computed exactly as `GET /candidates/{id}` computes `classification` and
+`evidenceAssessment` (`LifecycleService.classify_and_assess`); a test checks every row against the
+candidate page. It is **informational**: it is never written back to the lifecycle, a `DIFFERS`
+row keeps its recorded state until the lifecycle records a transition, and it authorizes nothing.
+The forensic detail (reasons' text, evidence items, explanation) stays on the candidate page.
+
+**Not offered, on purpose.** Filtering or sorting by the evidence verdict: the verdict is computed
+per row, after paging, so a filter on it could not be applied before paging without classifying
+every candidate on each request; the UI does not filter by it. Lifecycle state filtering stays on
+`GET /candidates?state=` (the UI's "Every candidate by lifecycle state").
+
+## Approval usability (OGWA-REVIEW-QUEUE-API-01)
+
+`GET /approvals` and `GET /candidates/{id}/approvals` carry `usability: {status, usable,
+problems}` on every row: whether the approval **passes the lifecycle's approval rules now**. It is
+computed by `app/api/review_queue.py` `ApprovalUsability` with the rules the server itself
+applies, not a second algorithm: `LifecycleService.stage_approval_problems` (the call a dry run's
+planning makes: `stage_approval_rules` + `approval_problems`, with the candidate's **current**
+evidence fingerprint and the policy in force), whether the candidate is in a state where that
+stage's approval is used (`APPROVED`/`OKTA_UNASSIGN_DRY_RUN`, `QUARANTINE_APPROVED`/`QUARANTINE_DRY_RUN`,
+`DELETION_APPROVED`/`DELETION_DRY_RUN`), and the remediation's policy binding
+(`authorization.binding`). `problems` are the rules' own words; `usable` is `true` only when there
+are none. `status` is the most telling one:
+
+| `status` | When |
+| --- | --- |
+| `USABLE` | No rule fails. **Not "ready"**: the step it backs has its own guards (a dry run needs evidence under 24 hours old), which the server applies when it is requested |
+| `EXPIRED` | Past `expiresAt` on the server's clock |
+| `EPOCH_SUPERSEDED` | The candidate was blocked and re-entered review since (a new epoch) |
+| `STAGE_NOT_CURRENT` | The candidate is not, or no longer, where this stage's approval is used |
+| `POLICY_NOT_IN_FORCE` | Judged by a policy other than the version in force (remediation dry runs and drills refuse it) |
+| `EVIDENCE_CHANGED` | The material evidence's fingerprint changed since the approval |
+| `NO_POLICY` | No candidate policy is in force (D52) |
+| `NOT_AN_APPROVAL`, `LEGACY` | A rejection; a legacy `AD_RETIREMENT` approval (D148) |
+| `NOT_USABLE` | Any other rule (an excluded approver, a hold not yet ended, …) |
+
+Usability is a reading: it changes nothing and authorizes nothing (tests: a usable approval is
+still refused to a person without the planning permission; an expired one draws the planner's own
+`APPROVAL_INVALID … expired`). The evidence fingerprint is read only for approvals that pass every
+other rule, so the listing stays cheap.
+
+## Directory group → candidate (OGWA-REVIEW-QUEUE-API-01)
+
+`GET /directory-groups/{id}` adds `lifecycleCandidates`: `[{candidateId, oktaGroupId, state,
+reviewStatus, holdUntil, quarantineHoldUntil, relationship, mappingId, mappingConfidence}]`.
+
+- An **AD** group's candidates come only through an **exact identity mapping** to its OGWA AD
+  evidence id (`adEvidenceId`): the latest observation of each identity mapping whose
+  `ad_group_id` is that id, re-read through the digest-verifying loader, kept only if `isExact`;
+  then that mapping's Okta group's candidates (`relationship: EXACT_IDENTITY_MAPPING`, with the
+  mapping's id and confidence). The snapshot's own Okta link (`oktaEvidenceId` on an AD group) is
+  **not** a mapping and is not used: in both demo datasets `KB-Admins` (an unverified identifier)
+  and `WikiV1-Users` (name only) have a snapshot link to an Okta group with a candidate, and their
+  AD pages list none.
+- An **Okta** directory group is the candidates' own subject: its `oktaEvidenceId`'s candidates
+  (`relationship: OKTA_GROUP`).
+- Nothing is matched by name. Groups that share a name (`Finance-RW`: two AD groups and an Okta
+  group) never share candidates; the tests check every link against `GET /mappings/{oktaGroupId}`.
 
 ## Write endpoints
 

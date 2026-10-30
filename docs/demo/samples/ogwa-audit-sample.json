@@ -1025,7 +1025,12 @@
             "versionSequence": 1
           },
           "reason": "synthetic review of NM-C11-okta complete",
-          "stage": "OKTA_UNASSIGN"
+          "stage": "OKTA_UNASSIGN",
+          "usability": {
+            "problems": [],
+            "status": "USABLE",
+            "usable": true
+          }
         }
       ],
       "source": "GET /api/v1/candidates/cand_1f924f9bb2c2314236a9bcac03a0d17d/approvals"

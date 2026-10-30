@@ -4,7 +4,8 @@ Each data table on the candidate page sorts with the shared table: the active co
 direction are shown (``aria-sort`` and an arrow), a new sort starts again at the first page,
 ties keep the table's own order, and nothing reloads. Columns of prose, ids, or actions do not
 sort, and the decision history and the audit trail keep their recorded order. Null Meridian
-runs locally or against ``UI_BROWSER_TARGET``; the classic world, whose stale-evidence
+runs locally; with ``UI_BROWSER_TARGET`` the same checks run against the target's dataset (they
+need only a DEPENDENCY_BLOCKED and a HOLD candidate). The classic world, whose stale-evidence
 candidate has more classification reasons than one page holds, runs locally only.
 """
 
@@ -30,7 +31,7 @@ SORTABLE = {
                                                                "Status": True, "Why": False},
     "Lifecycle decisions, oldest first": {"When": False, "From": False, "To": False, "By": False,
                                           "Judged by policy": False, "Reason": False, "Approval / job": False},
-    "Approvals and rejections": {"Stage": True, "Decision": True, "By": True, "Decided": True, "Expires": True,
+    "Approvals and rejections": {"Stage": True, "Decision": True, "Approval rules now": True, "By": True, "Decided": True, "Expires": True,
                                  "Epoch": True, "Judged by policy": True, "Reason": False},
     "Dry-run plans": {"Plan": False, "Kind": True, "Status": True, "Executed": True, "Mode": True, "Requested": True},
     "Audit events for this candidate, newest first": {"Sequence": False, "Action": False, "When": False,
@@ -75,13 +76,13 @@ AUDIT_TABLE = "Audit events for this candidate, newest first"
 
 
 @unittest.skipIf(skip_reason(), skip_reason() or "")
-class NullMeridianCandidateTablesTests(BrowserCase):
+class DemoCandidateTablesTests(BrowserCase):
     @classmethod
     def setUpClass(cls):
         reason = skip_reason()
         if reason:
             raise unittest.SkipTest(reason)
-        cls.server = SyntheticServer(refresh=(), dataset="null-meridian").start_and_wait()
+        cls.server = SyntheticServer(refresh=(), dataset="null-meridian", any_dataset=True).start_and_wait()
         try:
             cls.browser = Browser(browser_path())
         except Exception:

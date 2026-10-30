@@ -263,11 +263,14 @@ test("only the deletion stage's own approval backs a deletion dry run (D146)", (
     allowedActions: { transitions: [], approvals: [], planDryRun: true },
   };
   const approvals = [
-    { id: "apr_q", stage: "AD_QUARANTINE", decision: "APPROVE", expired: false, candidateEpoch: 1 },
-    { id: "apr_o", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: false, candidateEpoch: 1 },
-    { id: "apr_r", stage: "AD_RETIREMENT", decision: "APPROVE", expired: false, candidateEpoch: 1 },
-    { id: "apr_old", stage: "AD_DELETION", decision: "APPROVE", expired: false, candidateEpoch: 0 },
-    { id: "apr_d", stage: "AD_DELETION", decision: "APPROVE", expired: false, candidateEpoch: 1 },
+    // Even an answer of "usable" for another stage never backs this stage's dry run.
+    { id: "apr_q", stage: "AD_QUARANTINE", decision: "APPROVE", expired: false, candidateEpoch: 1, usability: { status: "USABLE", usable: true, problems: [] } },
+    { id: "apr_o", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: false, candidateEpoch: 1, usability: { status: "USABLE", usable: true, problems: [] } },
+    { id: "apr_r", stage: "AD_RETIREMENT", decision: "APPROVE", expired: false, candidateEpoch: 1,
+      usability: { status: "LEGACY", usable: false, problems: ["legacy"] } },
+    { id: "apr_old", stage: "AD_DELETION", decision: "APPROVE", expired: false, candidateEpoch: 0,
+      usability: { status: "EPOCH_SUPERSEDED", usable: false, problems: ["older epoch"] } },
+    { id: "apr_d", stage: "AD_DELETION", decision: "APPROVE", expired: false, candidateEpoch: 1, usability: { status: "USABLE", usable: true, problems: [] } },
   ];
   const plan = actionPlan(detail, approvals, []);
   assert.equal(plan.dryRun.kind, "AD_DELETION");
@@ -304,17 +307,22 @@ test("unknown states and codes fail closed", () => {
   assert.equal(errorText("SOMETHING_NEW", "fallback"), "fallback");
 });
 
-test("approvals from another epoch, expired, or rejected never back a dry run", () => {
+test("only approvals the server judges usable back a dry run (OGWA-REVIEW-QUEUE-API-01)", () => {
   const detail = {
     candidate: { id: "cand_x", state: "APPROVED", epoch: 2 },
     allowedActions: { transitions: [], approvals: [], planDryRun: true },
   };
+  const no = (status) => ({ status, usable: false, problems: [status] });
   const approvals = [
-    { id: "apr_a", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: false, candidateEpoch: 1 },
-    { id: "apr_b", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: true, candidateEpoch: 2 },
-    { id: "apr_c", stage: "OKTA_UNASSIGN", decision: "REJECT", expired: false, candidateEpoch: 2 },
-    { id: "apr_d", stage: "AD_RETIREMENT", decision: "APPROVE", expired: false, candidateEpoch: 2 },
-    { id: "apr_e", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: false, candidateEpoch: 2 },
+    { id: "apr_a", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: false, candidateEpoch: 1, usability: no("EPOCH_SUPERSEDED") },
+    { id: "apr_b", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: true, candidateEpoch: 2, usability: no("EXPIRED") },
+    { id: "apr_c", stage: "OKTA_UNASSIGN", decision: "REJECT", expired: false, candidateEpoch: 2, usability: no("NOT_AN_APPROVAL") },
+    { id: "apr_d", stage: "AD_RETIREMENT", decision: "APPROVE", expired: false, candidateEpoch: 2, usability: no("LEGACY") },
+    { id: "apr_e", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: false, candidateEpoch: 2, usability: { status: "USABLE", usable: true, problems: [] } },
+    // The record's own fields look valid, but the server's rules say no (evidence changed): not offered.
+    { id: "apr_f", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: false, candidateEpoch: 2, usability: no("EVIDENCE_CHANGED") },
+    // No answer from the server: not offered. The browser never re-derives validity itself.
+    { id: "apr_g", stage: "OKTA_UNASSIGN", decision: "APPROVE", expired: false, candidateEpoch: 2 },
   ];
   assert.deepEqual(actionPlan(detail, approvals, []).dryRun.approvals.map((a) => a.id), ["apr_e"]);
 });

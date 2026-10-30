@@ -11,7 +11,8 @@
 // - A state this module does not know is read as blocked.
 // - Stages ahead of the candidate are never shown as reached or guaranteed: "Not yet eligible".
 // - "OGWA could not tell" is never worded as "none found" (an unchecked kind is not clear).
-import { stateInfo } from "./assess.js";
+import { reasonHeadline, stateInfo } from "./assess.js";
+import { decisionText } from "./evidence.js";
 import { deadlineText } from "./present.js";
 
 // --- review status ------------------------------------------------------------------------
@@ -223,6 +224,71 @@ export function queueOrder(nowIso) {
     if (Boolean(da) !== Boolean(db)) return da ? -1 : 1;
     return a.updatedAt < b.updatedAt ? -1 : a.updatedAt > b.updatedAt ? 1 : (a.id < b.id ? -1 : 1);
   };
+}
+
+// --- the current evidence verdict (OGWA-REVIEW-QUEUE-API-01) ------------------------------------
+
+/**
+ * A queue row's evidence verdict (GET /review-queue `evidenceVerdict`) in words, beside the
+ * recorded state, never instead of it: {label, tone, agreement: {key, tone, text}, blockers}.
+ * `label` is the assessment's decision ("what OGWA can safely conclude now"); `agreement` says
+ * whether the classifier's current suggestion matches the recorded state. A disagreement is
+ * shown, never resolved: the state stands until the lifecycle records a transition. Anything
+ * missing or unknown reads as not assessed or unrecognized, never as agreement.
+ */
+export function verdictReading(verdict, state) {
+  if (!verdict) {
+    return { label: "Not assessed", tone: "blocked", blockers: [],
+      agreement: { key: "UNAVAILABLE", tone: "blocked", text: "No evidence verdict was returned." } };
+  }
+  const decision = decisionText(verdict.decision);
+  const suggested = verdict.suggestedState ? stateInfo(verdict.suggestedState).label : null;
+  const AGREEMENT = {
+    AGREES: { tone: "neutral", text: "Matches the recorded state." },
+    DIFFERS: { tone: "caution", text: suggested
+      ? `Differs from the recorded state: the evidence now points to “${suggested}”.`
+      : `Differs from the recorded state: the classifier no longer suggests “${stateInfo(state).label}”.` },
+    NOT_APPLICABLE: { tone: "terminal", text: "Terminal: nothing further is decided." },
+    UNAVAILABLE: { tone: "blocked", text: "Not classified: no policy in force, or no assignment evidence." },
+  };
+  const known = AGREEMENT[verdict.agreement];
+  return {
+    label: decision.label, tone: decision.tone,
+    agreement: known ? { key: verdict.agreement, ...known }
+      : { key: "UNKNOWN", tone: "blocked", text: "Unrecognized comparison with the recorded state." },
+    blockers: (verdict.blockingReasons || []).map(reasonHeadline),
+  };
+}
+
+// --- approval usability (OGWA-REVIEW-QUEUE-API-01) ------------------------------------------------
+
+const USABILITY = Object.freeze({
+  USABLE: { label: "Valid for its stage", tone: "caution" },
+  EXPIRED: { label: "Expired", tone: "neutral" },
+  EPOCH_SUPERSEDED: { label: "Superseded: the candidate re-entered review", tone: "neutral" },
+  STAGE_NOT_CURRENT: { label: "Not usable in the candidate's current state", tone: "neutral" },
+  EVIDENCE_CHANGED: { label: "Not usable: evidence changed since", tone: "neutral" },
+  POLICY_NOT_IN_FORCE: { label: "Not usable: judged by a policy not in force", tone: "neutral" },
+  NO_POLICY: { label: "Not usable: no policy in force", tone: "blocked" },
+  NOT_AN_APPROVAL: { label: "Rejection: authorizes nothing", tone: "neutral" },
+  LEGACY: { label: "Legacy: authorizes nothing", tone: "neutral" },
+  NOT_USABLE: { label: "Not usable", tone: "blocked" },
+});
+
+// A valid approval is not a ready step: the step it backs has its own checks.
+export const USABLE_NOTE = "The step it backs has its own checks (for a dry run, evidence under 24 hours old); the server applies them when it is requested.";
+
+/**
+ * Whether a recorded approval still passes the lifecycle's approval rules, as the server judged it
+ * (`usability` on GET /approvals and GET /candidates/{id}/approvals): {usable, label, tone,
+ * problems, note}. Only the server's `usable: true` with status USABLE reads as valid; a missing
+ * or unknown answer is not usable. Valid is never "ready": `note` says the step is checked too.
+ */
+export function approvalUsability(u) {
+  const usable = Boolean(u && u.usable === true && u.status === "USABLE");
+  const known = u && USABILITY[u.status];
+  const words = usable ? USABILITY.USABLE : known && u.status !== "USABLE" ? known : USABILITY.NOT_USABLE;
+  return { usable, ...words, problems: (u && u.problems) || [], note: usable ? USABLE_NOTE : null };
 }
 
 // --- evidence readiness -------------------------------------------------------------------------

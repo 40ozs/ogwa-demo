@@ -4,6 +4,10 @@ Serves an in-memory Null Meridian world on loopback and walks every directory vi
 reviewer would: the company overview, the portfolio scenarios, findings, people, a person's
 access paths, directory groups, and the inventory pages that link into them. Each must render
 accessibly, request nothing but its own origin, and offer no mutating control.
+
+Null Meridian content throughout (scenario titles, NM-C08/NM-C10, nullmeridian.info), so with
+``UI_BROWSER_TARGET`` it runs only against a target serving Null Meridian; on Genesee Press, see
+test_genesee_press_ui (every view, the data-quality candidate) and test_ui_ia.
 """
 
 import json

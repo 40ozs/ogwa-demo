@@ -5,8 +5,9 @@
 import { checkedId, get } from "../api.js";
 import { badge, banner, facts, fmtTime, h, humanize, link, mono, section, table, uid } from "../dom.js";
 import { employeeTerms, eventLabel, hashFor, PERSON_STATUS_LABEL, personStatus } from "../present.js";
-import { ruleLabel } from "../review.js";
-import { appLink, candidateLink, chain, go, groupLink, groupRef, lede, listing, pageParams } from "./common.js";
+import { nextStep, ruleLabel } from "../review.js";
+import { appLink, candidateLink, chain, go, groupLink, groupRef, lede, listing, mappingLink, pageParams, resolveRefs } from "./common.js";
+import { reviewCell } from "./review.js";
 
 const HEALTH_TONE = { ACTIONABLE: "blocked", QUESTIONABLE: "caution", CLEAN: "neutral", INFO: "info" };
 export const HEALTH_LABEL = { ACTIONABLE: "Actionable", QUESTIONABLE: "Worth a look", CLEAN: "No findings", INFO: "Context" };
@@ -280,6 +281,27 @@ export async function person(ctx) {
 
 // --- the canonical group page ---------------------------------------------------------------
 
+// OGWA-REVIEW-QUEUE-API-01: a directory group's lifecycle candidates, as the server links them by
+// stable id: an AD group through an exact identity mapping only, an Okta group as the candidate's
+// own subject. Nothing is matched by name, here or on the server.
+function groupCandidates(g, rows, refs) {
+  const isAd = g.source === "AD";
+  const name = (c) => { const e = refs[c.oktaGroupId]; return e && e.resolved ? e.name : c.oktaGroupId; };
+  return [
+    h("p", { class: "muted" }, isAd
+      ? "Linked only through an exact identity mapping to this AD group's stable identifiers. The directory's own Okta link, a shared name, or an unproven mapping never links a candidate."
+      : "The candidates whose subject is this Okta group."),
+    rows.length ? table("Lifecycle candidates for this group", [
+      { label: "Candidate", rowHeader: true, render: (c) => [candidateLink(c.candidateId, `Candidate for ${name(c)}`), h("div", { class: "muted" }, mono(c.candidateId))] },
+      { label: "Review status", render: (c) => reviewCell(c.state) },
+      { label: "Next step", render: (c) => nextStep(c, null).text },
+      { label: "Linked by", render: (c) => (c.relationship === "EXACT_IDENTITY_MAPPING"
+        ? [mappingLink(c.oktaGroupId, "Exact identity mapping"), h("div", { class: "muted" }, humanize(c.mappingConfidence || ""))]
+        : "Its own Okta group") },
+    ], rows) : h("p", null, isAd ? "No lifecycle candidate is linked to this AD group by an exact identity mapping." : "No candidate exists for this group."),
+  ];
+}
+
 export async function directoryGroup(ctx) {
   const id = checkedId(ctx.params.id);
   const data = await get(`/directory-groups/${id}`);
@@ -320,6 +342,7 @@ export async function directoryGroup(ctx) {
         ["OGWA AD evidence id", mono(g.adEvidenceId)],
         ["OGWA directory id", mono(g.id)],
       ], "AD identity")) : null,
+    section("Lifecycle candidates", groupCandidates(g, data.lifecycleCandidates || [], await resolveRefs((data.lifecycleCandidates || []).map((c) => c.oktaGroupId)))),
     section("Governance findings", findingsTable("Findings on this group", data.findings)),
     section("Lineage",
       facts([

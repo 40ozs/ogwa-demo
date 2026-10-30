@@ -494,15 +494,7 @@ class LifecycleService:
             raise forbidden("You approved this stage; a different person must plan its dry run (D49).",
                             code="SEPARATION_OF_DUTIES")
         now = self._clock()
-        lifecycle = policy.policy.lifecycle
-        stage = JOB_STAGE[kind]
-        rules = stage_approval_rules(candidate, stage)
-        problems = [*rules.unmet, *approval_problems(
-            approval, candidate_id=candidate.id, candidate_epoch=candidate.epoch, proposed_by=candidate.proposed_by,
-            stage=stage, now=now, max_ttl=lifecycle.approval_max_ttl, clock_skew=lifecycle.freshness.clock_skew,
-            evidence_fingerprint=fingerprint, not_before=rules.not_before, given_after=rules.given_after,
-            excluded_approvers=rules.excluded_problems(stage),
-        )]
+        problems = self.stage_approval_problems(candidate, approval, JOB_STAGE[kind], policy, now, fingerprint)
         if problems:
             raise conflict("APPROVAL_INVALID", "The approval does not authorize this dry run.", problems)
         hypothetical = self._hypothetical_job(candidate, bundle, kind, approval, fingerprint, now)
@@ -519,6 +511,21 @@ class LifecycleService:
         except StoreConflict as exc:
             raise conflict("CONFLICT", str(exc)) from None
         return {"job": self._store.load_execution_job(planned.id), "plannedActions": planned_actions, "policy": policy}
+
+    @staticmethod
+    def stage_approval_problems(candidate: LifecycleCandidate, approval: ApprovalRecord, stage: ApprovalStage,
+                                policy: PolicyInForce, now: datetime, fingerprint: str | None) -> list[str]:
+        """Why ``approval`` does not authorize ``stage`` for the candidate now (empty if it does): the
+        candidate-side stage rules and the approval's own rules, as a dry run's planning checks them.
+        Also the source of the listings' approval usability (app/api/review_queue.py)."""
+        lifecycle = policy.policy.lifecycle
+        rules = stage_approval_rules(candidate, stage)
+        return [*rules.unmet, *approval_problems(
+            approval, candidate_id=candidate.id, candidate_epoch=candidate.epoch, proposed_by=candidate.proposed_by,
+            stage=stage, now=now, max_ttl=lifecycle.approval_max_ttl, clock_skew=lifecycle.freshness.clock_skew,
+            evidence_fingerprint=fingerprint, not_before=rules.not_before, given_after=rules.given_after,
+            excluded_approvers=rules.excluded_problems(stage),
+        )]
 
     def execute(self, principal: Principal, job_id: str) -> None:
         """The route shape for future remediation. This build refuses it for every principal,

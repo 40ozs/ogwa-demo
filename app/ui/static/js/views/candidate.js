@@ -14,7 +14,7 @@ import {
   freshnessText, otherAssignmentsFact, requiredText, reviewerAnswers, stanceText, stateText,
 } from "../evidence.js";
 import { conditionRank, evidenceLabels, explanationAnswers, policyAgainstInForce, policyName } from "../policy.js";
-import { evidenceReadiness, lifecycleStages, nextStep, planStatus, reviewStatus } from "../review.js";
+import { approvalUsability, evidenceReadiness, lifecycleStages, nextStep, planStatus, reviewStatus } from "../review.js";
 import { appLink, errorBox, groupLink, identity, jobLink, mappingLink, resolveRefs } from "./common.js";
 import { coverageTable, resultBadge } from "./inventory.js";
 
@@ -164,7 +164,7 @@ function drillSection(detail, evidence, approvals, catalog) {
       ? "In this public demo, the drill runs only on the walkthrough's controlled-remediation candidate (Portfolio scenarios, part 2)."
       : "Running a drill needs the dry-run planning permission (the executor role), and the stage's approver cannot run it."));
   }
-  const approved = usableApprovals(approvals, c, stage.stage);
+  const approved = usableApprovals(approvals, stage.stage);
   const targets = stage.targetField === "assignmentId" ? c.assignmentIds : (evidence.adGroup ? [evidence.adGroup.id] : []);
   if (!approved.length || !targets.length) {
     return section(DRILL_TITLE, intro, banner("caution", "No drill is possible yet.", approved.length
@@ -532,6 +532,7 @@ function approvalsTable(items, inForce) {
   return table("Approvals and rejections", [
     { label: "Stage", rowHeader: true, render: (a) => STAGE_LABEL[a.stage] || a.stage, sort: (a) => STAGE_LABEL[a.stage] || a.stage },
     { label: "Decision", render: (a) => (a.decision === "APPROVE" ? badge("Approved for future action", "caution") : badge("Rejected", "neutral")), sort: (a) => a.decision },
+    { label: "Approval rules now", render: (a) => { const u = approvalUsability(a.usability); return [h("strong", { class: "state-label", "data-tone": u.tone }, u.label), h("div", { class: "muted" }, u.usable ? u.note : u.problems[0] || null)]; }, sort: (a) => approvalUsability(a.usability).label },
     { label: "By", render: (a) => actorText(a.operator), sort: (a) => actorText(a.operator) },
     { label: "Decided", render: (a) => fmtTime(a.decidedAt), sort: (a) => a.decidedAt },
     { label: "Expires", render: (a) => [fmtTime(a.expiresAt), a.expired ? [" ", badge("Expired", "neutral")] : null], sort: (a) => a.expiresAt },

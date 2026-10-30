@@ -10,7 +10,7 @@ import json
 import re
 import unittest
 
-from tests.browser.harness import A11Y_AUDIT, Browser, SyntheticServer, browser_path, enabled
+from tests.browser.harness import A11Y_AUDIT, Browser, HostedDemoServer, SyntheticServer, browser_path, enabled, target
 
 TONES = {"blocked", "caution", "info", "neutral", "terminal"}
 FORBIDDEN_CONTROL = re.compile(r"^(delete|unassign|execute|remove|retire|disable)\b", re.I)
@@ -35,6 +35,9 @@ def skip_reason() -> str | None:
 class BrowserCase(unittest.TestCase):
     server: SyntheticServer
     browser: Browser
+    # On the read-only public demo, the URL endings a module writes to on purpose (each such test asserts the answer
+    # and that nothing changed); any other write fails assert_clean.
+    deliberate_writes: tuple[str, ...] = ()
 
     @classmethod
     def setUpClass(cls):
@@ -67,6 +70,12 @@ class BrowserCase(unittest.TestCase):
             self.assertEqual(b.title(), expect_title)
         if prefix:
             self.assertTrue(b.title().startswith(prefix), b.title())
+
+    def part(self, name: str) -> tuple[str, str]:
+        """The scenario key and candidate id of a walkthrough part ("data-quality", "controlled-remediation"): how a
+        module names the demo's two walkthrough candidates in any dataset (docs/deployment/hosted-demo-fixtures.md)."""
+        key = self.server.walkthrough[name]
+        return key, self.server.scenarios[key]
 
     def candidate(self, key: str) -> None:
         self.nav(f"#/candidates/{self.server.scenarios[key]}", prefix="Candidate: ")
@@ -121,6 +130,9 @@ class BrowserCase(unittest.TestCase):
         foreign = [u for u in self.browser.requested_urls() if not (u.startswith(origin) or u == "about:blank")]
         self.assertEqual(foreign, [], "the page requested something other than its own origin")
         self.assertEqual(self.browser.problems(), [], "console errors, exceptions, or CSP violations")
+        if target() or isinstance(self.server, HostedDemoServer):  # the public demo, which is read-only
+            writes = [w for w in self.browser.writes() if not w.split("?")[0].endswith(self.deliberate_writes)]
+            self.assertEqual(writes, [], "a write request left the page during read-only checks")
 
 
 @unittest.skipIf(skip_reason(), skip_reason() or "")
@@ -308,7 +320,7 @@ class ReadOnlyReviewTests(BrowserCase):
     def test_g_a_slow_page_leaves_focus_where_the_reader_moved_it_and_a_failed_one_explains(self):
         b = self.browser
         self.sign_in("synthetic.viewer.one")
-        b.hold("*/api/v1/candidates*")
+        b.hold("*/api/v1/review-queue*")  # the Review queue's data (OGWA-REVIEW-QUEUE-API-01)
         try:
             b.focus("#primary-nav a[href='#/review']")
             b.key("Enter")

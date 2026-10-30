@@ -16,12 +16,17 @@ Safety:
 - ``HostedDemoServer`` serves the Cloudflare Worker's own application
   (``app.cloudflare.hosted.HostedDemo``) the way the Worker runs it, on loopback.
 - ``UI_BROWSER_TARGET`` (an origin, such as the local Worker on http://127.0.0.1:8787 or the
-  deployed one on workers.dev) points the Null Meridian and hosted-demo modules at a demo
-  that is already serving, instead of a local server; a module over another world skips.
-  The browser can then resolve that one host too, and still nothing else.
+  deployed one on workers.dev) points the demo modules at a public demo that is already
+  serving, instead of a local server. The target's dataset, scenario candidate ids, and
+  walkthrough parts are read from its own API (``target_demo``), never assumed from a local
+  seed. A module that asserts no dataset-specific content (``any_dataset=True``) runs against
+  any demo dataset; any other module skips unless the target serves its dataset
+  (docs/deployment/hosted-demo-fixtures.md). The browser can then resolve that one host too,
+  and still nothing else.
 """
 
 import base64
+import functools
 import json
 import os
 import secrets
@@ -77,7 +82,7 @@ def enabled() -> bool:
 
 
 def target() -> str | None:
-    """The origin of an already-serving Null Meridian demo to test instead of a local server."""
+    """The origin of an already-serving public demo (the Worker) to test instead of a local server."""
     raw = os.environ.get(TARGET_VAR)
     if not raw:
         return None
@@ -86,6 +91,47 @@ def target() -> str | None:
             or parts.fragment or parts.username or parts.password:
         raise ValueError(f"{TARGET_VAR} must be an origin such as https://host.example")
     return f"{parts.scheme}://{parts.netloc}"
+
+
+def walkthrough_parts(dataset_key: str) -> dict[str, str]:
+    """The dataset's walkthrough parts ("data-quality", "controlled-remediation") → their scenario keys; {} if none."""
+    from app.demo.datasets import dataset
+
+    guide = dataset(dataset_key).walkthrough()
+    return {p["key"]: p["candidateKey"] for p in guide["parts"]} if guide else {}
+
+
+@functools.cache
+def target_demo() -> dict:
+    """What the target serves, read from its own API as its anonymous visitor (GETs only): the dataset key from
+    ``GET /health``, and from ``GET /demo-scenarios`` each scenario's candidate id by key and each walkthrough part's
+    scenario key. https needs a CA bundle Python can read (on macOS python.org builds: SSL_CERT_FILE=/etc/ssl/cert.pem)."""
+    def get(path: str, cookie: str = "") -> tuple[list[str], dict]:
+        # Cloudflare refuses Python-urllib's default user agent (error 1010), as scripts/hosted_smoke.py notes.
+        headers = {"User-Agent": "ogwa-browser-gate/1.0", **({"Cookie": cookie} if cookie else {})}
+        with urllib.request.urlopen(urllib.request.Request(f"{target()}/api/v1{path}", headers=headers),
+                                    timeout=60) as response:
+            return response.headers.get_all("Set-Cookie") or [], json.load(response)
+
+    _, health = get("/health")
+    if not (health.get("publicDemo") and (health.get("dataset") or {}).get("key")):
+        raise CdpError(f"{TARGET_VAR} is not a public demo: GET /health answered {health}")
+    cookies, _ = get("/session")
+    cookie = next(c.split(";", 1)[0] for c in cookies if c.startswith("__Host-ogwa-session="))
+    _, data = get("/demo-scenarios", cookie)
+    return {"dataset": health["dataset"]["key"],
+            "scenarios": {s["candidateKey"]: s["candidateId"] for s in data["items"] if s.get("candidateKey")},
+            "walkthrough": {p["key"]: p["candidateKey"] for p in (data.get("walkthrough") or {}).get("parts", [])}}
+
+
+def adopt_target(server, any_dataset: bool) -> None:
+    """Point ``server`` at the target, or skip the module when it asserts another dataset's content."""
+    demo = target_demo()
+    if demo["dataset"] != server.dataset and not any_dataset:
+        raise unittest.SkipTest(f"{TARGET_VAR} serves {demo['dataset']}; this module asserts {server.dataset} content "
+                                "(docs/deployment/hosted-demo-fixtures.md)")
+    server.origin, server.dataset = target(), demo["dataset"]
+    server.scenarios, server.walkthrough = demo["scenarios"], demo["walkthrough"]
 
 
 def browser_flags() -> tuple[str, ...]:
@@ -113,9 +159,12 @@ def free_port() -> int:
 class SyntheticServer(threading.Thread):
     """A seeded synthetic world served as UI + API on 127.0.0.1, entirely inside this thread."""
 
-    def __init__(self, refresh: tuple[str, ...] = ("S07", "S14"), dataset: str = "classic") -> None:
+    def __init__(self, refresh: tuple[str, ...] = ("S07", "S14"), dataset: str = "classic",
+                 any_dataset: bool = False) -> None:
         super().__init__(daemon=True)
         self.dataset = dataset
+        self.any_dataset = any_dataset  # the module asserts no dataset-specific content: any target's demo will do
+        self.walkthrough = walkthrough_parts(dataset)
         self.port = free_port()
         self.origin = f"http://127.0.0.1:{self.port}"
         self.refresh = refresh
@@ -148,16 +197,7 @@ class SyntheticServer(threading.Thread):
 
     def start_and_wait(self) -> "SyntheticServer":
         if target():
-            if self.dataset != "null-meridian":
-                raise unittest.SkipTest(f"{TARGET_VAR} serves the Null Meridian demo, not the {self.dataset} world")
-            self.origin = target()
-            # The seed is deterministic, so this build's candidate ids are the target's when it
-            # serves this build; a stale target fails on them instead of skipping.
-            world = World(dataset=self.dataset)
-            try:
-                self.scenarios = {s.key: s.candidate_id for s in world.summary.scenarios}
-            finally:
-                world.close()
+            adopt_target(self, self.any_dataset)
             return self
         self.start()
         self.ready.wait(60)
@@ -183,8 +223,10 @@ class DemoServer:
 
     REPO_ROOT = Path(__file__).resolve().parents[2]
 
-    def __init__(self, dataset: str | None = None) -> None:
+    def __init__(self, dataset: str | None = None, any_dataset: bool = False) -> None:
         self.dataset = dataset or "null-meridian"
+        self.any_dataset = any_dataset
+        self.walkthrough = walkthrough_parts(self.dataset)
         self.port = free_port()
         self.origin = f"http://127.0.0.1:{self.port}"
         self.tmp = Path(tempfile.mkdtemp(prefix="ogwa-ui-demo-"))
@@ -194,9 +236,7 @@ class DemoServer:
 
     def start_and_wait(self) -> "DemoServer":
         if target():
-            if self.dataset not in (None, "null-meridian"):
-                raise unittest.SkipTest(f"{TARGET_VAR} serves the Null Meridian demo, not {self.dataset}")
-            self.origin = target()
+            adopt_target(self, self.any_dataset)
             return self
         env = self._reset()
         base = {k: v for k, v in os.environ.items() if not k.upper().startswith("OGWA_")}
@@ -252,7 +292,11 @@ class HostedDemoServer(DemoServer):
     ``HostedDemo.handle`` exactly as the Worker drives it, over the bytes of a demo store reset by
     the demo reset. The UI files are served as Workers Static Assets serve them (with the local
     server's headers). D1 is stood in for by the store itself: it holds the same store, as the
-    Worker requires. With ``UI_BROWSER_TARGET``, the deployed (or ``wrangler dev``) Worker instead."""
+    Worker requires. With ``UI_BROWSER_TARGET``, the deployed (or ``wrangler dev``) Worker instead, whatever
+    dataset it serves. Locally, the dataset the Worker is configured with (Genesee Press)."""
+
+    def __init__(self, dataset: str | None = "genesee-press") -> None:
+        super().__init__(dataset, any_dataset=True)
 
     def start_and_wait(self) -> "HostedDemoServer":
         if target():
@@ -484,6 +528,11 @@ class Browser:
             self.cdp.send("Target.closeTarget", {"targetId": target})
 
     # --- what the page did ------------------------------------------------------------------
+
+    def writes(self) -> list[str]:
+        """Every request this browser sent that is not a read (GET, HEAD, OPTIONS), in every tab: "METHOD url"."""
+        requests = [e["params"]["request"] for e in self.cdp.events if e.get("method") == "Network.requestWillBeSent"]
+        return [f"{r['method']} {r['url']}" for r in requests if r["method"] not in ("GET", "HEAD", "OPTIONS")]
 
     def requested_urls(self) -> list[str]:
         return [e["params"]["request"]["url"] for e in self.cdp.events if e.get("method") == "Network.requestWillBeSent"]
