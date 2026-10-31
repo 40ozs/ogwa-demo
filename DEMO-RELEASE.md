@@ -11,7 +11,7 @@ Changes are made upstream and arrive here only through a new release export.
 | Dataset / contract | `synthetic-enterprise-world@2.1.0` / `0.2.0` |
 | Projection | `ogwa@0.3.1` (lock `SYNTHETIC_ENTERPRISE.lock`, commit `ce7c0c7d9fbc82c67e596dde95cf5e2432acf450`) |
 | Integration record | `docs/demo/reports/SYNTH-CROSSAPP-01-report.md` @ `296b528e5927f579f2513b6c43b750f50f1de8e8` |
-| Release generated | 2026-10-30T21:28:25Z by `tools/cutover/demo_release.py` (OGWA-APPROVAL-ATTENTION-01) |
+| Release generated | 2026-10-31T21:00:00Z by `tools/cutover/demo_release.py` (OGWA-APPROVAL-ATTENTION-01) |
 
 Machine-readable provenance: [`demo-release.json`](demo-release.json). Every file's digest:
 [`demo-release/files.sha256`](demo-release/files.sha256).
