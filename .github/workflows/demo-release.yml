@@ -21,6 +21,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: "Release tree equals demo-release/files.sha256; provenance; prohibited files"
         run: python3 demo-release/verify_release.py
       - name: "Vendored Genesee Press projection, generated files and overlay"
